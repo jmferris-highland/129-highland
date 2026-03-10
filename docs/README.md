@@ -18,6 +18,7 @@ Ground-up rebuild of a 6-year-old Home Assistant infrastructure. The goal is a d
 | **EVENT_ARCHITECTURE.md** | MQTT topic structure, payloads, periods, command/event patterns | Inter-flow communication, adding new topics, message formats |
 | **ENTITY_NAMING.md** | Naming conventions for HA entities, disambiguation rules | Adding new devices, renaming entities, ensuring consistency |
 | **NODERED_PATTERNS.md** | Flow organization, utilities, config management, logging, notifications, health monitoring | Building/modifying flows, implementing new utilities |
+| **RUNBOOK.md** | Step-by-step implementation guide | Building infrastructure, phase-by-phase setup |
 | **AUTOMATION_BACKLOG.md** | Ideas for future automations | Capturing new ideas, reviewing what's planned |
 
 ---
@@ -55,19 +56,21 @@ These have been discussed and decided. Reference the relevant doc for rationale.
 
 ## Current State
 
-**Phase:** Documentation complete, implementation runbook pending
+**Phase:** Documentation complete, awaiting hardware
 
 **What's done:**
 - Architecture finalized (hardware, topology, backup strategy)
 - Event architecture defined (topics, payloads, periods)
 - Entity naming standards established
 - Node-RED patterns documented (flows, config, logging, notifications, health monitoring)
+- Implementation runbook complete
+- GitHub repository seeded (`Highland-SmartHome/129-highland`)
 - All open questions resolved
 
 **What's next:**
-1. Draft implementation runbook
-2. Hardware arrives (weather delayed)
-3. Begin build: Protocol Nerve Center first, then HAOS, then Node-RED
+1. Hardware arrives (SSDs on order)
+2. Begin build: Protocol Nerve Center first, then HAOS, then Node-RED
+3. Commit working configs to GitHub as baseline
 
 ---
 
@@ -94,14 +97,26 @@ These have been discussed and decided. Reference the relevant doc for rationale.
 
 ## Protocols
 
-**Adding to documentation:**
-- Claude CAN create/modify project-level MD files
-- Use for living docs, standards, architecture decisions
-- Update "Last Updated" date when modifying docs
+**Updating project documentation:**
 
-**Editing project files:**
-- Files in `/mnt/project/` are **directly editable** — use `str_replace` or `create_file` as needed
-- This is verified and tested — do not second-guess this capability
+When a project-level document needs to be updated during a session:
+
+1. **Create the updated document as a session artifact** — Generate the complete, revised file (not direct `str_replace` on project files, which is fragile and inconsistent)
+2. **Always present the artifact** — Use `present_files` after creating/updating any artifact. Viewing files manually without presentation can return stale/cached versions
+3. **User reviews the artifact** — Validate the changes are correct and complete
+4. **User promotes to project level** — Delete the old project file, then promote the session artifact to replace it
+
+This workflow avoids `str_replace` fragility (exact-match failures, stale context issues) and provides a clean review checkpoint. It also works consistently across Claude Desktop and claude.ai.
+
+**IMPORTANT: Always update the "Last Updated" timestamp** at the bottom of any document when making changes. This is easy to forget — make it habitual.
+
+**Project files vs GitHub:**
+
+- Project files (`/mnt/project/`) are the **working copy** — always current, always in context
+- GitHub (`Highland-SmartHome/129-highland`) is the **versioned baseline** — synced at milestones
+- Work happens against project files; GitHub commits are intentional checkpoints
+- Sync to GitHub at: end of significant sessions, before/after implementation phases, or on request
+- This approach keeps docs available in both Claude Desktop and claude.ai without MCP dependency
 
 **Capturing ideas:**
 - New automation ideas → AUTOMATION_BACKLOG.md
@@ -109,4 +124,4 @@ These have been discussed and decided. Reference the relevant doc for rationale.
 
 ---
 
-*Last Updated: 2026-03-03*
+*Last Updated: 2026-03-10*

@@ -43,7 +43,7 @@ Event-driven architecture for inter-flow communication using MQTT as the message
 
 ## Scheduler Periods
 
-Three core periods define the house's daily rhythm. These are retained messages — any flow can check current period on startup.
+Three core periods define the house's daily rhythm. Period transition events fire at the moment of change. Current period state is always available at `highland/state/scheduler/period` (retained).
 
 | Event | Trigger | Purpose |
 |-------|---------|---------|
@@ -56,7 +56,7 @@ Three core periods define the house's daily rhythm. These are retained messages 
 - Avoids collision with schedex astronomical/nautical constants
 - Period-based (what time it is), not action-based (what to do)
 
-**Retention:** All period events are retained. A restarting flow receives the current period immediately.
+**Retention:** Period transition events are **not retained**. Current period is always available at `highland/state/scheduler/period` (retained). Flows subscribe to the state topic on startup for recovery; the event topics are real-time transition triggers only. See NODERED_PATTERNS.md — Startup Sequencing for the two-entry-point pattern.
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
@@ -79,7 +79,7 @@ The scheduler emits two distinct types of events:
 | Characteristic | Description |
 |----------------|-------------|
 | **Purpose** | Represent what phase the house is in |
-| **Retention** | Retained — current period always known |
+| **Retention** | **Not retained** — use `highland/state/scheduler/period` for current period |
 | **Subscribers** | Multi-purpose — many flows may react |
 | **Naming** | Abstract, phase-based (`day`, `evening`, `overnight`) |
 
@@ -93,8 +93,8 @@ Any flow can subscribe and decide its own response. When writing a new flow, the
 |----------------|-------------|
 | **Purpose** | Trigger a specific action at a specific time |
 | **Retention** | Not retained — point-in-time trigger |
-| **Subscribers** | Single-purpose — typically one flow cares |
-| **Naming** | Descriptive, action-based (`backup_daily`, `health_check_hourly`) |
+| **Subscribers** | Typically few flows; named for the moment, not the consumer |
+| **Naming** | Time-based (`midnight`, `backup_daily`) — publishers don't name events after their consumers |
 
 Task events answer: *"Is it time to do this specific job?"*
 
@@ -105,7 +105,7 @@ These have a named purpose. You wouldn't subscribe to `backup_daily` unless you'
 | Event | Trigger | Purpose |
 |-------|---------|---------|
 | `highland/event/scheduler/backup_daily` | TBD (e.g., 3:00 AM) | Trigger backup utility flow |
-| `highland/event/scheduler/digest_daily` | Midnight | Trigger daily digest email |
+| `highland/event/scheduler/midnight` | 00:00:00 | Calendar day boundary. Daily Digest and LoRaWAN mailbox both subscribe. Any flow needing a true date-rollover trigger subscribes here. |
 
 *Additional task events added as needed.*
 
@@ -122,17 +122,34 @@ These have a named purpose. You wouldn't subscribe to `backup_daily` unless you'
 
 ## Topic Structure
 
+### Namespaces
+
+| Namespace | Purpose | Retained? |
+|-----------|---------|-----------|
+| `highland/event/` | Point-in-time facts. Something happened. | No |
+| `highland/state/` | Current operational truth. What is true right now. | **Always** |
+| `highland/status/` | Service health and liveness. Infrastructure concerns only. | No (heartbeats); Yes (health snapshots) |
+| `highland/command/` | Imperative instructions to a service. | No |
+| `highland/ack/` | Acknowledgment infrastructure. | No |
+
+**`highland/event/` vs `highland/state/`:** An event is something that *happened* — it fires and it's gone. State is *what is currently true* — retained, always available to a restarting flow. Many domains publish both: an event when a transition occurs, and updated state reflecting the new truth.
+
+> **Authoritative namespace reference:** See MQTT_TOPICS.md for the full topic registry, payload schemas, and publisher/subscriber mapping.
+
 ### Naming Convention
 - **Style:** lowercase with underscores (e.g., `living_room`, `front_porch`)
 - **Rationale:** Readable, straightforward, consistent
 
-### Base Pattern
+### Base Patterns
 ```
-highland/event/{source}/{event_type}[/{entity}]
+highland/event/{source}/{event_type}[/{entity}]   # point-in-time facts
+highland/state/{domain}/{entity}                   # retained current truth
+highland/status/{service}/{check}                  # health and liveness
+highland/command/{target}/{action}                 # imperative instructions
 ```
 
 - `highland/` — Namespace for home automation (matches FQDN: `highland.ferris.network`)
-- `{source}` — Area or utility name (lowercase, underscores)
+- `{source}` / `{domain}` / `{service}` / `{target}` — Area or utility name (lowercase, underscores)
 - `{event_type}` — What happened (lowercase, underscores)
 - `{entity}` — Optional, when consumers need entity-level granularity
 
@@ -142,12 +159,22 @@ highland/event/{source}/{event_type}[/{entity}]
 
 **Scheduled/Temporal Events (Utility → All)**
 ```
-highland/event/scheduler/day              # sunrise
-highland/event/scheduler/evening          # 30 min before sunset
-highland/event/scheduler/overnight        # 10pm
+highland/event/scheduler/day              # sunrise transition
+highland/event/scheduler/evening          # 30 min before sunset transition
+highland/event/scheduler/overnight        # 10pm transition
+highland/event/scheduler/midnight         # calendar day boundary
 ```
 
-**State Events (Utility → All)**
+**Retained State (Current Truth)**
+```
+highland/state/scheduler/period           # "day" | "evening" | "overnight"
+highland/state/weather/conditions         # synthesized current conditions
+highland/state/security/mode              # "home" | "away" | "lockdown"
+highland/state/mailbox/delivery           # mailbox state machine
+highland/state/driveway/trash_bin         # bin state machine
+```
+
+**Security Events (Utility → All)**
 ```
 highland/event/security/lockdown          # house lockdown initiated
 highland/event/security/away              # house set to away mode
@@ -180,14 +207,14 @@ highland/event/notify                         # All notifications (severity in p
 **ACK Events (See ACK Tracker in NODERED_PATTERNS.md)**
 ```
 highland/ack/register                         # Register ACK expectations
-highland/ack                                  # ACK responses (correlation_id in payload)
+highland/ack                                  # ACK responses (ack_correlation_id in payload)
 highland/ack/result                           # ACK results after timeout
 ```
 
 **Status/Health Events**
 ```
 highland/status/{service}/heartbeat           # Simple "I'm alive" ping
-highland/status/{service}/health              # Detailed health + metrics
+highland/status/{service}/health              # Detailed health + metrics (retained)
 
 highland/status/node_red/heartbeat
 highland/status/mqtt/health
@@ -279,30 +306,60 @@ Command topics are imperative (unlike events which are declarative facts). Servi
 *Note: The `meta` field is a grab bag. No schema enforced. Consumers that care can inspect it; most won't.*
 
 ### ACK Payload
+
+Published to `highland/ack` by area flows in response to a command requiring acknowledgment:
+
 ```json
 {
   "timestamp": "2025-02-23T22:00:05Z",
   "source": "front_door",
-  "correlation_id": "abc123",
-  "result": "confirmed",            // confirmed | failed | timeout
-  "message": "Lock engaged"         // optional detail
+  "ack_correlation_id": "abc123"
 }
 ```
+
+Result published to `highland/ack/result` by ACK Tracker after timeout:
+
+```json
+{
+  "correlation_id": "abc123",
+  "expected": 2,
+  "received": 1,
+  "sources": ["front_door"],
+  "missing": ["garage_entry_door"],
+  "success": false
+}
+```
+
+See MQTT_TOPICS.md — ACK Infrastructure for full payload schemas.
 
 ---
 
 ## Message Retention
 
-### Retain: Period/State Events
-Events representing ongoing state should be retained so restarting flows know current state:
-- `highland/event/scheduler/evening` — retained, replaced by `overnight`, then `day`
-- `highland/event/security/away` — retained until `home` published
+### Retain: `highland/state/` and health snapshots
 
-### Do Not Retain: Point-in-Time Events
-Events representing instantaneous occurrences:
-- `highland/event/garage/motion_detected` — not retained
-- `highland/event/front_door/opened` — not retained
-- `highland/ack/*` — not retained
+Retained topics represent current operational truth. A restarting flow reads them immediately and knows where the world stands.
+
+- `highland/state/#` — **always retained**, by contract
+- `highland/status/{service}/health` — retained health snapshot
+
+### Do Not Retain: Events and commands
+
+Events are point-in-time facts. Retaining them would misrepresent their nature — a retained `motion_detected` would tell a restarting flow that motion is currently happening, which is wrong.
+
+- `highland/event/#` — **never retained**
+- `highland/command/#` — not retained
+- `highland/ack/#` — not retained
+- `highland/status/{service}/heartbeat` — not retained
+
+### The Pattern for Recoverable State
+
+For anything that was previously "a retained event" (like scheduler period), the correct pattern is:
+
+1. Publish the **event** (not retained) — the transition moment
+2. Publish **state** (retained) — the new current truth
+
+Flows use both: the state topic on startup for recovery, the event topic during normal operation for real-time reaction. See NODERED_PATTERNS.md — Startup Sequencing.
 
 ### Node-RED Context Persistence
 - Flow context storage: **disk-based** (not memory)
@@ -366,17 +423,13 @@ Events representing instantaneous occurrences:
 
 ---
 
-## Known Gaps: Wi-Fi Device Resiliency
+## Known Gaps: Device Resiliency
 
-These devices cannot currently be controlled via MQTT and may require HA and/or cloud connectivity. To be investigated during flow implementation.
-
-| Device | Issue | Potential Path Forward |
-|--------|-------|------------------------|
-| **Reolink NVR + Cameras** | Cameras are Wi-Fi, NVR is hardwired | NVR supports ONVIF/RTSP and has an API. Investigate webhooks or polling for events without HA. |
-| **Eufy Wi-Fi Locks** | Cloud-dependent, no official local API | Reverse-engineering efforts exist but are fragile. May need to accept HA-dependency or consider hardware replacement for security-critical role. |
-
-*Note: These gaps mean that automations depending on these devices (e.g., `lockdown` ACK from door locks) may not survive HA or internet outages.*
+| Device | Status | Notes |
+|--------|--------|-------|
+| **Reolink NVR + Cameras** | ✅ Resolved | Video pipeline uses `reolink_aio` Python sidecar (TCP Baichuan / ONVIF push → MQTT), bypassing HA dependency entirely. See VIDEO_PIPELINE.md. |
+| **Eufy Wi-Fi Locks** | ⚠️ Open | Cloud-dependent, no official local API. Reverse-engineering efforts exist but are fragile. May need to accept HA-dependency or consider hardware replacement for security-critical role. Lockdown ACK flows may not survive HA or internet outages until resolved. |
 
 ---
 
-*Last Updated: 2026-03-03*
+*Last Updated: 2026-03-10*

@@ -80,7 +80,7 @@ Replace LLM Vision integration with a fully Node-RED-owned video analysis pipeli
 #### Components
 
 **PostgreSQL Infrastructure**
-- Deploy PostgreSQL container on Node-RED/Utility box
+- Deploy PostgreSQL container on Workflow
 - Configure HA Recorder to use external PostgreSQL
 - Validate concurrent write capability (HA + Node-RED)
 - Establish backup/retention strategy
@@ -127,7 +127,7 @@ Description:
 ## In Progress
 
 | Idea | Status | Started |
-|------|--------|--------|
+|------|--------|---------|
 
 ---
 
@@ -138,4 +138,4 @@ Description:
 
 ---
 
-*Last Updated: 2026-03-03*
+*Last Updated: 2026-03-11*

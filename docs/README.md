@@ -24,7 +24,6 @@ Ground-up rebuild of a 6-year-old Home Assistant infrastructure. The goal is a d
 | **CALENDAR_INTEGRATION.md** | Google Calendar bridge for automation triggers | Camera suppression, planned events, kill switch UX |
 | **LORA.md** | LoRaWAN sensors (mailbox, driveway bins) | Mailbox state machine, bin tracking, RSSI-based zone detection |
 | **ASSIST_PIPELINE.md** | HA Assist voice pipeline with Marvin persona | Voice control, STT/TTS, conversation agents, wake word |
-| **GARAGE_DOOR.md** | Konnected GDO blaQ garage door integration | SSE bridge, Smart Reversing, ZEN37 wall remote |
 | **RUNBOOK.md** | Step-by-step implementation guide | Building infrastructure, phase-by-phase setup |
 | **AUTOMATION_BACKLOG.md** | Ideas for future automations | Capturing new ideas, reviewing what's planned |
 
@@ -36,7 +35,7 @@ These have been discussed and decided. Reference the relevant doc for rationale.
 
 | Decision | Rationale |
 |----------|-----------|
-| **Three-box architecture** | HAOS, Communication Hub (MQTT/Z2M/Z-Wave), Workflow — physical separation for resiliency |
+| **Four-box architecture** | HAOS, Communication Hub (MQTT/Z2M/Z-Wave), Workflow (Node-RED), Edge AI — physical separation for resiliency |
 | **MQTT as control plane** | Node-RED subscribes directly to Z2M/Z-Wave topics; critical automations work without HA |
 | **MQTT-triggered backups** | Each host owns its backup via MQTT command; no SSH between hosts |
 | **File-based config** | External JSON files in `/home/nodered/config/`; `secrets.json` gitignored |
@@ -71,7 +70,7 @@ These have been discussed and decided. Reference the relevant doc for rationale.
 - MQTT topic registry established (authoritative reference)
 - Entity naming standards established
 - Node-RED patterns documented (flows, config, logging, notifications, health monitoring)
-- Domain-specific designs complete (video pipeline, weather, calendar, LoRaWAN, voice, garage door)
+- Domain-specific designs complete (video pipeline, weather, calendar, LoRaWAN, voice)
 - Implementation runbook complete
 - GitHub repository synced (`Highland-SmartHome/129-highland`)
 - All open questions resolved

@@ -16,7 +16,7 @@ Where this document conflicts with EVENT_ARCHITECTURE.md, **this document wins**
 ## Namespace Summary
 
 | Namespace | Purpose | Retained? |
-|-----------|---------|-----------|
+|-----------|---------|----------|
 | `highland/event/` | Point-in-time facts. Something happened. | No (except where noted) |
 | `highland/state/` | Current operational truth. What is true right now. | **Always** |
 | `highland/status/` | Service health and liveness. Infra concerns only. | No (heartbeats); Yes (health snapshots) |
@@ -1011,6 +1011,106 @@ Published by HA MQTT cover entity via `command_template`. Node-RED translates to
 
 ---
 
+### Appliance Monitoring
+
+**Architecture:** Power-based cycle detection for washing machine, dryer, and dishwasher via ZEN15 smart plugs. Z-Wave JS UI publishes ZEN15 power readings to MQTT; Node-RED subscribes and runs the state machine. HA never speaks to the ZEN15 directly. See **APPLIANCE_MONITORING.md** for full design.
+
+**Internal-only (never on the bus):**
+- Raw ZEN15 Z-Wave JS UI MQTT payloads
+- State machine accumulators (time_above_s, time_below_s, energy_since_idle_wh)
+- Power trace samples (stored in flow context and PostgreSQL; not on MQTT bus)
+- Cadence tracking (p95_dt)
+
+---
+
+**`highland/state/appliance/{appliance}/cycle`** ← RETAINED
+
+Current cycle state for one appliance.
+
+`{appliance}` values: `washing_machine` | `dryer` | `dishwasher`
+
+| | |
+|--|--|
+| **Publisher** | Appliance Monitor flow (one per appliance) |
+| **Consumers** | HA (via MQTT Discovery), notification flow |
+| **Retained** | Yes |
+
+```json
+{
+  "timestamp": "2026-03-11T14:30:00Z",
+  "source": "appliance_monitor",
+  "appliance": "washing_machine",
+  "state": "running",
+  "cycle_start": "2026-03-11T14:15:00Z",
+  "duration_s": 900,
+  "energy_wh": 42.3,
+  "power_w": 387.2,
+  "max_power_w": 1820.0,
+  "matched_profile": null,
+  "estimated_remaining_s": null
+}
+```
+
+`state` values: `off` | `starting` | `running` | `paused` | `ending` | `finished` | `interrupted` | `force_stopped`
+
+---
+
+**`highland/event/appliance/{appliance}/cycle_started`**
+
+```json
+{
+  "timestamp": "2026-03-11T14:15:00Z",
+  "source": "appliance_monitor",
+  "appliance": "washing_machine",
+  "cycle_id": "wm_20260311_141500"
+}
+```
+
+---
+
+**`highland/event/appliance/{appliance}/cycle_finished`**
+
+```json
+{
+  "timestamp": "2026-03-11T15:02:00Z",
+  "source": "appliance_monitor",
+  "appliance": "washing_machine",
+  "cycle_id": "wm_20260311_141500",
+  "status": "completed",
+  "duration_s": 2820,
+  "energy_wh": 187.4,
+  "max_power_w": 1820.0,
+  "matched_profile": null
+}
+```
+
+`status` values: `completed` | `interrupted` | `force_stopped`
+
+---
+
+**`highland/event/appliance/{appliance}/cycle_interrupted`**
+
+Same payload as `cycle_finished`. Separate topic for targeted subscriptions.
+
+---
+
+**`highland/command/appliance/{appliance}/force_end`**
+
+Force the current cycle to end immediately.
+
+```json
+{
+  "timestamp": "2026-03-11T15:05:00Z",
+  "source": "ha_assist"
+}
+```
+
+**`highland/command/appliance/{appliance}/reset`**
+
+Force state machine to OFF.
+
+---
+
 ### Security
 
 **`highland/state/security/mode`** ← RETAINED
@@ -1287,18 +1387,22 @@ All command payloads carry minimal envelope:
 | `highland/state/weather/#` | All weather state |
 | `highland/state/driveway/#` | Both bin states |
 | `highland/state/garage/#` | All garage state (door, light, lock, sensors) |
+| `highland/state/appliance/#` | All appliance cycle state (all three machines) |
 | `highland/event/scheduler/#` | All scheduler events (periods + tasks) |
 | `highland/event/driveway/#` | All bin events (both bins, all transition types) |
 | `highland/event/driveway/trash_bin/#` | All trash bin events only |
 | `highland/event/driveway/recycling_bin/#` | All recycling bin events only |
 | `highland/event/mailbox/#` | All mailbox events |
 | `highland/event/garage/#` | All garage events |
+| `highland/event/appliance/#` | All appliance cycle events (start, finish, interrupted) |
+| `highland/event/appliance/+/cycle_finished` | Any machine finishing — notification flow |
 | `highland/event/+/leak/#` | Any leak in any area |
 | `highland/event/+/motion_detected` | Any motion in any area |
 | `highland/status/#` | All health and heartbeat |
 | `highland/status/+/health` | Health snapshots only |
 | `highland/command/backup/#` | All backup commands |
 | `highland/command/garage/#` | All garage commands |
+| `highland/command/appliance/#` | All appliance commands (force_end, reset) |
 
 ---
 
@@ -1307,7 +1411,8 @@ All command payloads carry minimal envelope:
 Topics not yet designed. Will be added as each domain is designed.
 
 | Domain | Notes |
-|--------|-------|
+|--------|
+-------|
 | **Presence / Occupancy** | FP300 sensors; `highland/state/{area}/occupancy` likely pattern |
 | **Video Pipeline** | Kill switch, detection events, triage results |
 | **HA Assist / Voice** | Marvin persona events; may not need bus presence |
@@ -1321,7 +1426,7 @@ Topics not yet designed. Will be added as each domain is designed.
 
 | Date | Change |
 |------|--------|
-| 2026-03-11 | Added Garage Door section (Konnected Blaq bridge). Added garage wildcard patterns. Clarified Locks pending domain as entry door locks, distinct from garage remote lockout. |
+| 2026-03-11 | Added Appliance Monitoring domain (washing machine, dryer, dishwasher — ZEN15 power-based cycle detection). Added appliance wildcard patterns. Added Garage Door section (Konnected Blaq bridge). Added garage wildcard patterns. Clarified Locks pending domain as entry door locks, distinct from garage remote lockout. |
 | 2026-03-10 | Added Driveway Bins and Mailbox sections from LORA.md. Removed both from Domains Pending. Added driveway and mailbox wildcard patterns. |
 | 2026-03-09 | Initial creation. Established `highland/state/` namespace and MQTT Discovery pattern. Corrected: scheduler period events are no longer retained (state lives at `highland/state/scheduler/period`). Renamed `digest_daily` → `midnight`. Removed `weather/period_change`. Moved calendar suppression state from `status/` to `state/`. |
 

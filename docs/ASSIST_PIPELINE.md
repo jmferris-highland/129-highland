@@ -1,4 +1,4 @@
-# Assist Pipeline — Planning & Architecture
+# Assist Pipeline — Planning &amp; Architecture
 
 ## Status
 
@@ -115,7 +115,7 @@ Use as audio-only satellites during Echo Show experiment. Gets pipeline end-to-e
 
 ---
 
-## Proactive Conversations & Satellite Targeting
+## Proactive Conversations &amp; Satellite Targeting
 
 ### House-Initiated Conversations
 
@@ -129,37 +129,60 @@ This is distinct from user-initiated flow. The house starts the conversation. Fo
 
 ### Satellite Targeting
 
-Proactive prompts and TTS announcements target a **specific satellite entity** (e.g., `assist_satellite.living_room`). You can target one satellite, a group, or all — your choice at the point of the service call. There is no broadcast-by-default behavior.
+When the house initiates a conversation, it must choose which satellite(s) to use. Options:
 
-This enables intelligent targeting by Node-RED: NR knows which room an event occurred in (or, eventually, where a specific person is via presence detection) and can direct a conversation to the appropriate satellite. This is actually a better model than Alexa/Google — the routing logic is yours, running locally, not in someone else's cloud.
+| Strategy | Use Case |
+|----------|----------|
+| **Area-based** | "Play in the room where motion was last detected" |
+| **Explicit** | "Play on the kitchen satellite" (known location) |
+| **Broadcast** | "Play on all satellites" (emergency alerts) |
+| **User-following** | "Play on the satellite nearest to [user]" (presence-based) |
 
-**Relevance to accessibility:** For a non-ambulatory user, being able to direct prompts to the satellite in whichever room she's currently in — rather than broadcasting to the whole house or requiring her to be near a specific device — is a meaningful UX improvement worth designing for from the start.
+User-following requires presence detection infrastructure (FP300 sensors, phone tracking, etc.) — deferred until that's in place.
 
 ---
 
 ## Node-RED Integration Points
 
-NR isn't deeply involved in the Assist pipeline itself, but there are three clean integration points. Understanding the seams matters more than having specific plans for them.
+Assist is HA-native, but Node-RED has several integration surfaces:
 
-### NR → TTS directly (most common)
+### TTS via Service Call
 
-When NR has already determined what needs to be said, it calls `tts.speak` targeting a specific satellite/media player. This bypasses the conversation agent entirely — straight to the TTS engine, same Google Cloud voice. This covers the majority of NR notification and announcement use cases.
+NR can trigger TTS on any satellite via HA service call:
 
-### NR triggering a proactive Assist conversation
+```yaml
+service: tts.speak
+data:
+  media_player_entity_id: media_player.kitchen_satellite
+  message: "The garage door has been open for 30 minutes."
+```
 
-NR detects a triggering event → calls HA service to initiate a proactive conversation on a specific satellite → satellite speaks the prompt and listens → response flows through the full pipeline → NR can optionally subscribe to the outcome event and act on it.
+Uses the same Google Cloud TTS voice as Assist responses.
 
-Example: NR detects washing machine cycle complete → initiates conversation on nearest satellite → "The laundry is done. Do you want a reminder in 30 minutes to move it?" → response comes back → NR sets the timer.
+### Proactive Conversation Trigger
 
-### NR → `conversation.process` (less common)
+NR can initiate a proactive conversation via HA service call:
 
-NR can call `conversation.process` to send text directly into the conversation agent and receive a structured response. Effectively uses Assist as an NLU engine. Niche use case — NR is usually the one doing the reasoning — but the capability exists.
+```yaml
+service: conversation.process
+data:
+  agent_id: conversation.ollama
+  text: "The garage door has been open for 30 minutes. Should I close it?"
+  device_id: &lt;satellite_device_id&gt;
+```
 
-### Division of Labor
+*Note: Exact service and parameters may have evolved — verify against current HA docs during implementation.*
 
-- **NR owns event detection and triggering logic** — knows what happened, decides whether it warrants a voice interaction, decides which satellite to target
-- **Assist owns the voice conversation** — STT, conversation, TTS
-- **NR optionally owns follow-through** — if the conversation outcome requires MQTT device control or complex automation, NR may be better placed to execute it
+### Notification vs. Conversation Decision
+
+NR flows decide: is this a one-way notification (TTS only) or a conversation (expects response)?
+
+| Scenario | Approach |
+|----------|----------|
+| "Package delivered" | TTS notification |
+| "Garage door open 30 min — close it?" | Proactive conversation |
+| "Severe weather alert" | TTS notification (broadcast) |
+| "Visitor at front door — unlock?" | Proactive conversation |
 
 Handoff points: HA service calls (NR → Assist) and HA events (Assist outcome → NR subscribes and reacts).
 
@@ -175,7 +198,7 @@ MQTT_TOPICS.md designates **HA Assist / Voice** as a domain pending definition. 
 
 ## Implementation Sequence
 
-All of this follows baseline infrastructure (Communication Hub → HAOS → Workflow) being stable.
+All of this follows baseline infrastructure (PNC → HAOS → Node-RED) being stable.
 
 1. **Google Cloud TTS** — Configure integration, select voice, validate output quality. Foundational dependency; low risk, do first.
 2. **Whisper STT** — Install HA add-on. Enables text *or* voice input via Companion app; no satellite hardware required yet.
@@ -214,6 +237,67 @@ The HA Companion app is not a satellite in the Wyoming protocol sense, but it is
 
 ---
 
+## Deferred: Persistent Memory Architecture
+
+**Status: Backburner — blocked on two fronts. Revisit when blockers resolve.**
+
+### Blockers
+
+**1. HA pipeline events are fully internal**
+
+`assist_pipeline_event` does not propagate to the external WebSocket API, the HA event bus as seen by NR, or Developer Tools event listener. Verified on HA 2026.3.1. The only externally visible artifact of an Assist interaction is a single `state_changed` event — insufficient for capture purposes.
+
+Clean per-interaction capture would require NR to own the conversation orchestration entirely, talking to Ollama directly rather than routing through HA's Assist pipeline. HA would be demoted to audio hardware layer only (wake word, STT, TTS). This is architecturally viable but adds significant complexity.
+
+**2. No viable local LLM inference hardware**
+
+The Edge AI box (Dell OptiPlex 7050 SFF) has one PCIe slot occupied by the Coral TPU. GPU acceleration for Ollama would require displacing the Coral, which is a non-starter. CPU-only inference on the i7-7700 produces marginal latency for voice use (~5-8 t/s on a 13B model) — technically functional but a poor experience. A dedicated GPU box resolves this but adds hardware cost and complexity. GPU hardware prices need to come down before this is worth pursuing.
+
+### Design Direction (When Revisited)
+
+**Core concept:** Marvin maintains durable long-term context via externalized markdown files, analogous to the architectural guidance files used in the hand-crafted SDLC workflow.
+
+**Daily cycle pattern:**
+- Context accumulates throughout the day in a working memory store
+- Nightly distillation (natural trigger: `highland/event/scheduler/midnight`) extracts and persists the items worth carrying forward
+- Each day starts fresh but informed — stale noise purged, durable knowledge retained
+
+**Memory categories (preliminary):**
+- User preferences and household context (known visitors, vehicle descriptions, recurring schedules)
+- Household knowledge — infrequently-changing facts Marvin should just know
+- Episodic carry-forward — things explicitly taught or important enough to survive the nightly purge
+- Learned behavioral patterns
+
+**Capture mechanism (when NR owns orchestration):**
+- NR intercepts input before sending to Ollama, and captures Ollama's response before returning to HA
+- Full exchange available at NR without depending on HA event exposure
+- Evaluation pass determines tier: ephemeral (today only), temporal (carries forward with expiry), permanent (durable household knowledge)
+
+**Write path:** Explicit teaching ("Marvin, remember that...") triggers immediate write. Implicit capture goes through nightly distillation pass.
+
+**Access pattern (to be designed):** Tool-calling preferred — Marvin calls `read_memory` when warranted rather than injecting full context on every turn.
+
+### What Was Tried (Live System, HA 2026.3.1)
+
+Approximately two hours of live experimentation confirmed the following dead ends:
+
+- `assist_pipeline_event` does not appear in Developer Tools event listener — fully internal
+- NR `events: all` node catches nothing pipeline-related regardless of filter configuration
+- HA automation triggered on `assist_pipeline_event` never fires
+- `mqtt.publish` not exposed as a callable action within conversation agent tool context
+- Intents require explicit phrase matching — cannot be wildcarded to cover all interactions
+- No native writable entity surface with sufficient payload capacity reachable from within the pipeline
+- `input_text` helper capped at 255 characters — insufficient
+- Entity attributes are computed/owned by their integration — not arbitrarily writable via service call
+
+**Conclusion:** HA has deliberately sandboxed the conversation agent. It can read home state and control devices through the sanctioned tool interface, and that's the extent of it. The read side (injecting external context) is likely equally constrained. This is not a solvable problem within the current HA architecture without owning the conversation orchestration entirely outside of HA.
+
+*Revisit triggers: HA exposes pipeline events externally, or dedicated LLM inference hardware becomes viable enough to justify a standalone Ollama box with NR owning full conversation orchestration.*
+
+**See PERSISTENT_MEMORY.md** — full architecture for the persistent memory system, proxy design, classification layer, and context lifecycle. Captured as a standalone document given the scope.
+
+---
+
 ## Open Questions
 
 - [ ] Ollama model selection — which model(s) for home control vs. general use? Depends on HAOS SFF memory headroom under real load.
@@ -222,8 +306,8 @@ The HA Companion app is not a satellite in the Wyoming protocol sense, but it is
 - [ ] Per-room pipeline routing — e.g., bedroom satellite uses lower-volume TTS response
 - [ ] ATOM Echo placement for initial testing
 - [ ] Echo Show LineageOS build process and any known blockers for Gen 1
-- [ ] Speaker recognition — monitor [EuleMitKeule/speaker-recognition](https://github.com/EuleMitKeule/speaker-recognition): HA addon + custom integration using Resemblyzer neural voice embeddings. Trains on audio samples per user, returns speaker name + confidence score. Plugs into STT and conversation agent pipeline natively. Early project (low star count) but implementation looks legitimate. Python <3.10 requirement for server capabilities worth noting. If this matures, closes the "who asked?" gap for shared room satellites and enables per-user response targeting without relying on Companion app identity or satellite topology heuristics.
+- [ ] Speaker recognition — monitor [EuleMitKeule/speaker-recognition](https://github.com/EuleMitKeule/speaker-recognition): HA addon + custom integration using Resemblyzer neural voice embeddings. Trains on audio samples per user, returns speaker name + confidence score. Plugs into STT and conversation agent pipeline natively. Early project (low star count) but implementation looks legitimate. Python &lt;3.10 requirement for server capabilities worth noting. If this matures, closes the "who asked?" gap for shared room satellites and enables per-user response targeting without relying on Companion app identity or satellite topology heuristics.
 
 ---
 
-*Last Updated: 2026-03-11 — Session working notes, not yet promoted to project docs*
+*Last Updated: 2026-03-12 — Session working notes, not yet promoted to project docs*

@@ -250,11 +250,20 @@ advanced:
 ```
 
 **Generate network key:**
+
+The `network_key` field requires an array of 16 decimal integers (one per byte) — not a raw hex string. Use this one-liner to generate and format it in one step:
+
 ```bash
-# Generate a random network key
-openssl rand -hex 16
-# Format as array: [0xAA, 0xBB, 0xCC, ...]
+openssl rand -hex 16 | sed 's/\(..\)/0x\1 /g' | xargs printf "%d " | \
+  awk '{printf "["; for(i=1;i<=NF;i++) printf "%s%s", $i, (i<NF?", ":""); print "]"}'
 ```
+
+Output will be ready to paste directly into `configuration.yaml`, e.g.:
+```
+[161, 178, 195, 212, 229, 246, 161, 178, 195, 212, 229, 246, 161, 178, 195, 212]
+```
+
+Replace `GENERATE_NEW_KEY` in the yaml with this array. **Save it somewhere safe** — if you ever lose the network key, all paired Zigbee devices will need to be re-paired.
 
 ### 1.8 Z-Wave JS UI Configuration
 

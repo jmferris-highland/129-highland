@@ -287,6 +287,13 @@ Z-Wave JS UI is configured via its web interface after first launch. Key setting
 - **MQTT Auth:** svc_zwavejs / password
 - **MQTT Prefix:** `zwave`
 
+**Home Assistant integration settings** (under Settings → Home Assistant):
+- **WS Server:** Enable — starts the WebSocket server that HA connects to (off by default)
+- **Server Port:** 3000 (default, matches docker-compose port mapping)
+- **DNS Discovery:** Enable — broadcasts the instance via mDNS so HA auto-discovers it without needing the URL manually entered
+
+> **Note:** With DNS Discovery enabled, HA's Z-Wave integration may detect the instance automatically. If it doesn't auto-discover, manually enter `ws://hub.local:3000` when prompted.
+
 ### 1.9 Docker Compose
 
 **Create `/opt/highland/docker-compose.yml`:**
@@ -423,7 +430,7 @@ If not using DHCP reservation, set static IP:
 2. Search for "Z-Wave"
 3. Select "Z-Wave JS"
 4. Choose "Use Z-Wave JS Supervisor add-on" → **No**
-5. Enter WebSocket URL: `ws://hub.local:3000`
+5. Enter WebSocket URL: `ws://hub.local:3000` (or let DNS Discovery auto-populate)
 6. Submit
 
 ### 2.7 Zigbee2MQTT Integration
@@ -957,7 +964,7 @@ Create these flows in Node-RED to establish baseline functionality:
 ### First Automation
 
 | Check | Status |
-|-------|--------|  
+|-------|--------|
 | Test device paired to new Z2M | ☐ |
 | Device visible in HA | ☐ |
 | Node-RED can control device via MQTT | ☐ |

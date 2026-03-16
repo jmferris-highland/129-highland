@@ -435,38 +435,20 @@ If not using DHCP reservation, set static IP:
 
 ### 2.7 Zigbee2MQTT Integration
 
-Option A: Use MQTT discovery (automatic if Z2M has `homeassistant: true`)
+With `homeassistant: true` in Z2M's configuration and the MQTT integration connected, Z2M device discovery is automatic — no additional steps required. Devices should already be visible under Settings → Devices & Services → MQTT.
 
-Option B: Add MQTT integration and devices appear automatically
+### 2.8 Sidebar Panels
 
-### 2.8 Sidebar Panels (Iframe)
+Add Z2M and Z-Wave JS UI as sidebar panels via the UI. `panel_iframe` was removed in HA 2023.x — the replacement is a Webpage dashboard.
 
-**For Z2M Frontend:**
-1. Edit `configuration.yaml` (via File Editor or SSH)
-2. Add:
-```yaml
-panel_iframe:
-  zigbee2mqtt:
-    title: "Zigbee2MQTT"
-    url: "http://hub.local:8080"
-    icon: mdi:zigbee
-    require_admin: true
-```
+For each panel: **Settings → Dashboards → Add Dashboard → Webpage**
 
-**For Z-Wave JS UI:**
-```yaml
-panel_iframe:
-  zwavejs:
-    title: "Z-Wave JS"
-    url: "http://hub.local:8091"
-    icon: mdi:z-wave
-    require_admin: true
-```
+| Panel | Title | URL | Icon |
+|---|---|---|---|
+| Zigbee2MQTT | `Zigbee2MQTT` | `http://hub.local:8080` | `mdi:zigbee` |
+| Z-Wave JS UI | `Z-Wave JS` | `http://hub.local:8091` | `mdi:z-wave` |
 
-3. Restart Home Assistant
-4. Verify panels appear in sidebar
-
-*Note: These panels are local network only. Not accessible via Nabu Casa remote.*
+Both panels are local network only — not accessible via Nabu Casa remote.
 
 ### 2.9 Long-Lived Access Token
 
@@ -694,17 +676,13 @@ echo '{}' > secrets.json
 
 ### 3.11 HA Sidebar Panel (Optional)
 
-Add Node-RED to HA sidebar:
+Add Node-RED to the HA sidebar via **Settings → Dashboards → Add Dashboard → Webpage**:
 
-```yaml
-# In HA configuration.yaml
-panel_iframe:
-  nodered:
-    title: "Node-RED"
-    url: "http://workflow.local:1880"
-    icon: mdi:sitemap
-    require_admin: true
-```
+| Field | Value |
+|---|---|
+| Title | `Node-RED` |
+| URL | `http://workflow.local:1880` |
+| Icon | `mdi:sitemap` |
 
 ### 3.12 Verification
 

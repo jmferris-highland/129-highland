@@ -242,6 +242,7 @@ mqtt:
   password: "YOUR_SVC_ZIGBEE2MQTT_PASSWORD"
 serial:
   port: /dev/ttyUSB0  # Container-side path — Docker maps the host's by-id path to this
+  adapter: ember       # Required in Z2M 2.x — MG24 uses EmberZNet (Silicon Labs) chipset
 frontend:
   port: 8080
 advanced:
@@ -249,7 +250,7 @@ advanced:
   log_level: info
 ```
 
-> **Serial port note:** Z2M uses the **container-side** device path (`/dev/ttyUSB0`), not the host's by-id path. Docker resolves the stable by-id symlink on the host and exposes the physical device inside the container at `/dev/ttyUSB0`. The stability guarantee comes from the host-side mapping in `docker-compose.yml` — no remapping risk.
+> **Serial port note:** Z2M uses the **container-side** device path (`/dev/ttyUSB0`), not the host's by-id path. Docker resolves the stable by-id symlink on the host and exposes the physical device inside the container at `/dev/ttyUSB0`. The stability guarantee comes from the host-side mapping in `docker-compose.yml` — no remapping risk. The `adapter: ember` field is **required in Z2M 2.x** for Silicon Labs/EmberZNet chipsets (MG24, EFR32); omitting it causes a "no valid USB adapter found" error even with a correct port path.
 
 **Generate network key:**
 
@@ -273,7 +274,7 @@ Replace `GENERATE_NEW_KEY` in the yaml with this array. **Save it somewhere safe
 
 Z-Wave JS UI is configured via its web interface after first launch. Key settings to configure:
 
-- **Serial port:** `/dev/serial/by-id/usb-Zooz_800_xxx-if00-port0`
+- **Serial port:** `/dev/zwave` (container-side path, mapped from host's by-id path in docker-compose.yml)
 - **MQTT Gateway:** Enabled
 - **MQTT Host:** `mosquitto` (Docker network)
 - **MQTT Port:** 1883

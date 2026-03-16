@@ -127,6 +127,11 @@ sudo timedatectl set-timezone America/New_York
 # Install essentials
 sudo apt install -y curl git htop mosquitto-clients jq
 
+# Install Avahi for mDNS — enables hub.local resolution on the local network
+sudo apt install -y avahi-daemon
+sudo systemctl enable avahi-daemon
+sudo systemctl start avahi-daemon
+
 # Reboot to confirm static IP persists
 sudo reboot
 ```
@@ -501,6 +506,11 @@ sudo timedatectl set-timezone America/New_York
 
 # Install essentials
 sudo apt install -y curl git htop jq mosquitto-clients
+
+# Install Avahi for mDNS — enables workflow.local resolution on the local network
+sudo apt install -y avahi-daemon
+sudo systemctl enable avahi-daemon
+sudo systemctl start avahi-daemon
 
 # Reboot
 sudo reboot

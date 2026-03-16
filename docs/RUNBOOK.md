@@ -46,7 +46,11 @@ Generate/document these before starting:
 
 | Credential | Purpose | Store In |
 |------------|---------|----------|
-| MQTT username/password | Broker auth | secrets.json, Mosquitto config |
+| MQTT `svc_zigbee2mqtt` password | Zigbee2MQTT → broker auth | secrets.json |
+| MQTT `svc_zwavejs` password | Z-Wave JS UI → broker auth | secrets.json |
+| MQTT `svc_nodered` password | Node-RED → broker auth | secrets.json |
+| MQTT `svc_homeassistant` password | Home Assistant → broker auth | secrets.json |
+| MQTT `svc_scripts` password | Backup/watchdog scripts → broker auth | secrets.json |
 | HA long-lived access token | Node-RED → HA integration | Node-RED credentials |
 | Healthchecks.io ping URLs | External monitoring | secrets.json |
 | SMTP credentials | Daily digest email | secrets.json |
@@ -194,13 +198,36 @@ password_file /mosquitto/config/password.txt
 ```
 
 **Create password file:**
-```bash
-# Install mosquitto package for password utility (or use Docker)
-docker run --rm -v /opt/highland/mosquitto/config:/mosquitto/config \
-  eclipse-mosquitto mosquitto_passwd -c /mosquitto/config/password.txt highland
 
-# Enter password when prompted
+> **Note:** These are bespoke MQTT client credentials stored in Mosquitto's own password file — completely separate from Linux system user accounts. Each service gets its own credential for auditability and future ACL flexibility. Record all passwords in `secrets.json` as you create them.
+
+```bash
+# -c creates the file — use ONLY for the first user (overwrites if used again!)
+# -it required: allocates a TTY so the password prompt works
+docker run --rm -it -v /opt/highland/mosquitto/config:/mosquitto/config \
+  eclipse-mosquitto mosquitto_passwd -c /mosquitto/config/password.txt svc_zigbee2mqtt
+
+# Add remaining service accounts (no -c — that would overwrite the file)
+docker run --rm -it -v /opt/highland/mosquitto/config:/mosquitto/config \
+  eclipse-mosquitto mosquitto_passwd /mosquitto/config/password.txt svc_zwavejs
+
+docker run --rm -it -v /opt/highland/mosquitto/config:/mosquitto/config \
+  eclipse-mosquitto mosquitto_passwd /mosquitto/config/password.txt svc_nodered
+
+docker run --rm -it -v /opt/highland/mosquitto/config:/mosquitto/config \
+  eclipse-mosquitto mosquitto_passwd /mosquitto/config/password.txt svc_homeassistant
+
+docker run --rm -it -v /opt/highland/mosquitto/config:/mosquitto/config \
+  eclipse-mosquitto mosquitto_passwd /mosquitto/config/password.txt svc_scripts
 ```
+
+| Credential | Used By |
+|---|---|
+| `svc_zigbee2mqtt` | Zigbee2MQTT container |
+| `svc_zwavejs` | Z-Wave JS UI container |
+| `svc_nodered` | Node-RED (primary automation engine) |
+| `svc_homeassistant` | Home Assistant MQTT integration |
+| `svc_scripts` | Backup scripts, watchdog, CLI debug tools |
 
 ### 1.7 Zigbee2MQTT Configuration
 
@@ -211,8 +238,8 @@ permit_join: false
 mqtt:
   base_topic: zigbee2mqtt
   server: mqtt://mosquitto:1883
-  user: highland
-  password: YOUR_MQTT_PASSWORD
+  user: svc_zigbee2mqtt
+  password: YOUR_SVC_ZIGBEE2MQTT_PASSWORD
 serial:
   port: /dev/serial/by-id/usb-ITead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_xxx-if00-port0
 frontend:
@@ -237,7 +264,7 @@ Z-Wave JS UI is configured via its web interface after first launch. Key setting
 - **MQTT Gateway:** Enabled
 - **MQTT Host:** `mosquitto` (Docker network)
 - **MQTT Port:** 1883
-- **MQTT Auth:** highland / password
+- **MQTT Auth:** svc_zwavejs / password
 - **MQTT Prefix:** `zwave`
 
 ### 1.9 Docker Compose
@@ -306,7 +333,7 @@ docker compose logs -f  # Watch logs, Ctrl+C to exit
 
 | Check | Command / Action |
 |-------|------------------|
-| MQTT broker responding | `mosquitto_sub -h localhost -u highland -P password -t '#' -v` |
+| MQTT broker responding | `mosquitto_sub -h localhost -u svc_scripts -P password -t '#' -v` |
 | Z2M frontend accessible | Browse to `http://hub.local:8080` |
 | Z-Wave JS UI accessible | Browse to `http://hub.local:8091` |
 | Z-Wave JS WebSocket | Configure in UI, check logs |
@@ -314,10 +341,10 @@ docker compose logs -f  # Watch logs, Ctrl+C to exit
 **Test MQTT pub/sub:**
 ```bash
 # Terminal 1: Subscribe
-mosquitto_sub -h localhost -u highland -P YOUR_PASSWORD -t 'test/#' -v
+mosquitto_sub -h localhost -u svc_scripts -P YOUR_SVC_SCRIPTS_PASSWORD -t 'test/#' -v
 
 # Terminal 2: Publish
-mosquitto_pub -h localhost -u highland -P YOUR_PASSWORD -t 'test/hello' -m 'world'
+mosquitto_pub -h localhost -u svc_scripts -P YOUR_SVC_SCRIPTS_PASSWORD -t 'test/hello' -m 'world'
 ```
 
 ---
@@ -364,8 +391,8 @@ If not using DHCP reservation, set static IP:
 3. Configure:
    - Broker: `hub.local` (or IP address)
    - Port: `1883`
-   - Username: `highland`
-   - Password: (your MQTT password)
+   - Username: `svc_homeassistant`
+   - Password: (your svc_homeassistant MQTT password)
 4. Submit and verify connection
 
 ### 2.6 Z-Wave JS Integration
@@ -723,11 +750,11 @@ find "${BACKUP_DIR}" -name "hub_backup_*.tar.gz" -mtime +7 -delete
 
 # Publish result to MQTT
 if [ $? -eq 0 ]; then
-    mosquitto_pub -h localhost -u highland -P "PASSWORD" \
+    mosquitto_pub -h localhost -u svc_scripts -P "YOUR_SVC_SCRIPTS_PASSWORD" \
         -t "highland/event/backup/completed" \
         -m "{\"host\":\"hub\",\"file\":\"${BACKUP_FILE}\",\"timestamp\":\"$(date -Iseconds)\"}"
 else
-    mosquitto_pub -h localhost -u highland -P "PASSWORD" \
+    mosquitto_pub -h localhost -u svc_scripts -P "YOUR_SVC_SCRIPTS_PASSWORD" \
         -t "highland/event/backup/failed" \
         -m "{\"host\":\"hub\",\"error\":\"tar failed\",\"timestamp\":\"$(date -Iseconds)\"}"
 fi
@@ -751,8 +778,8 @@ echo "15 3 * * * root /usr/local/bin/highland-backup.sh" | sudo tee /etc/cron.d/
 # Highland Watchdog - Monitors Node-RED heartbeat
 
 MQTT_HOST="hub.local"
-MQTT_USER="highland"
-MQTT_PASS="PASSWORD"
+MQTT_USER="svc_scripts"
+MQTT_PASS="YOUR_SVC_SCRIPTS_PASSWORD"
 HEARTBEAT_TOPIC="highland/status/node_red/heartbeat"
 HC_PING_URL="https://hc-ping.com/YOUR-UUID-HERE"
 TIMEOUT=90
@@ -856,4 +883,4 @@ Create these flows in Node-RED to establish baseline functionality:
 
 ---
 
-*Last Updated: 2026-03-13*
+*Last Updated: 2026-03-16*

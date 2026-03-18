@@ -844,10 +844,17 @@ echo "15 3 * * * root /usr/local/bin/highland-backup.sh" | sudo tee /etc/cron.d/
 
 ### Watchdog Script
 
+> **Note:** The original watchdog design below — subscribing to Node-RED's MQTT heartbeat and pinging Healthchecks.io on receipt — has been superseded. Node-RED now pings Healthchecks.io directly via HTTP from the Health Monitor flow, which correctly separates Node-RED liveness from MQTT liveness. If MQTT goes down but Node-RED is up, the original design would have falsely reported Node-RED as unhealthy.
+>
+> Whether a watchdog script has a remaining role will be determined as each Health Monitor service check is designed. The script below is retained as a reference only.
+
+**Original design (reference only — do not deploy):**
+
 **Create `/usr/local/bin/highland-watchdog.sh` on Workflow host:**
 ```bash
 #!/bin/bash
 # Highland Watchdog - Monitors Node-RED heartbeat
+# NOTE: Superseded by direct HTTP pinging from Health Monitor flow
 
 MQTT_HOST="hub.local"
 MQTT_USER="svc_scripts"
@@ -866,19 +873,13 @@ else
 fi
 ```
 
-```bash
-sudo chmod +x /usr/local/bin/highland-watchdog.sh
-echo "* * * * * root /usr/local/bin/highland-watchdog.sh" | sudo tee /etc/cron.d/highland-watchdog
-```
-
 ### Healthchecks.io Setup
 
 1. Create account at healthchecks.io
-2. Create checks for:
-   - `highland-node-red` (1 min period, 2 min grace)
-   - `highland-hub-backup` (24h period, 1h grace)
-   - `highland-workflow-backup` (24h period, 1h grace)
-3. Copy ping URLs to `secrets.json`
+2. Create initial check:
+   - `highland-node-red` (1 min period, 2.5 min grace)
+3. Copy ping URL to `secrets.json` under `healthchecks_io.node_red`
+4. Additional checks (`highland-mqtt`, `highland-z2m`, `highland-zwave`, `highland-ha`) will be added as each Health Monitor service check is implemented
 
 ### Log Rotation
 
@@ -899,8 +900,8 @@ echo "* * * * * root /usr/local/bin/highland-watchdog.sh" | sudo tee /etc/cron.d
 
 Create these flows in Node-RED to establish baseline functionality:
 
-1. **Config Loader** — Load config files on startup
-2. **Health Monitor** — Publish heartbeat every 30 seconds
+1. **Config Loader** — Load config files on startup ✅
+2. **Health Monitor** — Ping Healthchecks.io, monitor services
 3. **Logging Utility** — Subscribe to `highland/event/log`, write to JSONL
 
 ### First Device Migration Test
@@ -941,9 +942,8 @@ Create these flows in Node-RED to establish baseline functionality:
 |-------|--------|
 | Hub backup script installed | ☐ |
 | Hub backup cron configured | ☐ |
-| Watchdog script installed | ☐ |
-| Watchdog cron configured | ☐ |
-| Healthchecks.io receiving pings | ☐ |
+| Healthchecks.io checks configured | ☐ |
+| Node-RED Health Monitor pinging Healthchecks.io | ☐ |
 | Log rotation configured | ☐ |
 
 ### First Automation

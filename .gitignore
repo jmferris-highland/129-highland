@@ -1,5 +1,6 @@
 # Secrets and credentials
 secrets.json
+secrets.yaml
 *.secret
 *.key
 *.pem
@@ -17,6 +18,15 @@ local/
 # Node-RED
 node-red/.config.nodes.json
 node-red/.flows.json.backup
+
+# Home Assistant
+.storage/
+.cloud/
+home-assistant_v2.db
+home-assistant_v2.db-shm
+home-assistant_v2.db-wal
+home-assistant.log
+home-assistant.log.1
 
 # OS files
 .DS_Store

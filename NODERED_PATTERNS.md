@@ -764,6 +764,96 @@ Same MQTT/console fallback pattern as `Utility: Connections`. `Build Service Cal
 
 ---
 
+## Utility: Scheduling
+
+### Purpose
+
+Publishes period transitions and fixed task events to the MQTT bus. All time-based triggers in Highland originate here — no other flow contains scheduling logic.
+
+### Topics
+
+| Topic | Retained | Purpose |
+|-------|----------|---------|
+| `highland/state/scheduler/period` | Yes | Current period — ground truth for all period-aware flows |
+| `highland/event/scheduler/daytime` | No | Fired on transition to daytime |
+| `highland/event/scheduler/evening` | No | Fired on transition to evening |
+| `highland/event/scheduler/overnight` | No | Fired on transition to overnight |
+| `highland/event/scheduler/midnight` | No | Fired daily at 00:00:00 |
+
+### Periods
+
+Three periods driven by `node-red-contrib-schedex` using solar events and fixed times:
+
+| Period | On time | On offset | Off time | Off offset |
+|--------|---------|-----------|----------|------------|
+| `daytime` | `sunrise` | 0 | `sunset` | -30 min |
+| `evening` | `sunset` | -30 min | `22:00` | 0 |
+| `overnight` | `22:00` | 0 | `sunrise` | 0 |
+
+Schedex coordinates: lat `41.5204`, lon `-74.0606` (matches `location.json`). All 7 days enabled.
+
+### Groups
+
+**Dynamic Periods** — Three schedex nodes (Daytime, Evening, Overnight), each wiring through a `link call` return pattern into a shared `Publish Dynamic Period` link in → `Is Active?` switch → `Prepare Dynamic` function → two MQTT out nodes (event + state)
+
+**Fixed Events** — Midnight inject (cron `00 00 * * *`) → `Prepare Fixed` function → MQTT out
+
+**Sinks** — On Startup inject → `Recover Last State` function (sets `startup_recovering` flag, sends `send_state` to all three schedex nodes via dynamic `link call`) → Dynamic Period `link call`
+
+**Test Cases** — Manual injects for daytime, evening, overnight (wired to `Publish Dynamic Period` link in), and midnight (wired to `Prepare Fixed`)
+
+### Startup Recovery
+
+On startup, `Recover Last State` sends `send_state` to all three schedex nodes via dynamic `link call`. Each schedex node emits its current state if it is within its active window — exactly one of the three responds with a non-empty payload. The `Is Active?` switch drops the empty off-window responses. `Prepare Dynamic` detects the `startup_recovering` flag and publishes state only (no event) during the recovery window.
+
+**`startup_recovering` flag:** Set to `true` for 2 seconds in the `volatile` store on startup. During this window, `Prepare Dynamic` suppresses events and publishes state only. After the window, all transitions publish both event and state.
+
+### Period-Aware Flow Pattern
+
+Flows that respond to period changes use **two entry points, one handler**:
+
+```
+highland/state/scheduler/period  ──┐  (retained — delivered on subscription,
+  (startup recovery path)          │   covers restart/init)
+                                   ├──► period logic
+highland/event/scheduler/evening ──┘  (non-retained — real-time transition)
+```
+
+This is a push model, not polling. The retained state delivers once on subscription; events drive everything thereafter.
+
+**State-following flows** (lights, ambiance): read retained period on startup, act immediately. No reconciliation needed — just apply the current period's intent.
+
+**Safety-critical flows** (locks, security): read retained period on startup, query actual device state, reconcile if misaligned or prompt for confirmation. The scheduler publishes truth; consuming flows own reconciliation.
+
+### Midnight Event Payload
+
+```json
+{
+  "timestamp": "2026-03-23T00:00:00.000Z",
+  "source": "scheduler",
+  "task": "midnight"
+}
+```
+
+### Period Event/State Payload
+
+```json
+{
+  "period": "evening",
+  "timestamp": "2026-03-23T19:47:12.000Z",
+  "source": "scheduler"
+}
+```
+
+### Notes
+
+- `send_state` to schedex nodes dispatched via dynamic `link call` — each schedex node is a named `Link In` target (`Daytime`, `Evening`, `Overnight`)
+- Spreading a string payload with `{...msg.payload}` produces a character-indexed object — always pass string payloads directly as `msg.payload`
+- `Prepare Fixed` sets `node.status()` on every midnight fire for "last fired" visibility in the editor
+- Midnight cron uses Node-RED's 5-field format: `"00 00 * * *"` (minute hour day month weekday)
+
+---
+
 ## Health Monitoring
 
 ### Philosophy
@@ -839,10 +929,10 @@ Centralized ACK tracking for flows that need confirmation of actions.
 - [x] ~~Television Delivery group~~ → **Built; HA state lookup, source → endpoint type resolution, dispatches to Android TV or WebOS via `link call`; unknown source and TV-off both log WARN and drop**
 - [x] ~~Android TV Delivery group~~ → **Built; `nfandroidtv` via HA; severity maps to duration/color/interrupt; clears are no-ops**
 - [x] ~~WebOS Delivery group~~ → **Built; WebOS notify via HA; clears are no-ops**
+- [x] ~~Utility: Scheduler~~ → **Built and tested; three solar/fixed periods via schedex, midnight task event, startup recovery via send_state, retained state + non-retained events**
 - [ ] **Echo Show / View Assist** — LineageOS Echo Show devices running View Assist; determine whether HA registers them as `mobile_app_*` (→ `ha_companion` channel, no new plumbing) or as Android TV devices (→ `android_tv` endpoint type); add to `notifications.json` accordingly after setup
 - [ ] **Voice notifications** — Completely separate from visual notifications; different payload schema (`tts_text`, target speaker, voice/language, volume, interruptible vs queued); publish to `highland/event/speak`; handled by a future `Utility: Voice` flow; callers may publish to both `highland/event/notify` and `highland/event/speak` independently when both visual and spoken delivery is desired
 - [ ] **Action responses** — deferred until actionable notifications are implemented
-- [ ] **Utility: Scheduler** — period transitions and task events
 
 ---
 

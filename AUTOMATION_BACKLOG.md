@@ -50,6 +50,7 @@ Captured ideas for future automations. Not requirements — just things worth ex
 | Idea | Notes | Added |
 |------|-------|-------|
 | Host metrics monitoring | CPU load, memory usage, disk usage, and operating temperatures for Hub and Workflow hosts. Lightweight agent script per host publishes to `highland/status/{host}/metrics` (retained); Health Monitor evaluates against thresholds from `thresholds.json`. Hub will also need per-container metrics via `docker stats`. Revisit when baseline is stable and there is a concrete reason to care. | 2026-03-23 |
+| Device auto-discovery | When a payload arrives from an unregistered device, create a provisional device_registry.json entry (key, derived name, protocol, topic, partial capabilities inferred from payload fields) and flag for human review via notification or daily digest. Reduces manual registry maintenance from "author from scratch" to "review and enrich". Z2M bridge/devices topic provides protocol, topic, and modelID to bootstrap the entry. | 2026-03-23 |
 
 ### AI & Advanced
 

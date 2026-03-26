@@ -59,7 +59,7 @@ Generate/document these before starting:
 | Google Calendar API key | Daily digest | secrets.json |
 
 **SSH keys:**
-- [ ] Generate SSH keypair for admin access to Ubuntu hosts
+- [X] Generate SSH keypair for admin access to Ubuntu hosts
 
 ### Downloads to Stage
 
@@ -574,6 +574,7 @@ services:
     volumes:
       - /opt/highland/nodered/data:/data
       - /home/nodered/config:/config:ro
+      - /home/nodered/assets:/assets
       - /var/log/highland:/var/log/highland
     extra_hosts:
       - "home.local:HAOS_IP_ADDRESS"    # mDNS doesn't work inside Docker — map explicitly
@@ -619,7 +620,7 @@ Install via Node-RED UI (Menu → Manage Palette → Install):
 | Package | Purpose |
 |---------|---------|
 | `node-red-contrib-home-assistant-websocket` | HA integration |
-| `node-red-node-markdown` | Markdown → HTML for digest |
+| `node-red-node-email` | SMTP email delivery (Daily Digest) |
 | `schedex` | Sunrise/sunset scheduling |
 | `node-red-contrib-moment` | Date/time handling (optional) |
 
@@ -952,37 +953,37 @@ Create these flows in Node-RED to establish baseline functionality:
 
 | Check | Status |
 |-------|--------|
-| Hub: All containers running | ☐ |
-| Hub: MQTT accepting connections | ☐ |
-| Hub: Z2M frontend accessible | ☐ |
-| Hub: Z-Wave JS UI accessible | ☐ |
-| HAOS: Running and accessible | ☐ |
-| HAOS: MQTT integration connected | ☐ |
-| HAOS: Z-Wave JS integration connected | ☐ |
-| Workflow: Node-RED accessible | ☐ |
-| Workflow: HA integration connected | ☐ |
-| Workflow: Context persistence working | ☐ |
-| NVR: Cameras recording | ☐ |
-| NVR: HA integration working | ☐ |
+| Hub: All containers running | [X] |
+| Hub: MQTT accepting connections | [X] |
+| Hub: Z2M frontend accessible | [X] |
+| Hub: Z-Wave JS UI accessible | [X] |
+| HAOS: Running and accessible | [X] |
+| HAOS: MQTT integration connected | [X] |
+| HAOS: Z-Wave JS integration connected | [X] |
+| Workflow: Node-RED accessible | [X] |
+| Workflow: HA integration connected | [X] |
+| Workflow: Context persistence working | [X] |
+| NVR: Cameras recording | [] |
+| NVR: HA integration working | [] |
 
 ### Backup & Monitoring
 
 | Check | Status |
 |-------|--------|
-| Hub backup script installed | ☐ |
-| Hub backup cron configured | ☐ |
-| Healthchecks.io checks configured | ☐ |
-| Node-RED Health Monitor pinging Healthchecks.io | ☐ |
-| Log rotation configured | ☐ |
+| Hub backup script installed | [] |
+| Hub backup cron configured | [] |
+| Healthchecks.io checks configured | [X] |
+| Node-RED Health Monitor pinging Healthchecks.io | [X] |
+| Log rotation configured | [X] |
 
 ### First Automation
 
 | Check | Status |
 |-------|--------|
-| Test device paired to new Z2M | ☐ |
-| Device visible in HA | ☐ |
-| Node-RED can control device via MQTT | ☐ |
-| End-to-end automation working | ☐ |
+| Test device paired to new Z2M | [X] |
+| Device visible in HA | [X] |
+| Node-RED can control device via MQTT | [] |
+| End-to-end automation working | [] |
 
 ---
 

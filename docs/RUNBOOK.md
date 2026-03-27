@@ -866,6 +866,18 @@ cd /opt/highland
 docker compose up -d --force-recreate nodered
 ```
 
+**Node-RED `/config` volume mount:** The `Utility: Device Registry` flow writes back to `/home/nodered/config/device_registry.json` at runtime. The volume mount must **not** have the `:ro` flag, and the directory needs write permission for the container user:
+
+```yaml
+# In nodered service volumes — ensure this is NOT :ro
+- /home/nodered/config:/config
+```
+
+```bash
+# On the Workflow host
+chmod 775 /home/nodered/config
+```
+
 **HA:** Automatic backups remain enabled. Node-RED audits `sensor.backup_last_successful_automatic_backup` at 3:15 AM and notifies if the last backup is older than 26 hours. No changes to HA backup settings required.
 
 **Node-RED — Utility: Backup flow:**
@@ -984,7 +996,7 @@ Create these flows in Node-RED to establish baseline functionality:
 | Hub `highland-backup-listener.service` enabled and running | [X] |
 | Workflow: `/backups` volume mount added, nodered force-recreated | [X] |
 | Utility: Backup flow built and configured | [X] |
-| Scheduling: System Events group added | [] |
+| Scheduling: System Events group added | [X] |
 | Healthchecks.io checks configured | [X] |
 | Node-RED Health Monitor pinging Healthchecks.io | [X] |
 | Log rotation configured | [X] |

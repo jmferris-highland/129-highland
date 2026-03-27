@@ -16,7 +16,7 @@ Tracks battery levels across all Zigbee devices, detects state transitions, noti
 
 **Threshold rationale:** Some devices (e.g., Sonoff) report in 10% increments. These thresholds provide 7 levels of normal, 2 levels of low, 1 level of critical for coarse reporters.
 
-**Rechargeable devices:** `rechargeable: true` in the model catalog entry. The `Build Notification` node branches on this flag — message says "plug in to charge" rather than "replace N× type".
+**Rechargeable devices:** `rechargeable: true` in the `models` block of `device_registry.json`. The `Build Notification` node branches on this flag — message says "plug in to charge" rather than "replace N× type".
 
 ---
 
@@ -59,43 +59,33 @@ See `standards/MQTT_TOPICS.md` for full payload schemas.
 
 **Battery State Pipeline** — Link In → `Evaluate State` (Output 1: state changed; Output 2: no change/drop) → `Build Event` → MQTT out (battery event) + `Build Notification` → MQTT out (notify)
 
-**Device Discovery** — `zigbee2mqtt/bridge/devices` MQTT in → `Build Device Map` (populates `flow.device_models`)
-
-**Device Recovery** — On Startup inject → `Recover Critical State` → MQTT out (notify if overdue)
+**Device Recovery** — On Startup inject → Initializer Latch → `Recover Critical State` → MQTT out (notify if overdue)
 
 **Error Handling** — flow-wide catch → debug
 
 ---
 
-## Device Catalog Pattern
+## Device Registry Integration
 
-Battery type/quantity is model-level knowledge, not device-instance knowledge. Stored in `device_catalog.json`:
+Battery type/quantity is model-level knowledge stored in the `models` block of `device_registry.json`, keyed by `model_id`. The `Utility: Device Registry` flow populates `global.config.deviceRegistry` on startup.
 
-```json
-{
-  "models": {
-    "PS-S04D": {
-      "battery": { "type": "CR2450", "quantity": 2 }
-    },
-    "some-rechargeable-model": {
-      "rechargeable": true
-    }
-  },
-  "overrides": {
-    "office_desk_presence": {
-      "friendly_name": "Joseph's Desk Presence"
-    }
-  }
-}
+`Extract Battery` looks up device and battery info at runtime:
+
+```javascript
+const registry = global.get('config.deviceRegistry') || {};
+const deviceEntry = registry.devices?.[deviceKey];
+const friendlyName = deviceEntry?.friendly_name || derivedName;
+const modelId = deviceEntry?.model_id;
+const batterySpec = registry.models?.[modelId]?.battery || null;
 ```
 
-**Maintenance:** Add one entry per model the first time a device of that model is paired.
+**No `device_catalog.json`** — that file has been retired. All model battery specs and device metadata now live in `device_registry.json` under the `models` block.
 
 ---
 
 ## Friendly Name Derivation
 
-Registry absence is never a processing gate. Friendly names are derived automatically:
+Registry absence is never a processing gate. Friendly names are derived automatically if the device isn't in the registry:
 
 ```javascript
 const friendlyName = deviceKey
@@ -104,13 +94,7 @@ const friendlyName = deviceKey
 // "office_desk_presence" → "Office Desk Presence"
 ```
 
-`overrides` in `device_catalog.json` provide explicit overrides when the derived name isn't sufficient.
-
----
-
-## Build Device Map
-
-Subscribes to `zigbee2mqtt/bridge/devices` (retained). Fires on startup and on every Z2M restart. Builds `flow.device_models` map: `{ device_key → model_id }`. No latch needed — pure data population, no `global.config` dependency.
+If the device is in the registry, `deviceEntry.friendly_name` is used directly — which for Z2M devices is the Z2M friendly name (our device key convention), or the HA `name_by_user` override if set.
 
 ---
 
@@ -118,8 +102,8 @@ Subscribes to `zigbee2mqtt/bridge/devices` (retained). Fires on startup and on e
 
 | Condition | Behavior |
 |-----------|----------|
-| Device not in `device_models` | Process with no model info; no battery spec |
-| Model not in catalog | WARN log, process without battery spec detail |
+| Device not in registry | Process with derived friendly name; no battery spec |
+| Model not in `models` block | WARN log, process without battery spec detail |
 | No battery spec | Notification omits type/quantity detail |
 | `battery` field absent from payload | Message filtered in `Extract Battery`, no processing |
 
@@ -140,9 +124,10 @@ This guarantees no double-notification within a 24hr window and no silent drops 
 | Key | Store | Content |
 |-----|-------|---------|
 | `flow.battery_states` | default (disk) | `{ device_key: { state, level, last_notified_critical } }` |
-| `flow.device_models` | default (disk) | `{ device_key: model_id }` — rebuilt from Z2M on startup |
 | `flow.battery_timers` | volatile (memory) | `{ device_key: timer_handle }` — lost on restart, recovered by `Recover Critical State` |
+
+> **Note:** `flow.device_models` has been removed. Device-to-model mapping is now provided by `global.config.deviceRegistry` via the `Utility: Device Registry` flow. The Device Discovery group that previously subscribed to `zigbee2mqtt/bridge/devices` to build this map has been eliminated.
 
 ---
 
-*Last Updated: 2026-03-26*
+*Last Updated: 2026-03-27*

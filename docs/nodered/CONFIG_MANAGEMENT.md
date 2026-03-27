@@ -10,8 +10,7 @@ Centralized configuration using external JSON files. Config is separated from co
 
 ```
 /home/nodered/config/
-├── device_catalog.json         ← git: yes (model battery specs, friendly name overrides)
-├── device_registry.json        ← git: yes
+├── device_registry.json        ← git: yes (HA-sourced device/area data + manual models block)
 ├── flow_registry.json          ← git: yes (area→device mappings, if persisted)
 ├── location.json               ← git: yes (lat/lon, timezone, elevation)
 ├── notifications.json          ← git: yes (recipient mappings, channels)
@@ -22,7 +21,11 @@ Centralized configuration using external JSON files. Config is separated from co
 └── README.md                   ← git: yes (documents config structure)
 ```
 
+> **`device_catalog.json` is retired.** Model battery specs and friendly name overrides previously stored there are now part of `device_registry.json` under the `models` block. See `nodered/DEVICE_REGISTRY.md`.
+
 > **Scheduler configuration** (periods, sunrise/sunset) lives in schedex nodes within the Scheduler flow, not external config. `location.json` is the authoritative source for coordinates — schedex nodes reference it as documentation but require the values to be entered manually in the UI.
+
+> **Volume mount:** `/home/nodered/config` is mounted into the Node-RED container at `/config` **without** the `:ro` flag. The `Utility: Device Registry` flow writes `device_registry.json` back to this directory on every refresh. The directory requires `chmod 775` on the Workflow host to allow container writes.
 
 ---
 
@@ -205,7 +208,6 @@ Loads all config files into global context on startup, deploy, or MQTT reload co
 1. Read each JSON file from `/config/`
 2. Validate JSON structure
 3. Store in global context:
-   - `global.config.deviceCatalog`
    - `global.config.deviceRegistry`
    - `global.config.location`
    - `global.config.notifications`
@@ -213,6 +215,8 @@ Loads all config files into global context on startup, deploy, or MQTT reload co
    - `global.config.thresholds`
    - `global.config.healthchecks`
    - `global.config.secrets`
+
+   > **Note:** `global.config.deviceCatalog` no longer exists. The `Utility: Device Registry` flow overwrites `global.config.deviceRegistry` shortly after startup with a fresh HA pull. Config Loader's load of `device_registry.json` serves as the initial seed only.
 4. Publish `highland/status/config/loaded` (retained)
 5. Log: "Config loaded: {list}"
 
@@ -241,8 +245,12 @@ const apiKey = global.get('config.secrets.weather_api_key');
 const adminRecipients = global.get('config.notifications.defaults.admin_only');
 
 // Device info
-const device = global.get('config.deviceRegistry')?.['foyer_entry_door'];
+const device = global.get('config.deviceRegistry')?.devices?.['foyer_entry_door'];
 const friendlyName = device?.friendly_name;
+
+// Battery spec (via model lookup — never stored directly on device entry)
+const modelId = device?.model_id;
+const battery = global.get('config.deviceRegistry')?.models?.[modelId]?.battery;
 ```
 
 ---
@@ -256,4 +264,5 @@ On load, validate each config file:
 
 ---
 
-*Last Updated: 2026-03-26*
+*Last Updated: 2026-03-27*
+

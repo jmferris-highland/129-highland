@@ -1,0 +1,444 @@
+[
+    {
+        "id": "utility-weather-forecasts",
+        "type": "tab",
+        "label": "Utility: Weather Forecasts",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "4890ab63b13350cb",
+        "type": "group",
+        "z": "utility-weather-forecasts",
+        "name": "Error Handling",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "ec03925679bc3709",
+            "e116e4c00671be30"
+        ],
+        "x": 54,
+        "y": 399,
+        "w": 352,
+        "h": 82
+    },
+    {
+        "id": "e481f8752dd3b33c",
+        "type": "group",
+        "z": "utility-weather-forecasts",
+        "name": "Forecast",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "f9c0c78e641f451b",
+            "c80733bd972465cf",
+            "3f527ed540334e19",
+            "5d04d135cc3b380f",
+            "69176d85cc1e71c1",
+            "6ee160a2667b1430",
+            "d3ed978120580c25"
+        ],
+        "x": 54,
+        "y": 39,
+        "w": 1412,
+        "h": 142
+    },
+    {
+        "id": "034e6d7039aec520",
+        "type": "group",
+        "z": "utility-weather-forecasts",
+        "name": "Grid Resolution",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "542fd1cecc6e7cc0",
+            "16c18e9925d40747",
+            "58d308ec28983149",
+            "1b9625800238edb1",
+            "c0e76a7192a0c079"
+        ],
+        "x": 54,
+        "y": 219,
+        "w": 932,
+        "h": 142
+    },
+    {
+        "id": "16c18e9925d40747",
+        "type": "inject",
+        "z": "utility-weather-forecasts",
+        "g": "034e6d7039aec520",
+        "name": "On Startup",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 320,
+        "wires": [
+            [
+                "542fd1cecc6e7cc0"
+            ]
+        ]
+    },
+    {
+        "id": "542fd1cecc6e7cc0",
+        "type": "function",
+        "z": "utility-weather-forecasts",
+        "g": "034e6d7039aec520",
+        "name": "Build Points Request",
+        "func": "const location = global.get('config')?.location;\nconst userAgent = global.get('config')?.system?.http?.user_agent;\n\nmsg.url = `https://api.weather.gov/points/${location.latitude},${location.longitude}`;\nmsg.headers = {\n    'Accept': 'application/geo+json',\n    'User-Agent': userAgent\n};\nmsg.payload = '';\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 260,
+        "wires": [
+            [
+                "58d308ec28983149"
+            ]
+        ]
+    },
+    {
+        "id": "58d308ec28983149",
+        "type": "http request",
+        "z": "utility-weather-forecasts",
+        "g": "034e6d7039aec520",
+        "name": "Fetch Points",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 630,
+        "y": 260,
+        "wires": [
+            [
+                "1b9625800238edb1"
+            ]
+        ]
+    },
+    {
+        "id": "1b9625800238edb1",
+        "type": "function",
+        "z": "utility-weather-forecasts",
+        "g": "034e6d7039aec520",
+        "name": "Store Forecast URL",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nif (msg.statusCode !== 200) {\n    node.error(`Points fetch failed: ${msg.statusCode}`, msg);\n    return null;\n}\n\nconst forecastUrl = msg.payload?.properties?.forecast;\nif (!forecastUrl) {\n    node.error('No forecast URL in points response', msg);\n    return null;\n}\n\nflow.set('forecast_url', forecastUrl);\nnode.status({ fill: 'green', shape: 'dot', text: formatStatus(`URL resolved: ${forecastUrl}`) });\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 860,
+        "y": 260,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "f9c0c78e641f451b",
+        "type": "cronplus",
+        "z": "utility-weather-forecasts",
+        "g": "e481f8752dd3b33c",
+        "name": "Every Hour",
+        "outputField": "payload",
+        "timeZone": "",
+        "storeName": "",
+        "commandResponseMsgOutput": "output1",
+        "defaultLocation": "",
+        "defaultLocationType": "default",
+        "outputs": 1,
+        "options": [
+            {
+                "name": "Hourly",
+                "topic": "hourly",
+                "payloadType": "default",
+                "payload": "",
+                "expressionType": "cron",
+                "expression": "0 * * * *",
+                "location": "",
+                "offset": "0",
+                "solarType": "all",
+                "solarEvents": "sunrise,sunset"
+            }
+        ],
+        "x": 170,
+        "y": 80,
+        "wires": [
+            [
+                "c80733bd972465cf"
+            ]
+        ]
+    },
+    {
+        "id": "3f527ed540334e19",
+        "type": "inject",
+        "z": "utility-weather-forecasts",
+        "g": "e481f8752dd3b33c",
+        "name": "On Startup",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 140,
+        "wires": [
+            [
+                "c80733bd972465cf"
+            ]
+        ]
+    },
+    {
+        "id": "c80733bd972465cf",
+        "type": "function",
+        "z": "utility-weather-forecasts",
+        "g": "e481f8752dd3b33c",
+        "name": "Build Forecast Request",
+        "func": "const forecastUrl = flow.get('forecast_url');\nconst userAgent = global.get('config')?.system?.http?.user_agent;\n\nif (!forecastUrl) {\n    node.status({ fill: 'yellow', shape: 'ring', text: 'Waiting for forecast URL...' });\n    return null;\n}\n\nmsg.url = forecastUrl;\nmsg.headers = {\n    'Accept': 'application/geo+json',\n    'User-Agent': userAgent\n};\nmsg.payload = '';\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 80,
+        "wires": [
+            [
+                "5d04d135cc3b380f"
+            ]
+        ]
+    },
+    {
+        "id": "5d04d135cc3b380f",
+        "type": "http request",
+        "z": "utility-weather-forecasts",
+        "g": "e481f8752dd3b33c",
+        "name": "Fetch Forecast",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 660,
+        "y": 80,
+        "wires": [
+            [
+                "69176d85cc1e71c1"
+            ]
+        ]
+    },
+    {
+        "id": "69176d85cc1e71c1",
+        "type": "function",
+        "z": "utility-weather-forecasts",
+        "g": "e481f8752dd3b33c",
+        "name": "Normalize Periods",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nconst location = global.get('config')?.location;\nconst timezone = location?.timezone || 'America/New_York';\n\nif (msg.statusCode !== 200) {\n    node.error(`Forecast fetch failed: ${msg.statusCode}`, msg);\n    return null;\n}\n\nconst periods = msg.payload?.properties?.periods;\nif (!Array.isArray(periods) || periods.length === 0) {\n    node.error('No periods in forecast response', msg);\n    return null;\n}\n\n// Extract icon condition code from NWS icon URL\n// e.g. https://api.weather.gov/icons/land/day/bkn/rain,20?size=medium → rain\nfunction extractIconCode(iconUrl) {\n    try {\n        const path = new URL(iconUrl).pathname;\n        // path like /icons/land/day/bkn or /icons/land/day/bkn/rain,20\n        const parts = path.split('/').filter(Boolean);\n        // parts[0]=icons, [1]=land, [2]=day|night, [3]=code1, [4]=code2 (optional)\n        const codes = [];\n        if (parts[3]) codes.push(parts[3].split(',')[0]);\n        if (parts[4]) codes.push(parts[4].split(',')[0]);\n\n        // Priority: precipitation/severe wins over cloud cover\n        const priority = [\n            'tornado','hurricane','tropical_storm','blizzard',\n            'tsra','tsra_sct','tsra_hi',\n            'snow','rain_snow','rain_sleet','snow_sleet','fzra','rain_fzra','snow_fzra','sleet',\n            'rain','rain_showers','rain_showers_hi',\n            'fog','smoke','dust','haze','hot','cold',\n            'wind_ovc','wind_bkn','wind_sct','wind_few','wind_skc',\n            'ovc','bkn','sct','few','skc'\n        ];\n\n        for (const p of priority) {\n            if (codes.includes(p)) return p;\n        }\n        return codes[0] || 'skc';\n    } catch {\n        return 'skc';\n    }\n}\n\n// Build date-keyed map\nconst forecastMap = {};\n\nfor (const period of periods) {\n    // Derive local date from startTime\n    const startDate = new Date(period.startTime);\n    const localDate = startDate.toLocaleDateString('en-CA', { timeZone: timezone }); // YYYY-MM-DD\n\n    if (!forecastMap[localDate]) {\n        forecastMap[localDate] = {};\n    }\n\n    const slot = period.isDaytime ? 'daytime' : 'overnight';\n\n    // Don't overwrite if we already have this slot (first one wins)\n    if (forecastMap[localDate][slot]) continue;\n\n    forecastMap[localDate][slot] = {\n        temperature: period.temperature,\n        shortForecast: period.shortForecast,\n        detailedForecast: period.detailedForecast,\n        precipChance: period.probabilityOfPrecipitation?.value ?? 0,\n        windSpeed: period.windSpeed,\n        windDirection: period.windDirection,\n        icon: extractIconCode(period.icon),\n        isDaytime: period.isDaytime\n    };\n}\n\nnode.status({\n    fill: 'green',\n    shape: 'dot',\n    text: formatStatus(`${Object.keys(forecastMap).length} day(s) normalized`)\n});\n\nmsg.forecastMap = forecastMap;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 890,
+        "y": 80,
+        "wires": [
+            [
+                "6ee160a2667b1430"
+            ]
+        ]
+    },
+    {
+        "id": "6ee160a2667b1430",
+        "type": "function",
+        "z": "utility-weather-forecasts",
+        "g": "e481f8752dd3b33c",
+        "name": "Build Snapshot",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nconst forecastUrl = flow.get('forecast_url');\n\nmsg.topic = 'highland/state/weather/forecast';\nmsg.retain = true;\nmsg.qos = 1;\nmsg.payload = JSON.stringify({\n    timestamp: new Date().toISOString(),\n    source: 'nws',\n    forecast_url: forecastUrl,\n    periods: msg.forecastMap\n});\n\nnode.status({\n    fill: 'green',\n    shape: 'dot',\n    text: formatStatus(`Snapshot published: ${Object.keys(msg.forecastMap).length} day(s)`)\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1120,
+        "y": 80,
+        "wires": [
+            [
+                "d3ed978120580c25"
+            ]
+        ]
+    },
+    {
+        "id": "d3ed978120580c25",
+        "type": "mqtt out",
+        "z": "utility-weather-forecasts",
+        "g": "e481f8752dd3b33c",
+        "name": "Weather Forecast",
+        "topic": "",
+        "qos": "1",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 1350,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "ec03925679bc3709",
+        "type": "catch",
+        "z": "utility-weather-forecasts",
+        "g": "4890ab63b13350cb",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 140,
+        "y": 440,
+        "wires": [
+            [
+                "e116e4c00671be30"
+            ]
+        ]
+    },
+    {
+        "id": "e116e4c00671be30",
+        "type": "debug",
+        "z": "utility-weather-forecasts",
+        "g": "4890ab63b13350cb",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 310,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "c0e76a7192a0c079",
+        "type": "cronplus",
+        "z": "utility-weather-forecasts",
+        "g": "034e6d7039aec520",
+        "name": "Daily",
+        "outputField": "payload",
+        "timeZone": "",
+        "storeName": "",
+        "commandResponseMsgOutput": "output1",
+        "defaultLocation": "",
+        "defaultLocationType": "default",
+        "outputs": 1,
+        "options": [
+            {
+                "name": "Daily",
+                "topic": "daily",
+                "payloadType": "default",
+                "payload": "",
+                "expressionType": "cron",
+                "expression": "55 23 * * *",
+                "location": "",
+                "offset": "0",
+                "solarType": "all",
+                "solarEvents": "sunrise,sunset"
+            }
+        ],
+        "x": 190,
+        "y": 260,
+        "wires": [
+            [
+                "542fd1cecc6e7cc0"
+            ]
+        ]
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "20e03313b1ec8d8e",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-cron-plus": "2.2.4"
+        }
+    }
+]

@@ -1,0 +1,101 @@
+[
+    {
+        "id": "utility-initializers",
+        "type": "tab",
+        "label": "Utility: Initializers",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "63e3a4fa83bfec75",
+        "type": "group",
+        "z": "utility-initializers",
+        "style": {
+            "stroke": "#29484c",
+            "stroke-opacity": "1",
+            "fill": "#052629",
+            "fill-opacity": "0.5",
+            "label": true,
+            "label-position": "nw",
+            "color": "#b2cacd"
+        },
+        "nodes": [
+            "e49e4c2c138a9d0b",
+            "c0dda801f1411b7b",
+            "788c50fed286eedf"
+        ],
+        "x": 54,
+        "y": 39,
+        "w": 692,
+        "h": 82
+    },
+    {
+        "id": "e49e4c2c138a9d0b",
+        "type": "inject",
+        "z": "utility-initializers",
+        "g": "63e3a4fa83bfec75",
+        "name": "On Startup",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 80,
+        "wires": [
+            [
+                "c0dda801f1411b7b"
+            ]
+        ]
+    },
+    {
+        "id": "c0dda801f1411b7b",
+        "type": "function",
+        "z": "utility-initializers",
+        "g": "63e3a4fa83bfec75",
+        "name": "Register Functions",
+        "func": "global.set('utils.formatStatus', function(text) {\n    const now = new Date();\n    const timeStr = now.toLocaleString('en-US', {\n        month: 'short', day: 'numeric',\n        hour: 'numeric', minute: '2-digit', hour12: true\n    });\n    return `${text} at: ${timeStr}`;\n}, 'initializers');\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers');\nnode.status({ fill: \"green\", shape: \"dot\", text: formatStatus(`${global.keys('initializers').length} function(s)`)});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 80,
+        "wires": [
+            [
+                "788c50fed286eedf"
+            ]
+        ]
+    },
+    {
+        "id": "788c50fed286eedf",
+        "type": "function",
+        "z": "utility-initializers",
+        "g": "63e3a4fa83bfec75",
+        "name": "Emit Ready State",
+        "func": "global.set('initializers.ready', true, 'initializers');\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers');\nnode.status({ fill: \"green\", shape: \"dot\", text: formatStatus('READY')});",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 630,
+        "y": 80,
+        "wires": []
+    }
+]

@@ -1,0 +1,536 @@
+[
+    {
+        "id": "utility-calendaring",
+        "type": "tab",
+        "label": "Utility: Calendaring",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "257f63f07c96a72a",
+        "type": "group",
+        "z": "utility-calendaring",
+        "name": "Error Handling",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "3a99af3f33a9502d",
+            "6e1ce045a044f02e",
+            "2417dec8b70a4124"
+        ],
+        "x": 54,
+        "y": 539,
+        "w": 532,
+        "h": 82
+    },
+    {
+        "id": "757a209a42f268e4",
+        "type": "group",
+        "z": "utility-calendaring",
+        "name": "Sinks",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "a7eebe12b33105b1",
+            "fcd1699ec35fbbc7",
+            "325663b670235a4c"
+        ],
+        "x": 54,
+        "y": 359,
+        "w": 462,
+        "h": 142
+    },
+    {
+        "id": "1ba8852fb7c7f83c",
+        "type": "group",
+        "z": "utility-calendaring",
+        "name": "OAuth Pipeline",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "d465103f526f31ac",
+            "0949902bcbf5758b",
+            "c2b201a2c0e720f9",
+            "1b5a3247c34e8ad6",
+            "6b2304f5f3382325",
+            "95f79b9a275d43f1",
+            "0905c90ca3b8f52c"
+        ],
+        "x": 54,
+        "y": 159,
+        "w": 1292,
+        "h": 162
+    },
+    {
+        "id": "8fe0c65326f63d25",
+        "type": "group",
+        "z": "utility-calendaring",
+        "name": "Calendar Fetch",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "cde3d7ab6f7e7097",
+            "1bc73a2ea758b7b3",
+            "33d804a58bcab24a",
+            "c3815c1ab91b7714",
+            "3b0135a2dc85a92e",
+            "edf2316b7f349329",
+            "255445e91041a0f2"
+        ],
+        "x": 54,
+        "y": 39,
+        "w": 1612,
+        "h": 82
+    },
+    {
+        "id": "a7eebe12b33105b1",
+        "type": "inject",
+        "z": "utility-calendaring",
+        "g": "757a209a42f268e4",
+        "name": "Every 15 Minutes",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "900",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 190,
+        "y": 400,
+        "wires": [
+            [
+                "325663b670235a4c"
+            ]
+        ]
+    },
+    {
+        "id": "fcd1699ec35fbbc7",
+        "type": "mqtt in",
+        "z": "utility-calendaring",
+        "g": "757a209a42f268e4",
+        "name": "Reload",
+        "topic": "highland/command/calendar/reload",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 230,
+        "y": 460,
+        "wires": [
+            [
+                "325663b670235a4c"
+            ]
+        ]
+    },
+    {
+        "id": "325663b670235a4c",
+        "type": "link out",
+        "z": "utility-calendaring",
+        "g": "757a209a42f268e4",
+        "name": "Trigger Poll",
+        "mode": "link",
+        "links": [
+            "d465103f526f31ac"
+        ],
+        "x": 420,
+        "y": 400,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "d465103f526f31ac",
+        "type": "link in",
+        "z": "utility-calendaring",
+        "g": "1ba8852fb7c7f83c",
+        "name": "Trigger Poll",
+        "links": [
+            "325663b670235a4c"
+        ],
+        "x": 150,
+        "y": 220,
+        "wires": [
+            [
+                "0949902bcbf5758b"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "0949902bcbf5758b",
+        "type": "function",
+        "z": "utility-calendaring",
+        "g": "1ba8852fb7c7f83c",
+        "name": "Check Token",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nconst token = flow.get('oauth_token');\nconst expiry = flow.get('oauth_token_expiry') || 0;\nconst now = Date.now();\n\n// Token valid with 60s buffer\nif (token && expiry - now > 60000) {\n    node.status({ fill: 'green', shape: 'dot', text: formatStatus('Token valid') });\n    return [msg, null];\n}\n\n// Need refresh\nnode.status({ fill: 'yellow', shape: 'ring', text: formatStatus('Refreshing token...') });\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 220,
+        "wires": [
+            [
+                "1b5a3247c34e8ad6"
+            ],
+            [
+                "0905c90ca3b8f52c"
+            ]
+        ]
+    },
+    {
+        "id": "c2b201a2c0e720f9",
+        "type": "http request",
+        "z": "utility-calendaring",
+        "g": "1ba8852fb7c7f83c",
+        "name": "Refresh Token",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "https://oauth2.googleapis.com/token",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [
+            {
+                "keyType": "other",
+                "keyValue": "content-type",
+                "valueType": "other",
+                "valueValue": "application/x-www-form-urlencoded"
+            }
+        ],
+        "x": 820,
+        "y": 280,
+        "wires": [
+            [
+                "6b2304f5f3382325"
+            ]
+        ]
+    },
+    {
+        "id": "1b5a3247c34e8ad6",
+        "type": "link out",
+        "z": "utility-calendaring",
+        "g": "1ba8852fb7c7f83c",
+        "name": "Fetch Calendars",
+        "mode": "link",
+        "links": [
+            "cde3d7ab6f7e7097"
+        ],
+        "x": 560,
+        "y": 200,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "6b2304f5f3382325",
+        "type": "function",
+        "z": "utility-calendaring",
+        "g": "1ba8852fb7c7f83c",
+        "name": "Store Token",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nif (msg.statusCode !== 200 || !msg.payload.access_token) {\n    node.status({ fill: 'red', shape: 'ring', text: formatStatus('Token refresh failed') });\n    node.error('OAuth token refresh failed', msg);\n    return null;\n}\n\nflow.set('oauth_token', msg.payload.access_token);\n// expires_in is in seconds; store as ms timestamp with 60s buffer\nflow.set('oauth_token_expiry', Date.now() + (msg.payload.expires_in * 1000));\n\nnode.status({ fill: 'green', shape: 'dot', text: formatStatus('Token refreshed') });\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1030,
+        "y": 280,
+        "wires": [
+            [
+                "95f79b9a275d43f1"
+            ]
+        ]
+    },
+    {
+        "id": "95f79b9a275d43f1",
+        "type": "link out",
+        "z": "utility-calendaring",
+        "g": "1ba8852fb7c7f83c",
+        "name": "Fetch Calendars",
+        "mode": "link",
+        "links": [
+            "cde3d7ab6f7e7097"
+        ],
+        "x": 1240,
+        "y": 280,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0905c90ca3b8f52c",
+        "type": "function",
+        "z": "utility-calendaring",
+        "g": "1ba8852fb7c7f83c",
+        "name": "Build Refresh Request",
+        "func": "const secrets = global.get('config')?.secrets?.google_calendar;\n\nmsg.payload = new URLSearchParams({\n    grant_type: 'refresh_token',\n    refresh_token: secrets.refresh_token,\n    client_id: secrets.client_id,\n    client_secret: secrets.client_secret\n}).toString();\n\nmsg.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 580,
+        "y": 280,
+        "wires": [
+            [
+                "c2b201a2c0e720f9"
+            ]
+        ]
+    },
+    {
+        "id": "cde3d7ab6f7e7097",
+        "type": "link in",
+        "z": "utility-calendaring",
+        "g": "8fe0c65326f63d25",
+        "name": "Fetch Calendars",
+        "links": [
+            "1b5a3247c34e8ad6",
+            "95f79b9a275d43f1"
+        ],
+        "x": 160,
+        "y": 80,
+        "wires": [
+            [
+                "1bc73a2ea758b7b3"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "1bc73a2ea758b7b3",
+        "type": "function",
+        "z": "utility-calendaring",
+        "g": "8fe0c65326f63d25",
+        "name": "Build Fetch Requests",
+        "func": "const secrets = global.get('config')?.secrets?.google_calendar;\nconst token = flow.get('oauth_token');\nconst location = global.get('config')?.location;\n\nconst now = new Date();\nconst windowEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);\n\nconst timeMin = now.toISOString();\nconst timeMax = windowEnd.toISOString();\n\nconst calendarMap = {\n    [secrets.appointments_calendar_id]: 'appointments',\n    [secrets.reminders_calendar_id]: 'reminders',\n    [secrets.trash_calendar_id]: 'trash'\n};\n\n// Clear any previous requests which might not have complted the entire series.\nflow.set('calendar_responses', []);\n\n// Store calendar map and window for downstream nodes\nflow.set('calendar_map', calendarMap);\nflow.set('poll_window', { timeMin, timeMax, timezone: location?.timezone || 'America/New_York' });\n\n// Fan out one message per calendar\nconst calendars = Object.keys(calendarMap);\nfor (const calendarId of calendars) {\n    const params = new URLSearchParams({\n        timeMin,\n        timeMax,\n        singleEvents: 'true',\n        orderBy: 'startTime'\n    });\n\n    node.send({\n        calendarId,\n        url: `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`,\n        headers: { Authorization: `Bearer ${token}` },\n        payload: ''\n    });\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 80,
+        "wires": [
+            [
+                "33d804a58bcab24a"
+            ]
+        ]
+    },
+    {
+        "id": "33d804a58bcab24a",
+        "type": "http request",
+        "z": "utility-calendaring",
+        "g": "8fe0c65326f63d25",
+        "name": "Fetch Calendar",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 640,
+        "y": 80,
+        "wires": [
+            [
+                "c3815c1ab91b7714"
+            ]
+        ]
+    },
+    {
+        "id": "c3815c1ab91b7714",
+        "type": "function",
+        "z": "utility-calendaring",
+        "g": "8fe0c65326f63d25",
+        "name": "Collect Responses",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nif (msg.statusCode !== 200) {\n    node.error(`Calendar fetch failed for ${msg.calendarId}: ${msg.statusCode}`, msg);\n    return null;\n}\n\nconst responses = flow.get('calendar_responses') || [];\nresponses.push({ calendarId: msg.calendarId, items: msg.payload.items || [] });\nflow.set('calendar_responses', responses);\n\nif (responses.length < 3) {\n    node.status({ fill: 'yellow', shape: 'ring', text: formatStatus(`${responses.length}/3 calendars fetched`) });\n    return null;\n}\n\n// All three received — clear and proceed\nflow.set('calendar_responses', []);\nnode.status({ fill: 'green', shape: 'dot', text: formatStatus('All calendars fetched') });\nmsg.responses = responses;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 870,
+        "y": 80,
+        "wires": [
+            [
+                "3b0135a2dc85a92e"
+            ]
+        ]
+    },
+    {
+        "id": "3b0135a2dc85a92e",
+        "type": "function",
+        "z": "utility-calendaring",
+        "g": "8fe0c65326f63d25",
+        "name": "Classify Events",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nconst calendarMap = flow.get('calendar_map');\nconst { timeMin, timeMax, timezone } = flow.get('poll_window');\n\nconst events = [];\n\nfor (const { calendarId, items } of msg.responses) {\n    const category = calendarMap[calendarId];\n\n    for (const item of items) {\n        const allDay = !!item.start.date; // all-day events use start.date, not start.dateTime\n\n        // Normalize to local date/time strings\n        const startRaw = allDay ? item.start.date : item.start.dateTime;\n        const endRaw = allDay ? item.end.date : item.end.dateTime;\n\n        // For all-day events, date is already YYYY-MM-DD local\n        // For timed events, parse dateTime and convert to local\n        let date, start, end;\n\n        if (allDay) {\n            date = startRaw; // YYYY-MM-DD\n        } else {\n            // Extract local date from dateTime (may have offset)\n            const startDate = new Date(startRaw);\n            date = startDate.toLocaleDateString('en-CA', { timeZone: timezone }); // YYYY-MM-DD\n            start = startDate.toLocaleString('sv-SE', { timeZone: timezone }).replace(' ', 'T');\n            const endDate = new Date(endRaw);\n            end = endDate.toLocaleString('sv-SE', { timeZone: timezone }).replace(' ', 'T');\n        }\n\n        const event = {\n            id: item.id,\n            calendar: category,\n            title: item.summary || '(No title)',\n            date,\n            all_day: allDay\n        };\n\n        if (!allDay) {\n            event.start = start;\n            event.end = end;\n        }\n\n        events.push(event);\n    }\n}\n\n// Sort chronologically — all-day first within each day, then by time\nevents.sort((a, b) => {\n    const aKey = a.start || a.date + 'T00:00:00';\n    const bKey = b.start || b.date + 'T00:00:00';\n    return aKey.localeCompare(bKey);\n});\n\nnode.status({ fill: 'green', shape: 'dot', text: formatStatus(`${events.length} event(s) classified`) });\nmsg.events = events;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1100,
+        "y": 80,
+        "wires": [
+            [
+                "edf2316b7f349329"
+            ]
+        ]
+    },
+    {
+        "id": "edf2316b7f349329",
+        "type": "function",
+        "z": "utility-calendaring",
+        "g": "8fe0c65326f63d25",
+        "name": "Build Snapshot",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nconst { timeMin, timeMax } = flow.get('poll_window');\n\nmsg.topic = 'highland/state/calendar/snapshot';\nmsg.retain = true;\nmsg.qos = 1;\nmsg.payload = JSON.stringify({\n    timestamp: new Date().toISOString(),\n    source: 'calendaring',\n    window_start: timeMin,\n    window_end: timeMax,\n    events: msg.events\n});\n\nnode.status({ fill: 'green', shape: 'dot', text: formatStatus(`Snapshot: ${msg.events.length} event(s)`) });\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1320,
+        "y": 80,
+        "wires": [
+            [
+                "255445e91041a0f2"
+            ]
+        ]
+    },
+    {
+        "id": "255445e91041a0f2",
+        "type": "mqtt out",
+        "z": "utility-calendaring",
+        "g": "8fe0c65326f63d25",
+        "name": "Calendar Snapshot",
+        "topic": "",
+        "qos": "1",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 1550,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "3a99af3f33a9502d",
+        "type": "catch",
+        "z": "utility-calendaring",
+        "g": "257f63f07c96a72a",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 140,
+        "y": 580,
+        "wires": [
+            [
+                "6e1ce045a044f02e"
+            ]
+        ]
+    },
+    {
+        "id": "6e1ce045a044f02e",
+        "type": "function",
+        "z": "utility-calendaring",
+        "g": "257f63f07c96a72a",
+        "name": "Handle",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nnode.status({ fill: 'red', shape: 'ring', text: formatStatus(`Error: ${msg.error?.message || 'unknown'}`) });\nnode.warn(msg.error);\n// Future: publish to highland/event/notify for persistent API failures\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 580,
+        "wires": [
+            [
+                "2417dec8b70a4124"
+            ]
+        ]
+    },
+    {
+        "id": "2417dec8b70a4124",
+        "type": "debug",
+        "z": "utility-calendaring",
+        "g": "257f63f07c96a72a",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 490,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]

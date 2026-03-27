@@ -1,0 +1,790 @@
+[
+    {
+        "id": "subflow-initializer-latch",
+        "type": "subflow",
+        "name": "initializer latch",
+        "info": "",
+        "category": "highland",
+        "in": [
+            {
+                "x": 80,
+                "y": 60,
+                "wires": [
+                    {
+                        "id": "081746de07ee7073"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 360,
+                "y": 300,
+                "wires": [
+                    {
+                        "id": "204c782fa7f1e192",
+                        "port": 0
+                    }
+                ]
+            },
+            {
+                "x": 400,
+                "y": 360,
+                "wires": [
+                    {
+                        "id": "0a98747907675ad9",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [
+            {
+                "name": "RETRY_INTERVAL_MS",
+                "type": "num",
+                "value": "250",
+                "ui": {
+                    "label": {
+                        "en-US": "Retry Interval (ms)"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "num"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "MAX_RETRIES",
+                "type": "num",
+                "value": "20",
+                "ui": {
+                    "label": {
+                        "en-US": "Max Retries"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "num"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "CONTEXT_PREFIX",
+                "type": "str",
+                "value": "",
+                "ui": {
+                    "label": {
+                        "en-US": "Scope"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "str"
+                        ]
+                    }
+                }
+            }
+        ],
+        "meta": {},
+        "color": "#87A980",
+        "outputLabels": [
+            "OK",
+            "TIMEOUT"
+        ],
+        "icon": "node-red/timer.svg"
+    },
+    {
+        "id": "081746de07ee7073",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Buffer Management",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\n\nif (flow.get(`${prefix}initialized`)) {\n    return [msg, null];\n}\nif (flow.get(`${prefix}degraded`)) {\n    return null;\n}\nconst buffer = flow.get(`${prefix}state_buffer`) || [];\nbuffer.push(msg);\nflow.set(`${prefix}state_buffer`, buffer);\nif (!flow.get(`${prefix}check_running`)) {\n    flow.set(`${prefix}check_running`, true);\n    flow.set(`${prefix}retries`, 0);\n    return [null, msg];\n}\n\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 250,
+        "y": 60,
+        "wires": [
+            [
+                "18fe80e042b3e229"
+            ],
+            [
+                "2ecaa5d9e39ad7a1"
+            ]
+        ]
+    },
+    {
+        "id": "2ecaa5d9e39ad7a1",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Check Readiness",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nconst maxRetries = env.get('MAX_RETRIES') || 20;\nconst retries = flow.get(`${prefix}retries`) || 0;\n\nif (global.get('initializers.ready', 'initializers') === true) {\n    flow.set(`${prefix}check_running`, false);\n    return [msg, null];\n}\nif (retries >= maxRetries) {\n    flow.set(`${prefix}check_running`, false);\n    msg.timedOut = true;\n    return [null, msg];\n}\nflow.set(`${prefix}retries`, retries + 1);\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 490,
+        "y": 120,
+        "wires": [
+            [
+                "4f8a77e8b898a9bc"
+            ],
+            [
+                "74db48c8fac39695"
+            ]
+        ]
+    },
+    {
+        "id": "74db48c8fac39695",
+        "type": "switch",
+        "z": "subflow-initializer-latch",
+        "name": "Route",
+        "property": "timedOut",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "true"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 690,
+        "y": 180,
+        "wires": [
+            [
+                "716d39543f5312f7"
+            ],
+            [
+                "3efc69215972097b"
+            ]
+        ]
+    },
+    {
+        "id": "218b4ac37cd3bb4b",
+        "type": "delay",
+        "z": "subflow-initializer-latch",
+        "name": "Retry Delay",
+        "pauseType": "delayv",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1050,
+        "y": 240,
+        "wires": [
+            [
+                "62595fe3f63fb6a4"
+            ]
+        ]
+    },
+    {
+        "id": "3efc69215972097b",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Set Delay",
+        "func": "msg.delay = env.get('RETRY_INTERVAL_MS') || 250;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 860,
+        "y": 240,
+        "wires": [
+            [
+                "218b4ac37cd3bb4b"
+            ]
+        ]
+    },
+    {
+        "id": "83c96b9bb45316e9",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Recheck Readiness",
+        "links": [
+            "62595fe3f63fb6a4"
+        ],
+        "x": 250,
+        "y": 180,
+        "wires": [
+            [
+                "2ecaa5d9e39ad7a1"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "62595fe3f63fb6a4",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Recheck Readiness",
+        "mode": "link",
+        "links": [
+            "83c96b9bb45316e9"
+        ],
+        "x": 1280,
+        "y": 240,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "4f8a77e8b898a9bc",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Open Gate",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nflow.set(`${prefix}initialized`, true);\nflow.set(`${prefix}degraded`, false);\nflow.set(`${prefix}check_running`, false);\n\nconst buffer = flow.get(`${prefix}state_buffer`) || [];\nflow.set(`${prefix}state_buffer`, []);\n\nfor (const bufferedMsg of buffer) {\n    node.send([bufferedMsg, null]);\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 710,
+        "y": 120,
+        "wires": [
+            [
+                "0d9caff7a4aadff8"
+            ]
+        ]
+    },
+    {
+        "id": "716d39543f5312f7",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Handle Timeout",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nflow.set(`${prefix}degraded`, true);\nflow.set(`${prefix}initialized`, false);\nflow.set(`${prefix}check_running`, false);\nflow.set(`${prefix}state_buffer`, []);\n\nmsg.timedOut = true;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 880,
+        "y": 180,
+        "wires": [
+            [
+                "5306e1168dacc5bf"
+            ]
+        ]
+    },
+    {
+        "id": "204c782fa7f1e192",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "links": [
+            "18fe80e042b3e229",
+            "0d9caff7a4aadff8"
+        ],
+        "x": 160,
+        "y": 300,
+        "wires": [
+            []
+        ],
+        "l": true
+    },
+    {
+        "id": "18fe80e042b3e229",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "mode": "link",
+        "links": [
+            "204c782fa7f1e192"
+        ],
+        "x": 500,
+        "y": 60,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0d9caff7a4aadff8",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "mode": "link",
+        "links": [
+            "204c782fa7f1e192"
+        ],
+        "x": 940,
+        "y": 120,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "5306e1168dacc5bf",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Discard Message Stream",
+        "mode": "link",
+        "links": [
+            "0a98747907675ad9"
+        ],
+        "x": 1130,
+        "y": 180,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0a98747907675ad9",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Discard Message Stream",
+        "links": [
+            "5306e1168dacc5bf"
+        ],
+        "x": 170,
+        "y": 360,
+        "wires": [
+            []
+        ],
+        "l": true
+    },
+    {
+        "id": "utility-config-loader",
+        "type": "tab",
+        "label": "Utility: Config Loader",
+        "disabled": false,
+        "info": "Loads JSON config files from /config/ into global.config namespace.\n\nBEFORE USING:\n- Configure the 'Highland MQTT' broker node with hub IP and svc_nodered credentials\n- If you already have an MQTT broker config node, update the broker ID references\n  in the three MQTT nodes below to point to your existing broker node instead.\n\nTriggers:\n- Startup (0.5s delay after deploy)\n- Manual inject\n- MQTT: highland/command/config/reload            (full reload)\n- MQTT: highland/command/config/reload/{name}     (selective reload)\n\nValid {name} values: device_registry, flow_registry, notifications,\n                     thresholds, healthchecks, secrets"
+    },
+    {
+        "id": "8771ba55260498c3",
+        "type": "group",
+        "z": "utility-config-loader",
+        "name": "Sinks",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "67e97d1dc837f271",
+            "cfg-inject-startup",
+            "cfg-mqtt-reload-all",
+            "cfg-mqtt-reload-one",
+            "2da5b79c773a84ca"
+        ],
+        "x": 54,
+        "y": 219,
+        "w": 342,
+        "h": 202
+    },
+    {
+        "id": "7f87f76904569482",
+        "type": "group",
+        "z": "utility-config-loader",
+        "name": "Configuration Management",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "cfg-fn-load",
+            "cfg-mqtt-out-status",
+            "cfg-debug-result",
+            "27ea8383957f97c0",
+            "c2ad725480c9cd0d",
+            "901d3db7174dd331"
+        ],
+        "x": 54,
+        "y": 39,
+        "w": 912,
+        "h": 142
+    },
+    {
+        "id": "87cca9c93c144cfe",
+        "type": "group",
+        "z": "utility-config-loader",
+        "name": "Error Handling",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "cfg-catch-all",
+            "cfg-debug-errors"
+        ],
+        "x": 54,
+        "y": 579,
+        "w": 432,
+        "h": 82
+    },
+    {
+        "id": "2e96aeac9d79a52f",
+        "type": "group",
+        "z": "utility-config-loader",
+        "name": "Latching Failure Management",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "b607dc99905b604b",
+            "2159d0e8c2e7cd25",
+            "80fba9b3b03f212a"
+        ],
+        "x": 54,
+        "y": 459,
+        "w": 652,
+        "h": 82
+    },
+    {
+        "id": "cfg-fn-load",
+        "type": "function",
+        "z": "utility-config-loader",
+        "g": "7f87f76904569482",
+        "name": "Parse Configuration",
+        "func": "const CONFIG_DIR = '/config';\n\nconst CONFIG_MAP = {\n    device_registry: 'device_registry.json',\n    flow_registry:   'flow_registry.json',\n    location:        'location.json',\n    notifications:   'notifications.json',\n    thresholds:      'thresholds.json',\n    healthchecks:    'healthchecks.json',\n    secrets:         'secrets.json',\n    system:          'system.json'    \n};\n\n// Determine scope: selective or full\nconst prefix = 'highland/command/config/reload/';\nconst topic  = msg.topic || '';\nlet scope = null;\n\nif (topic.startsWith(prefix)) {\n    const name = topic.slice(prefix.length);\n    if (!CONFIG_MAP[name]) {\n        node.warn(`[Config Loader] Unknown config name: ${name}`);\n        return null;\n    }\n    scope = name;\n}\n\nconst toLoad = scope\n    ? { [scope]: CONFIG_MAP[scope] }\n    : CONFIG_MAP;\n\n// Load or initialize global config object\nlet config = global.get('config') || {};\n\nconst loaded = [];\nconst errors = [];\n\nfor (const [key, filename] of Object.entries(toLoad)) {\n    const filepath = path.join(CONFIG_DIR, filename);\n    try {\n        const raw   = fs.readFileSync(filepath, 'utf8');\n        config[key] = JSON.parse(raw);\n        loaded.push(key);\n    } catch (err) {\n        errors.push({ key, filename, error: err.message });\n        node.warn(`[Config Loader] Failed to load ${filename}: ${err.message}`);\n    }\n}\n\nglobal.set('config', config);\n\nmsg.topic   = 'highland/status/config/loaded';\nmsg.payload = {\n    loaded,\n    errors,\n    scope:     scope || 'all',\n    timestamp: new Date().toISOString()\n};\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers');\nconst statusText = errors.length > 0\n    ? formatStatus(`${errors.length} error(s)`)\n    : formatStatus(`${loaded.length} loaded`);\nconst fill = errors.length > 0 ? 'yellow' : 'green';\nnode.status({ fill, shape: 'dot', text: statusText });\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "fs",
+                "module": "fs"
+            },
+            {
+                "var": "path",
+                "module": "path"
+            }
+        ],
+        "x": 580,
+        "y": 80,
+        "wires": [
+            [
+                "cfg-mqtt-out-status",
+                "cfg-debug-result"
+            ]
+        ]
+    },
+    {
+        "id": "cfg-mqtt-out-status",
+        "type": "mqtt out",
+        "z": "utility-config-loader",
+        "g": "7f87f76904569482",
+        "name": "Configuration Loaded",
+        "topic": "highland/status/config/loaded",
+        "qos": "1",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 840,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "cfg-debug-result",
+        "type": "debug",
+        "z": "utility-config-loader",
+        "g": "7f87f76904569482",
+        "name": "Output",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "payload.loaded",
+        "statusType": "msg",
+        "x": 790,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "cfg-catch-all",
+        "type": "catch",
+        "z": "utility-config-loader",
+        "g": "87cca9c93c144cfe",
+        "name": "Catch Errors",
+        "scope": null,
+        "uncaught": false,
+        "x": 150,
+        "y": 620,
+        "wires": [
+            [
+                "cfg-debug-errors"
+            ]
+        ]
+    },
+    {
+        "id": "cfg-debug-errors",
+        "type": "debug",
+        "z": "utility-config-loader",
+        "g": "87cca9c93c144cfe",
+        "name": "Uncaught Error",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 360,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "27ea8383957f97c0",
+        "type": "link in",
+        "z": "utility-config-loader",
+        "g": "7f87f76904569482",
+        "name": "Load Configuration",
+        "links": [
+            "67e97d1dc837f271",
+            "2da5b79c773a84ca"
+        ],
+        "x": 170,
+        "y": 80,
+        "wires": [
+            [
+                "c2ad725480c9cd0d"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "67e97d1dc837f271",
+        "type": "link out",
+        "z": "utility-config-loader",
+        "g": "8771ba55260498c3",
+        "name": "Load Configuration",
+        "mode": "link",
+        "links": [
+            "27ea8383957f97c0"
+        ],
+        "x": 355,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "cfg-inject-startup",
+        "type": "inject",
+        "z": "utility-config-loader",
+        "g": "8771ba55260498c3",
+        "name": "On Startup",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "payload": "{}",
+        "payloadType": "json",
+        "x": 170,
+        "y": 260,
+        "wires": [
+            [
+                "2da5b79c773a84ca"
+            ]
+        ]
+    },
+    {
+        "id": "cfg-mqtt-reload-all",
+        "type": "mqtt in",
+        "z": "utility-config-loader",
+        "g": "8771ba55260498c3",
+        "name": "Reload All",
+        "topic": "highland/command/config/reload",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 180,
+        "y": 320,
+        "wires": [
+            [
+                "67e97d1dc837f271"
+            ]
+        ]
+    },
+    {
+        "id": "cfg-mqtt-reload-one",
+        "type": "mqtt in",
+        "z": "utility-config-loader",
+        "g": "8771ba55260498c3",
+        "name": "Reload One",
+        "topic": "highland/command/config/reload/+",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 380,
+        "wires": [
+            [
+                "67e97d1dc837f271"
+            ]
+        ]
+    },
+    {
+        "id": "2da5b79c773a84ca",
+        "type": "link out",
+        "z": "utility-config-loader",
+        "g": "8771ba55260498c3",
+        "name": "Load Configuration",
+        "mode": "link",
+        "links": [
+            "27ea8383957f97c0"
+        ],
+        "x": 355,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "c2ad725480c9cd0d",
+        "type": "subflow:subflow-initializer-latch",
+        "z": "utility-config-loader",
+        "g": "7f87f76904569482",
+        "name": "Latch",
+        "x": 370,
+        "y": 80,
+        "wires": [
+            [
+                "cfg-fn-load"
+            ],
+            [
+                "901d3db7174dd331"
+            ]
+        ]
+    },
+    {
+        "id": "b607dc99905b604b",
+        "type": "link in",
+        "z": "utility-config-loader",
+        "g": "2e96aeac9d79a52f",
+        "name": "Log Latch Failure",
+        "links": [
+            "901d3db7174dd331"
+        ],
+        "x": 160,
+        "y": 500,
+        "wires": [
+            [
+                "2159d0e8c2e7cd25"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "2159d0e8c2e7cd25",
+        "type": "function",
+        "z": "utility-config-loader",
+        "g": "2e96aeac9d79a52f",
+        "name": "Prepare Log Message",
+        "func": "// Inline — intentionally not using utils.formatStatus, initializers store is unavailable\nconst ts = new Date().toLocaleString('en-US', {\n    month: 'short', day: 'numeric',\n    hour: 'numeric', minute: '2-digit', hour12: true\n});\nnode.status({ fill: 'red', shape: 'ring', text: `Degraded at: ${ts}` });\n\nmsg.topic = 'highland/event/log';\nmsg.payload = {\n    timestamp: new Date().toISOString(),\n    system:    'node_red',\n    source:    'config_loader',\n    level:     'CRITICAL',\n    message:   'Initializer latch timed out — config will not be loaded',\n    context:   {}\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 500,
+        "wires": [
+            [
+                "80fba9b3b03f212a"
+            ]
+        ]
+    },
+    {
+        "id": "80fba9b3b03f212a",
+        "type": "mqtt out",
+        "z": "utility-config-loader",
+        "g": "2e96aeac9d79a52f",
+        "name": "Log Event",
+        "topic": "highland/event/log",
+        "qos": "2",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 620,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "901d3db7174dd331",
+        "type": "link out",
+        "z": "utility-config-loader",
+        "g": "7f87f76904569482",
+        "name": "Log Latch Failure",
+        "mode": "link",
+        "links": [
+            "b607dc99905b604b"
+        ],
+        "x": 570,
+        "y": 140,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]

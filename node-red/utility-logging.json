@@ -1,0 +1,458 @@
+[
+    {
+        "id": "utility-logging",
+        "type": "tab",
+        "label": "Utility: Logging",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "abd63dcc7b5cdfb0",
+        "type": "group",
+        "z": "utility-logging",
+        "name": "Sinks",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "ac89bcbd0629663e",
+            "0083247e4c0875dc"
+        ],
+        "x": 54,
+        "y": 279,
+        "w": 392,
+        "h": 82
+    },
+    {
+        "id": "4c0f3961b5bcf044",
+        "type": "group",
+        "z": "utility-logging",
+        "name": "Log Writer",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "28d9d10ad8d281c3",
+            "66a58cee61012e7a",
+            "05abe8cfa43b4298",
+            "51eb59b6bc35d7ac"
+        ],
+        "x": 54,
+        "y": 39,
+        "w": 682,
+        "h": 82
+    },
+    {
+        "id": "165a0a4b67380d18",
+        "type": "group",
+        "z": "utility-logging",
+        "name": "Critical Forwarder",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "a04618bd2997f5ae",
+            "4f88ac17791b1ce9",
+            "bf6ad82aff45c776",
+            "55589198f5852320"
+        ],
+        "x": 54,
+        "y": 159,
+        "w": 812,
+        "h": 82
+    },
+    {
+        "id": "d90f0b9285181400",
+        "type": "group",
+        "z": "utility-logging",
+        "name": "Error Handling",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "bb406928fdfdf8d8",
+            "5b8e9c25368777c4"
+        ],
+        "x": 54,
+        "y": 399,
+        "w": 452,
+        "h": 82
+    },
+    {
+        "id": "112f6f7afa858401",
+        "type": "group",
+        "z": "utility-logging",
+        "name": "Test Cases",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "baf4f10d4e1b99b4",
+            "608f1d91622142b1",
+            "0e845cf337ff7b8e",
+            "c5fda78d329377bf"
+        ],
+        "x": 54,
+        "y": 519,
+        "w": 412,
+        "h": 142
+    },
+    {
+        "id": "ac89bcbd0629663e",
+        "type": "mqtt in",
+        "z": "utility-logging",
+        "g": "abd63dcc7b5cdfb0",
+        "name": "Event Signal",
+        "topic": "highland/event/log",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 320,
+        "wires": [
+            [
+                "0083247e4c0875dc"
+            ]
+        ]
+    },
+    {
+        "id": "28d9d10ad8d281c3",
+        "type": "function",
+        "z": "utility-logging",
+        "g": "4c0f3961b5bcf044",
+        "name": "Prepare Entry",
+        "func": "const now = new Date();\n\n// Local formatStatus — intentionally not using utils to avoid initializer dependency\nconst formatStatus = (text) => {\n    const ts = new Date().toLocaleString('en-US', {\n        month: 'short', day: 'numeric',\n        hour: 'numeric', minute: '2-digit', hour12: true\n    });\n    return `${text} at: ${ts}`;\n};\n\n// Build daily filename\nconst dateStr = now.toISOString().slice(0, 10); // YYYY-MM-DD\nmsg.filename = `/var/log/highland/highland-${dateStr}.jsonl`;\n\n// Validate and normalize the log entry\nlet entry = msg.payload;\n\nif (typeof entry !== 'object' || entry === null) {\n    // Wrap malformed input rather than drop it\n    entry = {\n        timestamp: now.toISOString(),\n        system:    'node_red',\n        source:    'logging_utility',\n        level:     'WARN',\n        message:   'Received malformed log entry',\n        context:   { raw: String(msg.payload) }\n    };\n} else {\n    // Ensure timestamp is present\n    if (!entry.timestamp) {\n        entry.timestamp = now.toISOString();\n    }\n}\n\n// Preserve structured entry for downstream Switch node\nmsg.logEntry = entry;\n\n// Serialize for file append\nmsg.payload = JSON.stringify(entry);\n\n// Node status — color coded by level\nconst levelColors = {\n    VERBOSE:  { fill: 'grey',   shape: 'dot'  },\n    DEBUG:    { fill: 'grey',   shape: 'dot'  },\n    INFO:     { fill: 'green',  shape: 'dot'  },\n    WARN:     { fill: 'yellow', shape: 'dot'  },\n    ERROR:    { fill: 'red',    shape: 'dot'  },\n    CRITICAL: { fill: 'red',    shape: 'ring' }\n};\n\nconst level  = entry.level || 'INFO';\nconst color  = levelColors[level] || { fill: 'grey', shape: 'dot' };\n\nnode.status({ fill: color.fill, shape: color.shape, text: formatStatus(level) });\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 80,
+        "wires": [
+            [
+                "51eb59b6bc35d7ac"
+            ]
+        ]
+    },
+    {
+        "id": "a04618bd2997f5ae",
+        "type": "switch",
+        "z": "utility-logging",
+        "g": "165a0a4b67380d18",
+        "name": "Is Critical?",
+        "property": "logEntry.level",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "CRITICAL",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 370,
+        "y": 200,
+        "wires": [
+            [
+                "55589198f5852320"
+            ]
+        ]
+    },
+    {
+        "id": "4f88ac17791b1ce9",
+        "type": "mqtt out",
+        "z": "utility-logging",
+        "g": "165a0a4b67380d18",
+        "name": "Notify",
+        "topic": "highland/event/notify",
+        "qos": "",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 790,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "bb406928fdfdf8d8",
+        "type": "catch",
+        "z": "utility-logging",
+        "g": "d90f0b9285181400",
+        "name": "Catch Errors",
+        "scope": null,
+        "uncaught": false,
+        "x": 150,
+        "y": 440,
+        "wires": [
+            [
+                "5b8e9c25368777c4"
+            ]
+        ]
+    },
+    {
+        "id": "5b8e9c25368777c4",
+        "type": "debug",
+        "z": "utility-logging",
+        "g": "d90f0b9285181400",
+        "name": "Unhandled Errors",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 370,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "66a58cee61012e7a",
+        "type": "link in",
+        "z": "utility-logging",
+        "g": "4c0f3961b5bcf044",
+        "name": "Log Writer",
+        "links": [
+            "0083247e4c0875dc"
+        ],
+        "x": 140,
+        "y": 80,
+        "wires": [
+            [
+                "28d9d10ad8d281c3"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "bf6ad82aff45c776",
+        "type": "link in",
+        "z": "utility-logging",
+        "g": "165a0a4b67380d18",
+        "name": "Forward Critical",
+        "links": [
+            "05abe8cfa43b4298"
+        ],
+        "x": 160,
+        "y": 200,
+        "wires": [
+            [
+                "a04618bd2997f5ae"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "0083247e4c0875dc",
+        "type": "link out",
+        "z": "utility-logging",
+        "g": "abd63dcc7b5cdfb0",
+        "name": "Log Writer",
+        "mode": "link",
+        "links": [
+            "66a58cee61012e7a"
+        ],
+        "x": 350,
+        "y": 320,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "05abe8cfa43b4298",
+        "type": "link out",
+        "z": "utility-logging",
+        "g": "4c0f3961b5bcf044",
+        "name": "Forward Critical",
+        "mode": "link",
+        "links": [
+            "bf6ad82aff45c776"
+        ],
+        "x": 695,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "51eb59b6bc35d7ac",
+        "type": "file",
+        "z": "utility-logging",
+        "g": "4c0f3961b5bcf044",
+        "name": "Write Entry",
+        "filename": "filename",
+        "filenameType": "msg",
+        "appendNewline": true,
+        "createDir": true,
+        "overwriteFile": "false",
+        "encoding": "none",
+        "x": 550,
+        "y": 80,
+        "wires": [
+            [
+                "05abe8cfa43b4298"
+            ]
+        ]
+    },
+    {
+        "id": "baf4f10d4e1b99b4",
+        "type": "inject",
+        "z": "utility-logging",
+        "g": "112f6f7afa858401",
+        "name": "INFO",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{   \"system\": \"node_red\",   \"source\": \"test\",   \"level\": \"INFO\",   \"message\": \"Logging utility test\",   \"context\": {} }",
+        "payloadType": "json",
+        "x": 150,
+        "y": 560,
+        "wires": [
+            [
+                "608f1d91622142b1"
+            ]
+        ]
+    },
+    {
+        "id": "608f1d91622142b1",
+        "type": "mqtt out",
+        "z": "utility-logging",
+        "g": "112f6f7afa858401",
+        "name": "Dispatch Event",
+        "topic": "highland/event/log",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 340,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "55589198f5852320",
+        "type": "function",
+        "z": "utility-logging",
+        "g": "165a0a4b67380d18",
+        "name": "Build Notification",
+        "func": "const entry = msg.logEntry;\n\n// Pull admin recipients from config — fall back to hardcoded if config unavailable\nconst notifications = global.get('config')?.notifications;\nconst adminOnly = notifications?.defaults?.admin_only || ['joseph'];\n\nconst targets = adminOnly.map(person => `people.${person}.ha_companion`);\n\nmsg.payload = {\n    timestamp: new Date().toISOString(),\n    source: 'logging_utility',\n    targets,\n    severity: 'critical',\n    title: `Critical: ${entry.source}`,\n    message: entry.message,\n    group: 'system_critical',\n    context: entry.context\n};\n\nnode.status({ \n    fill: 'red', \n    shape: 'ring', \n    text: `CRITICAL at ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 590,
+        "y": 200,
+        "wires": [
+            [
+                "4f88ac17791b1ce9"
+            ]
+        ]
+    },
+    {
+        "id": "0e845cf337ff7b8e",
+        "type": "inject",
+        "z": "utility-logging",
+        "g": "112f6f7afa858401",
+        "name": "CRITICAL",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"system\":\"node_red\",\"source\":\"test\",\"level\":\"CRITICAL\",\"message\":\"Logging utility test\",\"context\":{}}",
+        "payloadType": "json",
+        "x": 160,
+        "y": 620,
+        "wires": [
+            [
+                "c5fda78d329377bf"
+            ]
+        ]
+    },
+    {
+        "id": "c5fda78d329377bf",
+        "type": "mqtt out",
+        "z": "utility-logging",
+        "g": "112f6f7afa858401",
+        "name": "Dispatch Event",
+        "topic": "highland/event/log",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 360,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]

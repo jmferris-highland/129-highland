@@ -1,0 +1,1893 @@
+[
+    {
+        "id": "subflow-initializer-latch",
+        "type": "subflow",
+        "name": "initializer latch",
+        "info": "",
+        "category": "highland",
+        "in": [
+            {
+                "x": 80,
+                "y": 60,
+                "wires": [
+                    {
+                        "id": "081746de07ee7073"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 360,
+                "y": 300,
+                "wires": [
+                    {
+                        "id": "204c782fa7f1e192",
+                        "port": 0
+                    }
+                ]
+            },
+            {
+                "x": 400,
+                "y": 360,
+                "wires": [
+                    {
+                        "id": "0a98747907675ad9",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [
+            {
+                "name": "RETRY_INTERVAL_MS",
+                "type": "num",
+                "value": "250",
+                "ui": {
+                    "label": {
+                        "en-US": "Retry Interval (ms)"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "num"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "MAX_RETRIES",
+                "type": "num",
+                "value": "20",
+                "ui": {
+                    "label": {
+                        "en-US": "Max Retries"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "num"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "CONTEXT_PREFIX",
+                "type": "str",
+                "value": "",
+                "ui": {
+                    "label": {
+                        "en-US": "Scope"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "str"
+                        ]
+                    }
+                }
+            }
+        ],
+        "meta": {},
+        "color": "#87A980",
+        "outputLabels": [
+            "OK",
+            "TIMEOUT"
+        ],
+        "icon": "node-red/timer.svg"
+    },
+    {
+        "id": "081746de07ee7073",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Buffer Management",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\n\nif (flow.get(`${prefix}initialized`)) {\n    return [msg, null];\n}\nif (flow.get(`${prefix}degraded`)) {\n    return null;\n}\nconst buffer = flow.get(`${prefix}state_buffer`) || [];\nbuffer.push(msg);\nflow.set(`${prefix}state_buffer`, buffer);\nif (!flow.get(`${prefix}check_running`)) {\n    flow.set(`${prefix}check_running`, true);\n    flow.set(`${prefix}retries`, 0);\n    return [null, msg];\n}\n\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 250,
+        "y": 60,
+        "wires": [
+            [
+                "18fe80e042b3e229"
+            ],
+            [
+                "2ecaa5d9e39ad7a1"
+            ]
+        ]
+    },
+    {
+        "id": "2ecaa5d9e39ad7a1",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Check Readiness",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nconst maxRetries = env.get('MAX_RETRIES') || 20;\nconst retries = flow.get(`${prefix}retries`) || 0;\n\nif (global.get('initializers.ready', 'initializers') === true) {\n    flow.set(`${prefix}check_running`, false);\n    return [msg, null];\n}\nif (retries >= maxRetries) {\n    flow.set(`${prefix}check_running`, false);\n    msg.timedOut = true;\n    return [null, msg];\n}\nflow.set(`${prefix}retries`, retries + 1);\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 490,
+        "y": 120,
+        "wires": [
+            [
+                "4f8a77e8b898a9bc"
+            ],
+            [
+                "74db48c8fac39695"
+            ]
+        ]
+    },
+    {
+        "id": "74db48c8fac39695",
+        "type": "switch",
+        "z": "subflow-initializer-latch",
+        "name": "Route",
+        "property": "timedOut",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "true"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 690,
+        "y": 180,
+        "wires": [
+            [
+                "716d39543f5312f7"
+            ],
+            [
+                "3efc69215972097b"
+            ]
+        ]
+    },
+    {
+        "id": "218b4ac37cd3bb4b",
+        "type": "delay",
+        "z": "subflow-initializer-latch",
+        "name": "Retry Delay",
+        "pauseType": "delayv",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1050,
+        "y": 240,
+        "wires": [
+            [
+                "62595fe3f63fb6a4"
+            ]
+        ]
+    },
+    {
+        "id": "3efc69215972097b",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Set Delay",
+        "func": "msg.delay = env.get('RETRY_INTERVAL_MS') || 250;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 860,
+        "y": 240,
+        "wires": [
+            [
+                "218b4ac37cd3bb4b"
+            ]
+        ]
+    },
+    {
+        "id": "83c96b9bb45316e9",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Recheck Readiness",
+        "links": [
+            "62595fe3f63fb6a4"
+        ],
+        "x": 250,
+        "y": 180,
+        "wires": [
+            [
+                "2ecaa5d9e39ad7a1"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "62595fe3f63fb6a4",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Recheck Readiness",
+        "mode": "link",
+        "links": [
+            "83c96b9bb45316e9"
+        ],
+        "x": 1280,
+        "y": 240,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "4f8a77e8b898a9bc",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Open Gate",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nflow.set(`${prefix}initialized`, true);\nflow.set(`${prefix}degraded`, false);\nflow.set(`${prefix}check_running`, false);\n\nconst buffer = flow.get(`${prefix}state_buffer`) || [];\nflow.set(`${prefix}state_buffer`, []);\n\nfor (const bufferedMsg of buffer) {\n    node.send([bufferedMsg, null]);\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 710,
+        "y": 120,
+        "wires": [
+            [
+                "0d9caff7a4aadff8"
+            ]
+        ]
+    },
+    {
+        "id": "716d39543f5312f7",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Handle Timeout",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nflow.set(`${prefix}degraded`, true);\nflow.set(`${prefix}initialized`, false);\nflow.set(`${prefix}check_running`, false);\nflow.set(`${prefix}state_buffer`, []);\n\nmsg.timedOut = true;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 880,
+        "y": 180,
+        "wires": [
+            [
+                "5306e1168dacc5bf"
+            ]
+        ]
+    },
+    {
+        "id": "204c782fa7f1e192",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "links": [
+            "18fe80e042b3e229",
+            "0d9caff7a4aadff8"
+        ],
+        "x": 160,
+        "y": 300,
+        "wires": [
+            []
+        ],
+        "l": true
+    },
+    {
+        "id": "18fe80e042b3e229",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "mode": "link",
+        "links": [
+            "204c782fa7f1e192"
+        ],
+        "x": 500,
+        "y": 60,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0d9caff7a4aadff8",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "mode": "link",
+        "links": [
+            "204c782fa7f1e192"
+        ],
+        "x": 940,
+        "y": 120,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "5306e1168dacc5bf",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Discard Message Stream",
+        "mode": "link",
+        "links": [
+            "0a98747907675ad9"
+        ],
+        "x": 1130,
+        "y": 180,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0a98747907675ad9",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Discard Message Stream",
+        "links": [
+            "5306e1168dacc5bf"
+        ],
+        "x": 170,
+        "y": 360,
+        "wires": [
+            []
+        ],
+        "l": true
+    },
+    {
+        "id": "utility-health-checks",
+        "type": "tab",
+        "label": "Utility: Health Checks",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "28b153e613730ee4",
+        "type": "group",
+        "z": "utility-health-checks",
+        "name": "Node-RED",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "05e4a733d5a04f69",
+            "defcb703b5e14906",
+            "61d6fcac4973c27b",
+            "c824cc1a99fafe5b",
+            "b35c26a6e358f89c",
+            "b0692587e8aad4f4",
+            "e9051fc43c562ff8",
+            "4eeb7b983abd56fa",
+            "3af7a2d67d252860",
+            "9abeeb6dcb3575e6"
+        ],
+        "x": 54,
+        "y": 39,
+        "w": 1312,
+        "h": 142
+    },
+    {
+        "id": "98c046073990dbf2",
+        "type": "group",
+        "z": "utility-health-checks",
+        "name": "Node-RED/ Home Assistant Edge",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "e84cf3b38b0a443e",
+            "dd751b7cadd67f08",
+            "69e7cb6f015dc801",
+            "c8b192a54c807982",
+            "cb28032d485270e3",
+            "c629e58e4ea26cbc",
+            "c3ddf2cd1cc17b1f",
+            "ea44846ebafa1134",
+            "2308b05eea885c57",
+            "3ecfd424c6dc1889",
+            "3ecafccc2d425d95",
+            "caac396c5076348b"
+        ],
+        "x": 54,
+        "y": 219,
+        "w": 1812,
+        "h": 142
+    },
+    {
+        "id": "5b3c06d8813f743c",
+        "type": "group",
+        "z": "utility-health-checks",
+        "name": "Log Writer",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "6b99d06fcbd52ad1",
+            "d911c93d08d63e87",
+            "ac49aff05a4ac665"
+        ],
+        "x": 54,
+        "y": 999,
+        "w": 612,
+        "h": 82
+    },
+    {
+        "id": "8a2f707f56f14ca6",
+        "type": "group",
+        "z": "utility-health-checks",
+        "name": "Node-RED / MQTT Edge",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "e625949fb9b9c6fd",
+            "f0cd18c63022cf60",
+            "f57cce92bd117b99",
+            "2638c7b76a43df05",
+            "858dd16e94533320",
+            "02011c8a4c9514b2",
+            "529c755ed5030969",
+            "7f9367bf7bc7cc86",
+            "83a7a007cf0256c5",
+            "27e3fef01fe7d3eb",
+            "b7b77f2ad87d4692"
+        ],
+        "x": 54,
+        "y": 399,
+        "w": 1312,
+        "h": 202
+    },
+    {
+        "id": "677c9cb6f47cbd5e",
+        "type": "group",
+        "z": "utility-health-checks",
+        "name": "Node-RED / Z-Wave Edge",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "188ad3dfaee9ffb1",
+            "f9f71015a6795e81",
+            "96e1b6593ea76b48",
+            "35d89307c6bb467e",
+            "98312feb0a961e81",
+            "2af1357a7af8ee34",
+            "75cc7afc8422f242",
+            "027957ee7b6c042c",
+            "a5acb9abf078ff8f",
+            "3061ef17ead505a2",
+            "3a50a21647d68bd0",
+            "dea3c65210f3baac"
+        ],
+        "x": 54,
+        "y": 639,
+        "w": 1812,
+        "h": 142
+    },
+    {
+        "id": "bd5837bc0e884b5b",
+        "type": "group",
+        "z": "utility-health-checks",
+        "name": "Node-RED / Zigbee Edge",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "4e920f649aefc285",
+            "e3d95cfa1b8efb54",
+            "9ce4d75ab58053d2",
+            "2708c971997a232b",
+            "3bff15cfbcab3f5c",
+            "8bb6cc93253d8f1a",
+            "603e6fb4a89871c5",
+            "9a97050def1d1dc5",
+            "4bd1bdd00d4c5b15",
+            "c29a740227912190",
+            "336819183eefbec7",
+            "819b71397b78f81c"
+        ],
+        "x": 54,
+        "y": 819,
+        "w": 1812,
+        "h": 142
+    },
+    {
+        "id": "05e4a733d5a04f69",
+        "type": "inject",
+        "z": "utility-health-checks",
+        "g": "28b153e613730ee4",
+        "name": "Every Minute",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 180,
+        "y": 80,
+        "wires": [
+            [
+                "9abeeb6dcb3575e6"
+            ]
+        ]
+    },
+    {
+        "id": "defcb703b5e14906",
+        "type": "debug",
+        "z": "utility-health-checks",
+        "g": "28b153e613730ee4",
+        "name": "Output",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1270,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "61d6fcac4973c27b",
+        "type": "http request",
+        "z": "utility-health-checks",
+        "g": "28b153e613730ee4",
+        "name": "Execute Ping",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 830,
+        "y": 80,
+        "wires": [
+            [
+                "4eeb7b983abd56fa"
+            ]
+        ]
+    },
+    {
+        "id": "c824cc1a99fafe5b",
+        "type": "change",
+        "z": "utility-health-checks",
+        "g": "28b153e613730ee4",
+        "name": "Load Ping URL",
+        "rules": [
+            {
+                "t": "set",
+                "p": "url",
+                "pt": "msg",
+                "to": "config.secrets.healthchecks_io.node-red",
+                "tot": "global"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 620,
+        "y": 80,
+        "wires": [
+            [
+                "61d6fcac4973c27b"
+            ]
+        ]
+    },
+    {
+        "id": "e84cf3b38b0a443e",
+        "type": "inject",
+        "z": "utility-health-checks",
+        "g": "98c046073990dbf2",
+        "name": "Every Minute",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 180,
+        "y": 260,
+        "wires": [
+            [
+                "caac396c5076348b"
+            ]
+        ]
+    },
+    {
+        "id": "dd751b7cadd67f08",
+        "type": "function",
+        "z": "utility-health-checks",
+        "g": "98c046073990dbf2",
+        "name": "Prepare Request",
+        "func": "msg.url = 'http://home.local:8123/api/';\nmsg.headers = {\n    Authorization: `Bearer ${global.get('config').secrets.home_assistant.token}`\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 630,
+        "y": 260,
+        "wires": [
+            [
+                "69e7cb6f015dc801"
+            ]
+        ]
+    },
+    {
+        "id": "69e7cb6f015dc801",
+        "type": "http request",
+        "z": "utility-health-checks",
+        "g": "98c046073990dbf2",
+        "name": "Home Assistant Check",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 880,
+        "y": 260,
+        "wires": [
+            [
+                "c8b192a54c807982"
+            ]
+        ]
+    },
+    {
+        "id": "c8b192a54c807982",
+        "type": "function",
+        "z": "utility-health-checks",
+        "g": "98c046073990dbf2",
+        "name": "Response Evaluation",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers');\nconst previous = flow.get('node-red_ha_status') || 'unknown';\nconst current = (msg.statusCode === 200) ? 'healthy' : 'unhealthy';\n\nflow.set('node-red_ha_status', current);\n\nconst fill = current === 'healthy' ? 'green' : 'red';\nconst shape = current === 'healthy' ? 'dot' : 'ring';\nnode.status({ fill, shape, text: formatStatus(current.toUpperCase()) });\n\nmsg.haStatus = current;\nmsg.transition = { from: previous, to: current };\n\nif (current === 'healthy') {\n    return [msg, null];\n}\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1140,
+        "y": 260,
+        "wires": [
+            [
+                "cb28032d485270e3"
+            ],
+            [
+                "c629e58e4ea26cbc"
+            ]
+        ]
+    },
+    {
+        "id": "cb28032d485270e3",
+        "type": "change",
+        "z": "utility-health-checks",
+        "g": "98c046073990dbf2",
+        "name": "Load Ping URL",
+        "rules": [
+            {
+                "t": "set",
+                "p": "url",
+                "pt": "msg",
+                "to": "config.secrets.healthchecks_io.node-red_home_assistant_edge",
+                "tot": "global"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1380,
+        "y": 260,
+        "wires": [
+            [
+                "c3ddf2cd1cc17b1f"
+            ]
+        ]
+    },
+    {
+        "id": "c3ddf2cd1cc17b1f",
+        "type": "http request",
+        "z": "utility-health-checks",
+        "g": "98c046073990dbf2",
+        "name": "Execute Ping",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1590,
+        "y": 260,
+        "wires": [
+            [
+                "ea44846ebafa1134"
+            ]
+        ]
+    },
+    {
+        "id": "ea44846ebafa1134",
+        "type": "debug",
+        "z": "utility-health-checks",
+        "g": "98c046073990dbf2",
+        "name": "Output",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1770,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "c629e58e4ea26cbc",
+        "type": "debug",
+        "z": "utility-health-checks",
+        "g": "98c046073990dbf2",
+        "name": "Output",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1350,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "b35c26a6e358f89c",
+        "type": "catch",
+        "z": "utility-health-checks",
+        "g": "28b153e613730ee4",
+        "name": "Catch",
+        "scope": "group",
+        "uncaught": false,
+        "x": 150,
+        "y": 140,
+        "wires": [
+            [
+                "b0692587e8aad4f4"
+            ]
+        ]
+    },
+    {
+        "id": "2308b05eea885c57",
+        "type": "catch",
+        "z": "utility-health-checks",
+        "g": "98c046073990dbf2",
+        "name": "Catch",
+        "scope": "group",
+        "uncaught": false,
+        "x": 150,
+        "y": 320,
+        "wires": [
+            [
+                "3ecfd424c6dc1889"
+            ]
+        ]
+    },
+    {
+        "id": "3ecfd424c6dc1889",
+        "type": "change",
+        "z": "utility-health-checks",
+        "g": "98c046073990dbf2",
+        "name": "Set Source",
+        "rules": [
+            {
+                "t": "set",
+                "p": "group",
+                "pt": "msg",
+                "to": "Node Red / Home Assistant Edge",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 330,
+        "y": 320,
+        "wires": [
+            [
+                "3ecafccc2d425d95"
+            ]
+        ]
+    },
+    {
+        "id": "b0692587e8aad4f4",
+        "type": "change",
+        "z": "utility-health-checks",
+        "g": "28b153e613730ee4",
+        "name": "Set Source",
+        "rules": [
+            {
+                "t": "set",
+                "p": "group",
+                "pt": "msg",
+                "to": "Home Assistant",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 330,
+        "y": 140,
+        "wires": [
+            [
+                "e9051fc43c562ff8"
+            ]
+        ]
+    },
+    {
+        "id": "6b99d06fcbd52ad1",
+        "type": "link in",
+        "z": "utility-health-checks",
+        "g": "5b3c06d8813f743c",
+        "name": "Dispatch Log Event",
+        "links": [
+            "3ecafccc2d425d95",
+            "e9051fc43c562ff8",
+            "858dd16e94533320",
+            "3a50a21647d68bd0",
+            "336819183eefbec7"
+        ],
+        "x": 170,
+        "y": 1040,
+        "wires": [
+            [
+                "d911c93d08d63e87"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "d911c93d08d63e87",
+        "type": "function",
+        "z": "utility-health-checks",
+        "g": "5b3c06d8813f743c",
+        "name": "Build Event",
+        "func": "// Inline formatStatus — essential service pattern\nconst ts = new Date().toLocaleString('en-US', {\n    month: 'short', day: 'numeric',\n    hour: 'numeric', minute: '2-digit', hour12: true\n});\n\nconst group = msg.group || 'Unspecified';\n\nmsg.topic = 'highland/event/log';\nmsg.payload = {\n    timestamp: new Date().toISOString(),\n    system: 'node_red',\n    source: 'health_checks',\n    level: 'ERROR',\n    message: `Health check failed for ${group}: ${msg.error.message}`,\n    context: {\n        node: msg.error.source.name,\n        type: msg.error.source.type\n    }\n};\n\nnode.status({ fill: 'red', shape: 'dot', text: `ERROR at: ${ts}` });\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 1040,
+        "wires": [
+            [
+                "ac49aff05a4ac665"
+            ]
+        ]
+    },
+    {
+        "id": "ac49aff05a4ac665",
+        "type": "mqtt out",
+        "z": "utility-health-checks",
+        "g": "5b3c06d8813f743c",
+        "name": "Publish",
+        "topic": "highland/event/log",
+        "qos": "2",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 580,
+        "y": 1040,
+        "wires": []
+    },
+    {
+        "id": "3ecafccc2d425d95",
+        "type": "link out",
+        "z": "utility-health-checks",
+        "g": "98c046073990dbf2",
+        "name": "Dispatch Log Event",
+        "mode": "link",
+        "links": [
+            "6b99d06fcbd52ad1"
+        ],
+        "x": 550,
+        "y": 320,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "e9051fc43c562ff8",
+        "type": "link out",
+        "z": "utility-health-checks",
+        "g": "28b153e613730ee4",
+        "name": "Dispatch Log Event",
+        "mode": "link",
+        "links": [
+            "6b99d06fcbd52ad1"
+        ],
+        "x": 550,
+        "y": 140,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "4eeb7b983abd56fa",
+        "type": "function",
+        "z": "utility-health-checks",
+        "g": "28b153e613730ee4",
+        "name": "Response Evaluation",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers');\nconst previous = flow.get('nodered_status') || 'unknown';\nconst current = (msg.statusCode === 200) ? 'healthy' : 'unhealthy';\n\nflow.set('nodered_status', current);\n\nconst fill = current === 'healthy' ? 'green' : 'red';\nconst shape = current === 'healthy' ? 'dot' : 'ring';\nnode.status({ fill, shape, text: formatStatus(current.toUpperCase()) });\n\nmsg.haStatus = current;\nmsg.transition = { from: previous, to: current };\n\nif (current === 'healthy') {\n    return [msg, null];\n}\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1060,
+        "y": 80,
+        "wires": [
+            [
+                "defcb703b5e14906"
+            ],
+            [
+                "3af7a2d67d252860"
+            ]
+        ]
+    },
+    {
+        "id": "3af7a2d67d252860",
+        "type": "debug",
+        "z": "utility-health-checks",
+        "g": "28b153e613730ee4",
+        "name": "Output",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1270,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "9abeeb6dcb3575e6",
+        "type": "subflow:subflow-initializer-latch",
+        "z": "utility-health-checks",
+        "g": "28b153e613730ee4",
+        "name": "",
+        "env": [
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "nr-",
+                "type": "str"
+            }
+        ],
+        "x": 400,
+        "y": 80,
+        "wires": [
+            [
+                "c824cc1a99fafe5b"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "caac396c5076348b",
+        "type": "subflow:subflow-initializer-latch",
+        "z": "utility-health-checks",
+        "g": "98c046073990dbf2",
+        "name": "",
+        "env": [
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "nr-ha-",
+                "type": "str"
+            }
+        ],
+        "x": 400,
+        "y": 260,
+        "wires": [
+            [
+                "dd751b7cadd67f08"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "e625949fb9b9c6fd",
+        "type": "inject",
+        "z": "utility-health-checks",
+        "g": "8a2f707f56f14ca6",
+        "name": "Every Minute",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 180,
+        "y": 440,
+        "wires": [
+            [
+                "f0cd18c63022cf60"
+            ]
+        ]
+    },
+    {
+        "id": "f0cd18c63022cf60",
+        "type": "mqtt out",
+        "z": "utility-health-checks",
+        "g": "8a2f707f56f14ca6",
+        "name": "Probe Sent",
+        "topic": "highland/status/mqtt/probe",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 390,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "f57cce92bd117b99",
+        "type": "catch",
+        "z": "utility-health-checks",
+        "g": "8a2f707f56f14ca6",
+        "name": "Catch",
+        "scope": "group",
+        "uncaught": false,
+        "x": 150,
+        "y": 560,
+        "wires": [
+            [
+                "2638c7b76a43df05"
+            ]
+        ]
+    },
+    {
+        "id": "2638c7b76a43df05",
+        "type": "change",
+        "z": "utility-health-checks",
+        "g": "8a2f707f56f14ca6",
+        "name": "Set Source",
+        "rules": [
+            {
+                "t": "set",
+                "p": "group",
+                "pt": "msg",
+                "to": "Node Red / MQTT Edge",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 330,
+        "y": 560,
+        "wires": [
+            [
+                "858dd16e94533320"
+            ]
+        ]
+    },
+    {
+        "id": "858dd16e94533320",
+        "type": "link out",
+        "z": "utility-health-checks",
+        "g": "8a2f707f56f14ca6",
+        "name": "Dispatch Log Event",
+        "mode": "link",
+        "links": [
+            "6b99d06fcbd52ad1"
+        ],
+        "x": 550,
+        "y": 560,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "02011c8a4c9514b2",
+        "type": "mqtt in",
+        "z": "utility-health-checks",
+        "g": "8a2f707f56f14ca6",
+        "name": "Probe Received",
+        "topic": "highland/status/mqtt/probe",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 180,
+        "y": 500,
+        "wires": [
+            [
+                "b7b77f2ad87d4692"
+            ]
+        ]
+    },
+    {
+        "id": "529c755ed5030969",
+        "type": "function",
+        "z": "utility-health-checks",
+        "g": "8a2f707f56f14ca6",
+        "name": "Response Evaluation",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers');\nconst previous = flow.get('node-red_mqtt_status') || 'unknown';\nconst current = (msg.statusCode === 200) ? 'healthy' : 'unhealthy';\n\nflow.set('node-red_mqtt_status', current);\n\nconst fill = current === 'healthy' ? 'green' : 'red';\nconst shape = current === 'healthy' ? 'dot' : 'ring';\nnode.status({ fill, shape, text: formatStatus(current.toUpperCase()) });\n\nmsg.haStatus = current;\nmsg.transition = { from: previous, to: current };\n\nif (current === 'healthy') {\n    return [msg, null];\n}\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1060,
+        "y": 500,
+        "wires": [
+            [
+                "27e3fef01fe7d3eb"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "7f9367bf7bc7cc86",
+        "type": "change",
+        "z": "utility-health-checks",
+        "g": "8a2f707f56f14ca6",
+        "name": "Load Ping URL",
+        "rules": [
+            {
+                "t": "set",
+                "p": "url",
+                "pt": "msg",
+                "to": "config.secrets.healthchecks_io.node-red_mqtt_edge",
+                "tot": "global"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 620,
+        "y": 500,
+        "wires": [
+            [
+                "83a7a007cf0256c5"
+            ]
+        ]
+    },
+    {
+        "id": "83a7a007cf0256c5",
+        "type": "http request",
+        "z": "utility-health-checks",
+        "g": "8a2f707f56f14ca6",
+        "name": "Execute Ping",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 830,
+        "y": 500,
+        "wires": [
+            [
+                "529c755ed5030969"
+            ]
+        ]
+    },
+    {
+        "id": "27e3fef01fe7d3eb",
+        "type": "debug",
+        "z": "utility-health-checks",
+        "g": "8a2f707f56f14ca6",
+        "name": "Output",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1270,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "b7b77f2ad87d4692",
+        "type": "subflow:subflow-initializer-latch",
+        "z": "utility-health-checks",
+        "g": "8a2f707f56f14ca6",
+        "name": "",
+        "env": [
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "nr-mqtt-",
+                "type": "str"
+            }
+        ],
+        "x": 400,
+        "y": 500,
+        "wires": [
+            [
+                "7f9367bf7bc7cc86"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "188ad3dfaee9ffb1",
+        "type": "inject",
+        "z": "utility-health-checks",
+        "g": "677c9cb6f47cbd5e",
+        "name": "Every Minute",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 180,
+        "y": 680,
+        "wires": [
+            [
+                "f9f71015a6795e81"
+            ]
+        ]
+    },
+    {
+        "id": "f9f71015a6795e81",
+        "type": "subflow:subflow-initializer-latch",
+        "z": "utility-health-checks",
+        "g": "677c9cb6f47cbd5e",
+        "name": "",
+        "env": [
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "nr-z_wave-",
+                "type": "str"
+            }
+        ],
+        "x": 400,
+        "y": 680,
+        "wires": [
+            [
+                "96e1b6593ea76b48"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "96e1b6593ea76b48",
+        "type": "function",
+        "z": "utility-health-checks",
+        "g": "677c9cb6f47cbd5e",
+        "name": "Prepare Request",
+        "func": "msg.url = 'http://hub.local:8091';\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 630,
+        "y": 680,
+        "wires": [
+            [
+                "35d89307c6bb467e"
+            ]
+        ]
+    },
+    {
+        "id": "35d89307c6bb467e",
+        "type": "http request",
+        "z": "utility-health-checks",
+        "g": "677c9cb6f47cbd5e",
+        "name": "Z-Wave JS UI Check",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 880,
+        "y": 680,
+        "wires": [
+            [
+                "98312feb0a961e81"
+            ]
+        ]
+    },
+    {
+        "id": "98312feb0a961e81",
+        "type": "function",
+        "z": "utility-health-checks",
+        "g": "677c9cb6f47cbd5e",
+        "name": "Response Evaluation",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers');\nconst previous = flow.get('node-red_z-wave_status') || 'unknown';\nconst current = (msg.statusCode === 200) ? 'healthy' : 'unhealthy';\n\nflow.set('node-red_z-wave_status', current);\n\nconst fill = current === 'healthy' ? 'green' : 'red';\nconst shape = current === 'healthy' ? 'dot' : 'ring';\nnode.status({ fill, shape, text: formatStatus(current.toUpperCase()) });\n\nmsg.haStatus = current;\nmsg.transition = { from: previous, to: current };\n\nif (current === 'healthy') {\n    return [msg, null];\n}\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1140,
+        "y": 680,
+        "wires": [
+            [
+                "dea3c65210f3baac"
+            ],
+            [
+                "2af1357a7af8ee34"
+            ]
+        ]
+    },
+    {
+        "id": "027957ee7b6c042c",
+        "type": "debug",
+        "z": "utility-health-checks",
+        "g": "677c9cb6f47cbd5e",
+        "name": "Output",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1770,
+        "y": 680,
+        "wires": []
+    },
+    {
+        "id": "75cc7afc8422f242",
+        "type": "http request",
+        "z": "utility-health-checks",
+        "g": "677c9cb6f47cbd5e",
+        "name": "Execute Ping",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1590,
+        "y": 680,
+        "wires": [
+            [
+                "027957ee7b6c042c"
+            ]
+        ]
+    },
+    {
+        "id": "2af1357a7af8ee34",
+        "type": "debug",
+        "z": "utility-health-checks",
+        "g": "677c9cb6f47cbd5e",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1350,
+        "y": 740,
+        "wires": []
+    },
+    {
+        "id": "a5acb9abf078ff8f",
+        "type": "catch",
+        "z": "utility-health-checks",
+        "g": "677c9cb6f47cbd5e",
+        "name": "Catch",
+        "scope": "group",
+        "uncaught": false,
+        "x": 150,
+        "y": 740,
+        "wires": [
+            [
+                "3061ef17ead505a2"
+            ]
+        ]
+    },
+    {
+        "id": "3061ef17ead505a2",
+        "type": "change",
+        "z": "utility-health-checks",
+        "g": "677c9cb6f47cbd5e",
+        "name": "Set Source",
+        "rules": [
+            {
+                "t": "set",
+                "p": "group",
+                "pt": "msg",
+                "to": "Node Red / Zigbee Edge",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 330,
+        "y": 740,
+        "wires": [
+            [
+                "3a50a21647d68bd0"
+            ]
+        ]
+    },
+    {
+        "id": "3a50a21647d68bd0",
+        "type": "link out",
+        "z": "utility-health-checks",
+        "g": "677c9cb6f47cbd5e",
+        "name": "Dispatch Log Event",
+        "mode": "link",
+        "links": [
+            "6b99d06fcbd52ad1"
+        ],
+        "x": 550,
+        "y": 740,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "dea3c65210f3baac",
+        "type": "change",
+        "z": "utility-health-checks",
+        "g": "677c9cb6f47cbd5e",
+        "name": "Load Ping URL",
+        "rules": [
+            {
+                "t": "set",
+                "p": "url",
+                "pt": "msg",
+                "to": "config.secrets.healthchecks_io.node-red_zwave_edge",
+                "tot": "global"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1380,
+        "y": 680,
+        "wires": [
+            [
+                "75cc7afc8422f242"
+            ]
+        ]
+    },
+    {
+        "id": "4e920f649aefc285",
+        "type": "inject",
+        "z": "utility-health-checks",
+        "g": "bd5837bc0e884b5b",
+        "name": "Every Minute",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 180,
+        "y": 860,
+        "wires": [
+            [
+                "e3d95cfa1b8efb54"
+            ]
+        ]
+    },
+    {
+        "id": "e3d95cfa1b8efb54",
+        "type": "subflow:subflow-initializer-latch",
+        "z": "utility-health-checks",
+        "g": "bd5837bc0e884b5b",
+        "name": "",
+        "env": [
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "nr-zigbee-",
+                "type": "str"
+            }
+        ],
+        "x": 400,
+        "y": 860,
+        "wires": [
+            [
+                "9ce4d75ab58053d2"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "9ce4d75ab58053d2",
+        "type": "function",
+        "z": "utility-health-checks",
+        "g": "bd5837bc0e884b5b",
+        "name": "Prepare Request",
+        "func": "msg.url = 'http://hub.local:8080';\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 630,
+        "y": 860,
+        "wires": [
+            [
+                "2708c971997a232b"
+            ]
+        ]
+    },
+    {
+        "id": "2708c971997a232b",
+        "type": "http request",
+        "z": "utility-health-checks",
+        "g": "bd5837bc0e884b5b",
+        "name": "Zigbee2MQTT Check",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 880,
+        "y": 860,
+        "wires": [
+            [
+                "3bff15cfbcab3f5c"
+            ]
+        ]
+    },
+    {
+        "id": "3bff15cfbcab3f5c",
+        "type": "function",
+        "z": "utility-health-checks",
+        "g": "bd5837bc0e884b5b",
+        "name": "Response Evaluation",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers');\nconst previous = flow.get('node-red_zigbee_status') || 'unknown';\nconst current = (msg.statusCode === 200) ? 'healthy' : 'unhealthy';\n\nflow.set('node-red_zigbee_status', current);\n\nconst fill = current === 'healthy' ? 'green' : 'red';\nconst shape = current === 'healthy' ? 'dot' : 'ring';\nnode.status({ fill, shape, text: formatStatus(current.toUpperCase()) });\n\nmsg.haStatus = current;\nmsg.transition = { from: previous, to: current };\n\nif (current === 'healthy') {\n    return [msg, null];\n}\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1140,
+        "y": 860,
+        "wires": [
+            [
+                "819b71397b78f81c"
+            ],
+            [
+                "8bb6cc93253d8f1a"
+            ]
+        ]
+    },
+    {
+        "id": "8bb6cc93253d8f1a",
+        "type": "debug",
+        "z": "utility-health-checks",
+        "g": "bd5837bc0e884b5b",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1350,
+        "y": 920,
+        "wires": []
+    },
+    {
+        "id": "603e6fb4a89871c5",
+        "type": "http request",
+        "z": "utility-health-checks",
+        "g": "bd5837bc0e884b5b",
+        "name": "Execute Ping",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 1590,
+        "y": 860,
+        "wires": [
+            [
+                "9a97050def1d1dc5"
+            ]
+        ]
+    },
+    {
+        "id": "9a97050def1d1dc5",
+        "type": "debug",
+        "z": "utility-health-checks",
+        "g": "bd5837bc0e884b5b",
+        "name": "Output",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1770,
+        "y": 860,
+        "wires": []
+    },
+    {
+        "id": "4bd1bdd00d4c5b15",
+        "type": "catch",
+        "z": "utility-health-checks",
+        "g": "bd5837bc0e884b5b",
+        "name": "Catch",
+        "scope": "group",
+        "uncaught": false,
+        "x": 150,
+        "y": 920,
+        "wires": [
+            [
+                "c29a740227912190"
+            ]
+        ]
+    },
+    {
+        "id": "c29a740227912190",
+        "type": "change",
+        "z": "utility-health-checks",
+        "g": "bd5837bc0e884b5b",
+        "name": "Set Source",
+        "rules": [
+            {
+                "t": "set",
+                "p": "group",
+                "pt": "msg",
+                "to": "Node Red / Zigbee Edge",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 330,
+        "y": 920,
+        "wires": [
+            [
+                "336819183eefbec7"
+            ]
+        ]
+    },
+    {
+        "id": "336819183eefbec7",
+        "type": "link out",
+        "z": "utility-health-checks",
+        "g": "bd5837bc0e884b5b",
+        "name": "Dispatch Log Event",
+        "mode": "link",
+        "links": [
+            "6b99d06fcbd52ad1"
+        ],
+        "x": 550,
+        "y": 920,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "819b71397b78f81c",
+        "type": "change",
+        "z": "utility-health-checks",
+        "g": "bd5837bc0e884b5b",
+        "name": "Load Ping URL",
+        "rules": [
+            {
+                "t": "set",
+                "p": "url",
+                "pt": "msg",
+                "to": "config.secrets.healthchecks_io.node-red_zigbee_edge",
+                "tot": "global"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1380,
+        "y": 860,
+        "wires": [
+            [
+                "603e6fb4a89871c5"
+            ]
+        ]
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]

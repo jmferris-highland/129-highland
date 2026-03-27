@@ -1,0 +1,169 @@
+[
+    {
+        "id": "subflow-connection-gate",
+        "type": "subflow",
+        "name": "connection gate",
+        "info": "",
+        "category": "highland",
+        "in": [
+            {
+                "x": 60,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "cg-evaluate-gate"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 380,
+                "y": 40,
+                "wires": [
+                    {
+                        "id": "cg-evaluate-gate",
+                        "port": 0
+                    }
+                ]
+            },
+            {
+                "x": 380,
+                "y": 120,
+                "wires": [
+                    {
+                        "id": "cg-evaluate-gate",
+                        "port": 1
+                    }
+                ]
+            }
+        ],
+        "env": [
+            {
+                "name": "CONNECTION_TYPE",
+                "type": "str",
+                "value": "",
+                "ui": {
+                    "label": {
+                        "en-US": "Connection Type"
+                    },
+                    "type": "select",
+                    "opts": {
+                        "opts": [
+                            {
+                                "l": {
+                                    "en-US": "Home Assistant"
+                                },
+                                "v": "home_assistant"
+                            },
+                            {
+                                "l": {
+                                    "en-US": "MQTT"
+                                },
+                                "v": "mqtt"
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "RETENTION_MS",
+                "type": "num",
+                "value": "10000",
+                "ui": {
+                    "label": {
+                        "en-US": "Retention (ms)"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "num"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "CONTEXT_PREFIX",
+                "type": "str",
+                "value": "",
+                "ui": {
+                    "label": {
+                        "en-US": "Scope"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "str"
+                        ]
+                    }
+                }
+            }
+        ],
+        "meta": {},
+        "color": "#A6BBCF",
+        "icon": "font-awesome/fa-filter",
+        "status": {
+            "x": 440,
+            "y": 180,
+            "wires": [
+                {
+                    "id": "0242431e8d5fb057",
+                    "port": 0
+                }
+            ]
+        }
+    },
+    {
+        "id": "cg-evaluate-gate",
+        "type": "function",
+        "z": "subflow-connection-gate",
+        "name": "Evaluate Gate",
+        "func": "const CONNECTION_TYPE = env.get('CONNECTION_TYPE');\nconst RETENTION_MS = env.get('RETENTION_MS') || 0;\nconst POLL_INTERVAL_MS = 500;\nconst PREFIX = env.get('CONTEXT_PREFIX') || '';\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers');\nconst state = global.get(`connections.${CONNECTION_TYPE}`);\n\n// OPEN GATE - Immediate passthrough\nif (state !== 'down') {\n    node.status({ fill: 'green', shape: 'dot', text: formatStatus('PASSTHROUGH') });\n    return [msg, null];\n}\n\n// CLOSED GATE - NO RETENTION - Immediate drop\nif (!RETENTION_MS) {\n    node.status({ fill: 'red', shape: 'dot', text: formatStatus('DROPPED') });\n    return [null, msg];\n}\n\n// CLOSED GATE - WITH RETENTION - Poll for disposition\nconst existing = flow.get(`${PREFIX}retention_poll`, 'volatile');\nif (existing) {\n    clearInterval(existing);\n    flow.set(`${PREFIX}retention_poll`, null, 'volatile');\n}\n\nlet elapsed = 0;\nconst snapshot = msg;\n\nnode.status({ fill: 'yellow', shape: 'ring', text: formatStatus('WAITING') });\n\nconst pollId = setInterval(() => {\n    elapsed += POLL_INTERVAL_MS;\n    const currentState = global.get(`connections.${CONNECTION_TYPE}`);\n\n    // GATE OPENED WITHIN RETENTION - Passthrough as recovered.\n    if (currentState !== 'down') {\n        clearInterval(flow.get(`${PREFIX}retention_poll`, 'volatile'));\n        flow.set(`${PREFIX}retention_poll`, null, 'volatile');\n        node.status({ fill: 'green', shape: 'ring', text: formatStatus('RECOVERED') });\n        node.send([snapshot, null]);\n        return;\n    }\n\n    // GATE CLOSED AT EXPIRATION - Dropped as expired.\n    if (elapsed >= RETENTION_MS) {\n        clearInterval(flow.get(`${PREFIX}retention_poll`, 'volatile'));\n        flow.set(`${PREFIX}retention_poll`, null, 'volatile');\n        node.status({ fill: 'red', shape: 'ring', text: formatStatus('EXPIRED') });\n        node.send([null, snapshot]);\n    }\n}, POLL_INTERVAL_MS);\n\nflow.set(`${PREFIX}retention_poll`, pollId, 'volatile');\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 220,
+        "y": 80,
+        "wires": [
+            [],
+            []
+        ]
+    },
+    {
+        "id": "864c686316d96e5e",
+        "type": "status",
+        "z": "subflow-connection-gate",
+        "name": "",
+        "scope": [
+            "cg-evaluate-gate"
+        ],
+        "x": 100,
+        "y": 180,
+        "wires": [
+            [
+                "0242431e8d5fb057"
+            ]
+        ]
+    },
+    {
+        "id": "0242431e8d5fb057",
+        "type": "function",
+        "z": "subflow-connection-gate",
+        "name": "Mirror Status",
+        "func": "msg.payload = {\n    fill: msg.status.fill,\n    shape: msg.status.shape,\n    text: msg.status.text\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 290,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    }
+]

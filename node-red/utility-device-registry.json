@@ -1,0 +1,970 @@
+[
+    {
+        "id": "subflow-connection-gate",
+        "type": "subflow",
+        "name": "connection gate",
+        "info": "",
+        "category": "highland",
+        "in": [
+            {
+                "x": 60,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "cg-evaluate-gate"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 380,
+                "y": 40,
+                "wires": [
+                    {
+                        "id": "cg-evaluate-gate",
+                        "port": 0
+                    }
+                ]
+            },
+            {
+                "x": 380,
+                "y": 120,
+                "wires": [
+                    {
+                        "id": "cg-evaluate-gate",
+                        "port": 1
+                    }
+                ]
+            }
+        ],
+        "env": [
+            {
+                "name": "CONNECTION_TYPE",
+                "type": "str",
+                "value": "",
+                "ui": {
+                    "label": {
+                        "en-US": "Connection Type"
+                    },
+                    "type": "select",
+                    "opts": {
+                        "opts": [
+                            {
+                                "l": {
+                                    "en-US": "Home Assistant"
+                                },
+                                "v": "home_assistant"
+                            },
+                            {
+                                "l": {
+                                    "en-US": "MQTT"
+                                },
+                                "v": "mqtt"
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "RETENTION_MS",
+                "type": "num",
+                "value": "10000",
+                "ui": {
+                    "label": {
+                        "en-US": "Retention (ms)"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "num"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "CONTEXT_PREFIX",
+                "type": "str",
+                "value": "",
+                "ui": {
+                    "label": {
+                        "en-US": "Scope"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "str"
+                        ]
+                    }
+                }
+            }
+        ],
+        "meta": {},
+        "color": "#A6BBCF",
+        "icon": "font-awesome/fa-filter",
+        "status": {
+            "x": 440,
+            "y": 180,
+            "wires": [
+                {
+                    "id": "0242431e8d5fb057",
+                    "port": 0
+                }
+            ]
+        }
+    },
+    {
+        "id": "cg-evaluate-gate",
+        "type": "function",
+        "z": "subflow-connection-gate",
+        "name": "Evaluate Gate",
+        "func": "const CONNECTION_TYPE = env.get('CONNECTION_TYPE');\nconst RETENTION_MS = env.get('RETENTION_MS') || 0;\nconst POLL_INTERVAL_MS = 500;\nconst PREFIX = env.get('CONTEXT_PREFIX') || '';\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers');\nconst state = global.get(`connections.${CONNECTION_TYPE}`);\n\n// OPEN GATE - Immediate passthrough\nif (state !== 'down') {\n    node.status({ fill: 'green', shape: 'dot', text: formatStatus('PASSTHROUGH') });\n    return [msg, null];\n}\n\n// CLOSED GATE - NO RETENTION - Immediate drop\nif (!RETENTION_MS) {\n    node.status({ fill: 'red', shape: 'dot', text: formatStatus('DROPPED') });\n    return [null, msg];\n}\n\n// CLOSED GATE - WITH RETENTION - Poll for disposition\nconst existing = flow.get(`${PREFIX}retention_poll`, 'volatile');\nif (existing) {\n    clearInterval(existing);\n    flow.set(`${PREFIX}retention_poll`, null, 'volatile');\n}\n\nlet elapsed = 0;\nconst snapshot = msg;\n\nnode.status({ fill: 'yellow', shape: 'ring', text: formatStatus('WAITING') });\n\nconst pollId = setInterval(() => {\n    elapsed += POLL_INTERVAL_MS;\n    const currentState = global.get(`connections.${CONNECTION_TYPE}`);\n\n    // GATE OPENED WITHIN RETENTION - Passthrough as recovered.\n    if (currentState !== 'down') {\n        clearInterval(flow.get(`${PREFIX}retention_poll`, 'volatile'));\n        flow.set(`${PREFIX}retention_poll`, null, 'volatile');\n        node.status({ fill: 'green', shape: 'ring', text: formatStatus('RECOVERED') });\n        node.send([snapshot, null]);\n        return;\n    }\n\n    // GATE CLOSED AT EXPIRATION - Dropped as expired.\n    if (elapsed >= RETENTION_MS) {\n        clearInterval(flow.get(`${PREFIX}retention_poll`, 'volatile'));\n        flow.set(`${PREFIX}retention_poll`, null, 'volatile');\n        node.status({ fill: 'red', shape: 'ring', text: formatStatus('EXPIRED') });\n        node.send([null, snapshot]);\n    }\n}, POLL_INTERVAL_MS);\n\nflow.set(`${PREFIX}retention_poll`, pollId, 'volatile');\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 220,
+        "y": 80,
+        "wires": [
+            [],
+            []
+        ]
+    },
+    {
+        "id": "864c686316d96e5e",
+        "type": "status",
+        "z": "subflow-connection-gate",
+        "name": "",
+        "scope": [
+            "cg-evaluate-gate"
+        ],
+        "x": 100,
+        "y": 180,
+        "wires": [
+            [
+                "0242431e8d5fb057"
+            ]
+        ]
+    },
+    {
+        "id": "0242431e8d5fb057",
+        "type": "function",
+        "z": "subflow-connection-gate",
+        "name": "Mirror Status",
+        "func": "msg.payload = {\n    fill: msg.status.fill,\n    shape: msg.status.shape,\n    text: msg.status.text\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 290,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "utility-device-registry",
+        "type": "tab",
+        "label": "Utility: Device Registry",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "099e117caf89de8d",
+        "type": "group",
+        "z": "utility-device-registry",
+        "name": "Test Cases",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "7f7e550589825d13",
+            "4426c3a3255ed558"
+        ],
+        "x": 54,
+        "y": 619,
+        "w": 392,
+        "h": 82
+    },
+    {
+        "id": "7b1ea3c2728ce106",
+        "type": "group",
+        "z": "utility-device-registry",
+        "name": "Sinks",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "49e677f678c0d494",
+            "3b043f36b4a760e1",
+            "fcfca6030d15e02a",
+            "03fb57cc5e1a5d5b"
+        ],
+        "x": 54,
+        "y": 439,
+        "w": 692,
+        "h": 142
+    },
+    {
+        "id": "dc5aa602fab26888",
+        "type": "group",
+        "z": "utility-device-registry",
+        "name": "Registry Pipeline",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "db12a574139aba31",
+            "a360cfef1fadcfc4",
+            "4c5b6f96fc35a135",
+            "d6d8e68f1f6c5eb3",
+            "3ecdd5e873671916",
+            "55b083c2f851e031",
+            "7cd3401c7b5ddfb1",
+            "70c3c10a5b80abee",
+            "99a7741d25dd7808",
+            "f7498b1f1de55933",
+            "d86b821671b19348",
+            "8841815a025c4789",
+            "51aa96606a61cb3c",
+            "fef98433b6d570f5",
+            "542f17b90dc55fdd",
+            "df4d35dab5afc630",
+            "75fc52f54190d568",
+            "2d782853df4a0824",
+            "5ad91d23a357e074",
+            "2826b08e526e8b58",
+            "286b75baad702851",
+            "eaa42e77a1cc9145",
+            "6989f94f068ae2f4"
+        ],
+        "x": 54,
+        "y": 59,
+        "w": 1172,
+        "h": 322
+    },
+    {
+        "id": "6fb49d51ef63e795",
+        "type": "group",
+        "z": "utility-device-registry",
+        "name": "Error Handling",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "0ba7ac17d9389989",
+            "3347bebc309c3cd3"
+        ],
+        "x": 54,
+        "y": 739,
+        "w": 352,
+        "h": 82
+    },
+    {
+        "id": "db12a574139aba31",
+        "type": "ha-api",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Get Areas",
+        "server": "aa5463113481df19",
+        "version": 1,
+        "debugenabled": false,
+        "protocol": "websocket",
+        "method": "get",
+        "path": "",
+        "data": "{\"type\": \"config/area_registry/list\"}",
+        "dataType": "json",
+        "responseType": "json",
+        "outputProperties": [
+            {
+                "property": "registry.areas",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "results"
+            }
+        ],
+        "x": 460,
+        "y": 220,
+        "wires": [
+            [
+                "a360cfef1fadcfc4"
+            ]
+        ]
+    },
+    {
+        "id": "a360cfef1fadcfc4",
+        "type": "ha-api",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Get Devices",
+        "server": "aa5463113481df19",
+        "version": 1,
+        "debugenabled": false,
+        "protocol": "websocket",
+        "method": "get",
+        "path": "",
+        "data": "{\"type\": \"config/device_registry/list\"}",
+        "dataType": "json",
+        "responseType": "json",
+        "outputProperties": [
+            {
+                "property": "registry.devices",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "results"
+            }
+        ],
+        "x": 650,
+        "y": 220,
+        "wires": [
+            [
+                "4c5b6f96fc35a135"
+            ]
+        ]
+    },
+    {
+        "id": "4c5b6f96fc35a135",
+        "type": "ha-api",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Get Entities",
+        "server": "aa5463113481df19",
+        "version": 1,
+        "debugenabled": false,
+        "protocol": "websocket",
+        "method": "get",
+        "path": "",
+        "data": "{\"type\": \"config/entity_registry/list\"}",
+        "dataType": "json",
+        "responseType": "json",
+        "outputProperties": [
+            {
+                "property": "registry.entities",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "results"
+            }
+        ],
+        "x": 850,
+        "y": 220,
+        "wires": [
+            [
+                "55b083c2f851e031"
+            ]
+        ]
+    },
+    {
+        "id": "d6d8e68f1f6c5eb3",
+        "type": "link in",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Build Registry",
+        "links": [
+            "4426c3a3255ed558",
+            "fcfca6030d15e02a"
+        ],
+        "x": 150,
+        "y": 100,
+        "wires": [
+            [
+                "6989f94f068ae2f4"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "7f7e550589825d13",
+        "type": "inject",
+        "z": "utility-device-registry",
+        "g": "099e117caf89de8d",
+        "name": "Manual",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 660,
+        "wires": [
+            [
+                "4426c3a3255ed558"
+            ]
+        ]
+    },
+    {
+        "id": "4426c3a3255ed558",
+        "type": "link out",
+        "z": "utility-device-registry",
+        "g": "099e117caf89de8d",
+        "name": "Build Registry",
+        "mode": "link",
+        "links": [
+            "d6d8e68f1f6c5eb3"
+        ],
+        "x": 340,
+        "y": 660,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "49e677f678c0d494",
+        "type": "inject",
+        "z": "utility-device-registry",
+        "g": "7b1ea3c2728ce106",
+        "name": "On Startup",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 540,
+        "wires": [
+            [
+                "03fb57cc5e1a5d5b"
+            ]
+        ]
+    },
+    {
+        "id": "3b043f36b4a760e1",
+        "type": "mqtt in",
+        "z": "utility-device-registry",
+        "g": "7b1ea3c2728ce106",
+        "name": "Reload Registry",
+        "topic": "highland/command/config/reload/device_registry",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 160,
+        "y": 480,
+        "wires": [
+            [
+                "03fb57cc5e1a5d5b"
+            ]
+        ]
+    },
+    {
+        "id": "fcfca6030d15e02a",
+        "type": "link out",
+        "z": "utility-device-registry",
+        "g": "7b1ea3c2728ce106",
+        "name": "Build Registry",
+        "mode": "link",
+        "links": [
+            "d6d8e68f1f6c5eb3"
+        ],
+        "x": 640,
+        "y": 480,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "3ecdd5e873671916",
+        "type": "link in",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Fetch From Home Assistant",
+        "links": [],
+        "x": 220,
+        "y": 220,
+        "wires": [
+            [
+                "db12a574139aba31"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "55b083c2f851e031",
+        "type": "link out",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Fetch From Home Assistant Return",
+        "mode": "return",
+        "links": [],
+        "x": 995,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "7cd3401c7b5ddfb1",
+        "type": "link call",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Fetch From Home Assistant",
+        "links": [
+            "3ecdd5e873671916"
+        ],
+        "linkType": "static",
+        "timeout": "30",
+        "x": 660,
+        "y": 100,
+        "wires": [
+            [
+                "70c3c10a5b80abee"
+            ]
+        ]
+    },
+    {
+        "id": "70c3c10a5b80abee",
+        "type": "function",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Assemble Results",
+        "func": "// Preserve existing models from loaded config — never overwrite\nconst existingModels = msg.existingModels || {};\n\n// Build areas map\nconst areasMap = {};\nfor (const area of msg.registry.areas) {\n    areasMap[area.area_id] = {\n        name: area.name,\n        floor_id: area.floor_id\n    };\n}\n\n// Build entity index by device_id for fast lookup\nconst entitiesByDevice = {};\nfor (const entity of msg.registry.entities) {\n    if (!entitiesByDevice[entity.device_id]) {\n        entitiesByDevice[entity.device_id] = [];\n    }\n    entitiesByDevice[entity.device_id].push(entity);\n}\n\n// Filter and build devices\nconst devices = {};\nfor (const device of msg.registry.devices) {\n    // Skip infrastructure: service entries and devices with no parent\n    if (device.entry_type !== null) continue;\n    if (!device.via_device_id) continue;\n\n    // Determine protocol from identifiers\n    const identifierPlatforms = device.identifiers.map(i => i[0]);\n    let protocol = null;\n    if (identifierPlatforms.some(p => p === 'mqtt')) protocol = 'zigbee';\n    else if (identifierPlatforms.some(p => p === 'zwave_js')) protocol = 'zwave';\n    else continue; // skip non-highland devices\n\n    // Find battery entity\n    const deviceEntities = entitiesByDevice[device.id] || [];\n    const batteryEntity = deviceEntities.find(\n        e => e.original_name === 'Battery' && e.disabled_by === null\n    );\n\n    // Resolve area\n    const area = device.area_id ? areasMap[device.area_id] : null;\n\n    const key = device.name_by_user || device.name;\n\n    devices[key] = {\n        ha_device_id: device.id,\n        friendly_name: key,\n        manufacturer: device.manufacturer,\n        model: device.model,\n        model_id: device.model_id,\n        area_id: device.area_id,\n        floor_id: area?.floor_id || null,\n        protocol,\n        battery_pct_entity: batteryEntity?.entity_id || null\n    };\n}\n\nmsg.payload = {\n    devices,\n    areas: areasMap,\n    models: existingModels,\n    meta: {\n        last_refreshed: new Date().toISOString(),\n        device_count: Object.keys(devices).length,\n        source: 'ha_registry'\n    }\n};\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers');\nnode.status({ fill: 'green', shape: 'dot', \n    text: formatStatus(`Built — ${Object.keys(devices).length} devices`) });\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 930,
+        "y": 100,
+        "wires": [
+            [
+                "d86b821671b19348",
+                "8841815a025c4789"
+            ]
+        ]
+    },
+    {
+        "id": "99a7741d25dd7808",
+        "type": "link in",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Persist",
+        "links": [
+            "d86b821671b19348"
+        ],
+        "x": 150,
+        "y": 280,
+        "wires": [
+            [
+                "fef98433b6d570f5"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "f7498b1f1de55933",
+        "type": "link in",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Publish",
+        "links": [
+            "8841815a025c4789"
+        ],
+        "x": 150,
+        "y": 340,
+        "wires": [
+            [
+                "df4d35dab5afc630"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "d86b821671b19348",
+        "type": "link out",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Persist",
+        "mode": "link",
+        "links": [
+            "99a7741d25dd7808"
+        ],
+        "x": 1130,
+        "y": 100,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "8841815a025c4789",
+        "type": "link out",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Publish",
+        "mode": "link",
+        "links": [
+            "f7498b1f1de55933"
+        ],
+        "x": 1140,
+        "y": 160,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0ba7ac17d9389989",
+        "type": "catch",
+        "z": "utility-device-registry",
+        "g": "6fb49d51ef63e795",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 140,
+        "y": 780,
+        "wires": [
+            [
+                "3347bebc309c3cd3"
+            ]
+        ]
+    },
+    {
+        "id": "3347bebc309c3cd3",
+        "type": "debug",
+        "z": "utility-device-registry",
+        "g": "6fb49d51ef63e795",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 310,
+        "y": 780,
+        "wires": []
+    },
+    {
+        "id": "51aa96606a61cb3c",
+        "type": "file",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "To Disk",
+        "filename": "/config/device_registry.json",
+        "filenameType": "str",
+        "appendNewline": false,
+        "createDir": false,
+        "overwriteFile": "true",
+        "encoding": "utf8",
+        "x": 500,
+        "y": 280,
+        "wires": [
+            [
+                "542f17b90dc55fdd"
+            ]
+        ]
+    },
+    {
+        "id": "fef98433b6d570f5",
+        "type": "function",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Serialize",
+        "func": "// Serialize Registry\nmsg.payload = JSON.stringify(msg.payload, null, 2);\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 280,
+        "wires": [
+            [
+                "51aa96606a61cb3c"
+            ]
+        ]
+    },
+    {
+        "id": "542f17b90dc55fdd",
+        "type": "function",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Write Status",
+        "func": "// Set Persist Status\nconst formatStatus = global.get('utils.formatStatus', 'initializers');\nnode.status({ fill: 'green', shape: 'dot', text: formatStatus('Saved') });\nreturn msg;",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 690,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "df4d35dab5afc630",
+        "type": "function",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Update Context",
+        "func": "global.set('config.deviceRegistry', msg.payload);\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers');\nnode.status({ fill: 'green', shape: 'dot',\n    text: formatStatus(`${msg.payload.meta.device_count} devices`) });\n    \nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 340,
+        "wires": [
+            [
+                "2d782853df4a0824"
+            ]
+        ]
+    },
+    {
+        "id": "75fc52f54190d568",
+        "type": "mqtt out",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Status",
+        "topic": "",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 750,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "2d782853df4a0824",
+        "type": "function",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Prepare Status",
+        "func": "msg.payload = {\n    timestamp: msg.payload.meta.last_refreshed,\n    source: 'device_registry',\n    loaded: ['device_registry'],\n    device_count: msg.payload.meta.device_count\n};\nmsg.topic = 'highland/status/config/loaded';\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 340,
+        "wires": [
+            [
+                "75fc52f54190d568"
+            ]
+        ]
+    },
+    {
+        "id": "5ad91d23a357e074",
+        "type": "link in",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Fetch From Filesystem",
+        "links": [],
+        "x": 200,
+        "y": 160,
+        "wires": [
+            [
+                "286b75baad702851"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "2826b08e526e8b58",
+        "type": "link out",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Load Extant Registry Return",
+        "mode": "return",
+        "links": [],
+        "x": 795,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "286b75baad702851",
+        "type": "file in",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "From Disk",
+        "filename": "/config/device_registry.json",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "utf8",
+        "allProps": false,
+        "x": 430,
+        "y": 160,
+        "wires": [
+            [
+                "eaa42e77a1cc9145"
+            ]
+        ]
+    },
+    {
+        "id": "eaa42e77a1cc9145",
+        "type": "function",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "Extract Models",
+        "func": "try {\n    const existing = JSON.parse(msg.payload);\n    msg.existingModels = existing.models || {};\n} catch (e) {\n    // File doesn't exist yet or is malformed — start with empty models\n    msg.existingModels = {};\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 160,
+        "wires": [
+            [
+                "2826b08e526e8b58"
+            ]
+        ]
+    },
+    {
+        "id": "6989f94f068ae2f4",
+        "type": "link call",
+        "z": "utility-device-registry",
+        "g": "dc5aa602fab26888",
+        "name": "",
+        "links": [
+            "5ad91d23a357e074"
+        ],
+        "linkType": "static",
+        "timeout": "30",
+        "x": 380,
+        "y": 100,
+        "wires": [
+            [
+                "7cd3401c7b5ddfb1"
+            ]
+        ]
+    },
+    {
+        "id": "03fb57cc5e1a5d5b",
+        "type": "subflow:subflow-connection-gate",
+        "z": "utility-device-registry",
+        "g": "7b1ea3c2728ce106",
+        "name": "Home Assistant Gate",
+        "env": [
+            {
+                "name": "CONNECTION_TYPE",
+                "value": "home_assistant",
+                "type": "str"
+            },
+            {
+                "name": "RETENTION_MS",
+                "value": "5000",
+                "type": "num"
+            },
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "ha-",
+                "type": "str"
+            }
+        ],
+        "x": 400,
+        "y": 480,
+        "wires": [
+            [
+                "fcfca6030d15e02a"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "aa5463113481df19",
+        "type": "server",
+        "name": "Home Assistant",
+        "version": 6,
+        "addon": false,
+        "rejectUnauthorizedCerts": true,
+        "ha_boolean": [
+            "y",
+            "yes",
+            "true",
+            "on",
+            "home",
+            "open"
+        ],
+        "connectionDelay": true,
+        "cacheJson": true,
+        "heartbeat": false,
+        "heartbeatInterval": 30,
+        "areaSelector": "friendlyName",
+        "deviceSelector": "friendlyName",
+        "entitySelector": "friendlyName",
+        "statusSeparator": ": ",
+        "statusYear": "hidden",
+        "statusMonth": "short",
+        "statusDay": "numeric",
+        "statusHourCycle": "default",
+        "statusTimeFormat": "h:m",
+        "enableGlobalContextStore": false
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "1346b81fc4c95101",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-home-assistant-websocket": "0.80.3"
+        }
+    }
+]

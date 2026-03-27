@@ -1,0 +1,510 @@
+[
+    {
+        "id": "utility-daily-digest",
+        "type": "tab",
+        "label": "Utility: Daily Digest",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "d1a661e4c605c3eb",
+        "type": "group",
+        "z": "utility-daily-digest",
+        "name": "Sinks",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "31a7d6a45f3a9822",
+            "e2ab4c6734c269d8",
+            "23b3949b7c27ba09",
+            "3666cedb2ae9a3d4",
+            "e5de0c0860fe3308",
+            "db299bc910bf633b",
+            "f17a5ce9aed27dd5",
+            "41e6325331ab6c68"
+        ],
+        "x": 54,
+        "y": 219,
+        "w": 452,
+        "h": 262
+    },
+    {
+        "id": "7d32e9700704032c",
+        "type": "group",
+        "z": "utility-daily-digest",
+        "name": "Digest Pipeline",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "eaaf1897e5e206a6",
+            "d1526ffc579b2750",
+            "ccd2ea5138274a6d",
+            "754aad4aca7ab5c1",
+            "c8253451e72d53c6",
+            "78f153211dc97edb",
+            "3768e0753ac4d1d5"
+        ],
+        "x": 54,
+        "y": 39,
+        "w": 1192,
+        "h": 142
+    },
+    {
+        "id": "ef5cb2ef799c64ab",
+        "type": "group",
+        "z": "utility-daily-digest",
+        "name": "Test Cases",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "2f5e64d4bafca64c",
+            "651c97e57c819335"
+        ],
+        "x": 54,
+        "y": 639,
+        "w": 372,
+        "h": 82
+    },
+    {
+        "id": "33cf746f8b4336b1",
+        "type": "group",
+        "z": "utility-daily-digest",
+        "name": "Error Handling",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "bee73429adaf732b",
+            "fd23e2fee7a3b745"
+        ],
+        "x": 54,
+        "y": 519,
+        "w": 352,
+        "h": 82
+    },
+    {
+        "id": "31a7d6a45f3a9822",
+        "type": "mqtt in",
+        "z": "utility-daily-digest",
+        "g": "d1a661e4c605c3eb",
+        "name": "Calendar Snapshot",
+        "topic": "highland/state/calendar/snapshot",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 260,
+        "wires": [
+            [
+                "e2ab4c6734c269d8"
+            ]
+        ]
+    },
+    {
+        "id": "e2ab4c6734c269d8",
+        "type": "function",
+        "z": "utility-daily-digest",
+        "g": "d1a661e4c605c3eb",
+        "name": "Store Calendar",
+        "func": "try {\n    const data = typeof msg.payload === 'string' \n        ? JSON.parse(msg.payload) \n        : msg.payload;\n    flow.set('calendar_snapshot', data);\n} catch (e) {\n    node.warn('Failed to parse calendar snapshot');\n}\nreturn null;",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "23b3949b7c27ba09",
+        "type": "mqtt in",
+        "z": "utility-daily-digest",
+        "g": "d1a661e4c605c3eb",
+        "name": "Weather Forecast",
+        "topic": "highland/state/weather/forecast",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 320,
+        "wires": [
+            [
+                "3666cedb2ae9a3d4"
+            ]
+        ]
+    },
+    {
+        "id": "3666cedb2ae9a3d4",
+        "type": "function",
+        "z": "utility-daily-digest",
+        "g": "d1a661e4c605c3eb",
+        "name": "Store Forecast",
+        "func": "try {\n    const data = typeof msg.payload === 'string' \n        ? JSON.parse(msg.payload) \n        : msg.payload;\n    flow.set('weather_forecast', data);\n} catch (e) {\n    node.warn('Failed to parse weather forecast');\n}\nreturn null;",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "e5de0c0860fe3308",
+        "type": "mqtt in",
+        "z": "utility-daily-digest",
+        "g": "d1a661e4c605c3eb",
+        "name": "Weather Alerts",
+        "topic": "highland/state/weather/alerts",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 160,
+        "y": 380,
+        "wires": [
+            [
+                "db299bc910bf633b"
+            ]
+        ]
+    },
+    {
+        "id": "db299bc910bf633b",
+        "type": "function",
+        "z": "utility-daily-digest",
+        "g": "d1a661e4c605c3eb",
+        "name": "Store Alerts",
+        "func": "try {\n    const data = typeof msg.payload === 'string' \n        ? JSON.parse(msg.payload) \n        : msg.payload;\n    flow.set('weather_alerts', data);\n} catch (e) {\n    node.warn('Failed to parse weather alerts');\n}\nreturn null;",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "f17a5ce9aed27dd5",
+        "type": "mqtt in",
+        "z": "utility-daily-digest",
+        "g": "d1a661e4c605c3eb",
+        "name": "Battery States",
+        "topic": "highland/state/battery/states",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 440,
+        "wires": [
+            [
+                "41e6325331ab6c68"
+            ]
+        ]
+    },
+    {
+        "id": "41e6325331ab6c68",
+        "type": "function",
+        "z": "utility-daily-digest",
+        "g": "d1a661e4c605c3eb",
+        "name": "Store Batteries",
+        "func": "try {\n    const data = typeof msg.payload === 'string' \n        ? JSON.parse(msg.payload) \n        : msg.payload;\n    flow.set('battery_states', data);\n} catch (e) {\n    node.warn('Failed to parse weather alerts');\n}\nreturn null;",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "eaaf1897e5e206a6",
+        "type": "mqtt in",
+        "z": "utility-daily-digest",
+        "g": "7d32e9700704032c",
+        "name": "Midnight",
+        "topic": "highland/event/scheduler/midnight",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 80,
+        "wires": [
+            [
+                "d1526ffc579b2750"
+            ]
+        ]
+    },
+    {
+        "id": "d1526ffc579b2750",
+        "type": "delay",
+        "z": "utility-daily-digest",
+        "g": "7d32e9700704032c",
+        "name": "Delay 5s",
+        "pauseType": "delay",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 320,
+        "y": 80,
+        "wires": [
+            [
+                "ccd2ea5138274a6d"
+            ]
+        ]
+    },
+    {
+        "id": "ccd2ea5138274a6d",
+        "type": "function",
+        "z": "utility-daily-digest",
+        "g": "7d32e9700704032c",
+        "name": "Assemble Data",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nconst location = global.get('config')?.location;\nconst timezone = location?.timezone || 'America/New_York';\n\nconst now = new Date();\nconst today = now.toLocaleDateString('en-CA', { timeZone: timezone });\nconst tomorrow = new Date(now.getTime() + 86400000).toLocaleDateString('en-CA', { timeZone: timezone });\n\n// Calendar\nconst calendarSnapshot = flow.get('calendar_snapshot');\nconst events = calendarSnapshot?.events || [];\n\nconst appointments = events\n    .filter(e => e.calendar === 'appointments' && e.date === today)\n    .sort((a, b) => (a.start || '').localeCompare(b.start || ''));\n\nconst reminders = events\n    .filter(e => e.calendar === 'reminders' && e.date === today);\n\nconst trashToday = events.filter(e => e.calendar === 'trash' && e.date === today);\nconst trashTomorrow = events.filter(e => e.calendar === 'trash' && e.date === tomorrow);\n\n// Weather\nconst forecast = flow.get('weather_forecast');\nconst alerts = flow.get('weather_alerts');\nconst todayForecast = forecast?.periods?.[today] || null;\nconst activeAlerts = alerts?.alerts || [];\n\n// Battery\nconst batteryStates = flow.get('battery_states');\nconst batteries = batteryStates?.states || {};\nconst batteriesNeedingAttention = Object.entries(batteries)\n    .filter(([, v]) => v.state === 'low' || v.state === 'critical')\n    .map(([key, v]) => ({ key, ...v }))\n    .sort((a, b) => a.level - b.level);\n\n// System health\nconst connections = {\n    mqtt: global.get('connections.mqtt') || 'unknown',\n    home_assistant: global.get('connections.home_assistant') || 'unknown'\n};\n\n// Format date for header\nconst dateLabel = now.toLocaleDateString('en-US', {\n    timeZone: timezone,\n    weekday: 'long',\n    year: 'numeric',\n    month: 'long',\n    day: 'numeric'\n});\n\nconst timeLabel = now.toLocaleTimeString('en-US', {\n    timeZone: timezone,\n    hour: 'numeric',\n    minute: '2-digit',\n    hour12: true\n});\n\nmsg.digestData = {\n    dateLabel,\n    timeLabel,\n    appointments,\n    reminders,\n    trashToday,\n    trashTomorrow,\n    today,\n    tomorrow,\n    todayForecast,\n    activeAlerts,\n    batteriesNeedingAttention,\n    connections\n};\n\nnode.status({ fill: 'blue', shape: 'dot', text: formatStatus('Data assembled') });\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 520,
+        "y": 80,
+        "wires": [
+            [
+                "c8253451e72d53c6"
+            ]
+        ]
+    },
+    {
+        "id": "c8253451e72d53c6",
+        "type": "function",
+        "z": "utility-daily-digest",
+        "g": "7d32e9700704032c",
+        "name": "Build Email",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nconst {\n    dateLabel, timeLabel, appointments, reminders,\n    trashToday, trashTomorrow, today, tomorrow,\n    todayForecast, activeAlerts, batteriesNeedingAttention, connections\n} = msg.digestData;\n\n// ─────────────────────────────────────────────\n// Utility functions\n// ─────────────────────────────────────────────\n\nfunction esc(str) {\n    return String(str || '')\n        .replace(/&/g, '&amp;')\n        .replace(/</g, '&lt;')\n        .replace(/>/g, '&gt;')\n        .replace(/\"/g, '&quot;');\n}\n\nfunction formatTimeRange(start, end) {\n    const fmt = iso => {\n        const d = new Date(iso);\n        const h = d.getHours() % 12 || 12;\n        const m = d.getMinutes();\n        const ap = d.getHours() >= 12 ? 'PM' : 'AM';\n        return m === 0 ? `${h} ${ap}` : `${h}:${m.toString().padStart(2,'0')} ${ap}`;\n    };\n    return `${fmt(start)} \\u2013 ${fmt(end)}`;\n}\n\nfunction formatHour(iso) {\n    return String(new Date(iso).getHours() % 12 || 12);\n}\n\nfunction formatAmPm(iso) {\n    return new Date(iso).getHours() >= 12 ? 'PM' : 'AM';\n}\n\nfunction formatDateFull(dateStr) {\n    return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {\n        weekday: 'long', month: 'long', day: 'numeric'\n    });\n}\n\n// ─────────────────────────────────────────────\n// Meteocons icon mapping\n// NWS condition code → Meteocons filename (without .png)\n// ─────────────────────────────────────────────\n\nfunction getMeteoconName(code, isDaytime) {\n    const day = isDaytime;\n    switch (code) {\n        // Clear\n        case 'skc':\n        case 'few':\n            return day ? 'clear-day' : 'clear-night';\n        // Partly cloudy\n        case 'sct':\n            return day ? 'partly-cloudy-day' : 'partly-cloudy-night';\n        // Mostly cloudy\n        case 'bkn':\n            return day ? 'overcast-day' : 'overcast-night';\n        // Overcast\n        case 'ovc':\n            return 'overcast';\n        // Windy variants\n        case 'wind_skc':\n        case 'wind_few':\n            return day ? 'clear-day' : 'clear-night';\n        case 'wind_sct':\n        case 'wind_bkn':\n        case 'wind_ovc':\n            return 'wind';\n        // Rain\n        case 'rain':\n        case 'rain_showers':\n        case 'rain_showers_hi':\n            return 'rain';\n        // Freezing rain / mixed\n        case 'fzra':\n        case 'rain_fzra':\n        case 'snow_fzra':\n            return day ? 'overcast-day-sleet' : 'overcast-night-sleet';\n        // Rain/snow mix\n        case 'rain_snow':\n            return day ? 'partly-cloudy-day-sleet' : 'partly-cloudy-night-sleet';\n        // Sleet\n        case 'sleet':\n        case 'rain_sleet':\n        case 'snow_sleet':\n            return 'sleet';\n        // Snow\n        case 'snow':\n            return 'snow';\n        // Blizzard\n        case 'blizzard':\n            return 'extreme-snow';\n        // Thunderstorms\n        case 'tsra':\n        case 'tsra_sct':\n        case 'tsra_hi':\n            return day ? 'thunderstorms-day' : 'thunderstorms-night';\n        // Severe\n        case 'tornado':\n            return 'tornado';\n        case 'hurricane':\n        case 'tropical_storm':\n            return 'hurricane';\n        // Obscured\n        case 'fog':\n            return day ? 'fog-day' : 'fog-night';\n        case 'smoke':\n            return 'smoke';\n        case 'haze':\n            return day ? 'haze-day' : 'haze-night';\n        case 'dust':\n            return day ? 'dust-day' : 'dust-night';\n        // Temperature extremes\n        case 'hot':\n            return 'thermometer-sun';\n        case 'cold':\n            return 'thermometer-snow';\n        // Default\n        default:\n            return day ? 'clear-day' : 'clear-night';\n    }\n}\n\n// Track which icons are used so Build SMTP Message knows what to attach\nconst usedIcons = new Set();\n\nfunction weatherImg(code, isDaytime, width, height, extraStyle) {\n    const name = getMeteoconName(code, isDaytime);\n    usedIcons.add(name);\n    const style = extraStyle || 'display:block;';\n    return `<img src=\"cid:${name}.png\" width=\"${width}\" height=\"${height}\" alt=\"\" style=\"${style}\" />`;\n}\n\nfunction getWeatherIconLarge(code, isDaytime) {\n    return weatherImg(code, isDaytime, 64, 64, 'display:block;margin:0 auto;');\n}\n\nfunction getWeatherIconSmall(code, isDaytime) {\n    return weatherImg(code, isDaytime, 48, 48, 'display:inline-block;');\n}\n\nfunction severityColor(s) {\n    return { Extreme: '#dc2626', Severe: '#ea580c', Moderate: '#d97706', Minor: '#ca8a04' }[s] || '#d97706';\n}\nfunction severityBg(s) {\n    return { Extreme: '#fef2f2', Severe: '#fff7ed', Moderate: '#fef3c7', Minor: '#fefce8' }[s] || '#fef3c7';\n}\n\n// ─────────────────────────────────────────────\n// Layout primitives\n// ─────────────────────────────────────────────\n\nfunction divider() {\n    return `<tr><td style=\"padding:28px 40px 0;\">\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n          <tr><td style=\"height:1px;background-color:#ebebeb;\"></td></tr>\n        </table>\n      </td></tr>`;\n}\n\nfunction sectionHeader(label, title, accentColor) {\n    return `<tr><td style=\"padding:28px 40px 0;\">\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n          <tr><td style=\"border-left:3px solid ${accentColor};padding-left:12px;\">\n            <p style=\"margin:0;font-family:'Courier New',Courier,monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:${accentColor};\">${label}</p>\n            <h2 style=\"margin:3px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:18px;font-weight:600;color:#1a1f2e;\">${title}</h2>\n          </td></tr>\n        </table>\n      </td></tr>`;\n}\n\n// ─────────────────────────────────────────────\n// Section builders\n// ─────────────────────────────────────────────\n\nfunction buildAppointments() {\n    if (!appointments || !appointments.length) return '';\n    const items = appointments.map(e => `\n        <tr><td style=\"padding:0 0 8px 0;\">\n          <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:#f8f8f6;border-radius:8px;\">\n            <tr><td style=\"padding:16px 20px;\">\n              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n                <tr>\n                  <td valign=\"top\" width=\"56\">\n                    <div style=\"background-color:#e8f0fe;border-radius:6px;padding:7px 0;text-align:center;width:44px;\">\n                      <p style=\"margin:0;font-family:'Courier New',Courier,monospace;font-size:16px;font-weight:bold;color:#4f7df0;line-height:1;\">${formatHour(e.start)}</p>\n                      <p style=\"margin:1px 0 0;font-family:'Courier New',Courier,monospace;font-size:8px;letter-spacing:1px;color:#7a9bd4;text-transform:uppercase;\">${formatAmPm(e.start)}</p>\n                    </div>\n                  </td>\n                  <td style=\"padding-left:14px;\" valign=\"top\">\n                    <p style=\"margin:0 0 3px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:600;color:#1a1f2e;\">${esc(e.title)}</p>\n                    <p style=\"margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;color:#6b7280;\">${e.end ? formatTimeRange(e.start, e.end) : formatHour(e.start) + ' ' + formatAmPm(e.start)}</p>\n                  </td>\n                </tr>\n              </table>\n            </td></tr>\n          </table>\n        </td></tr>`).join('');\n\n    return sectionHeader('Today', 'Appointments', '#4f7df0') +\n        `<tr><td style=\"padding:16px 40px 0;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">${items}</table></td></tr>` +\n        divider();\n}\n\nfunction buildReminders() {\n    if (!reminders || !reminders.length) return '';\n    const items = reminders.map(e => `\n        <tr><td style=\"padding-bottom:8px;\">\n          <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:#f8f4ff;border-radius:8px;\">\n            <tr><td style=\"padding:13px 18px;\">\n              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n                <tr>\n                  <td width=\"24\" valign=\"middle\"><div style=\"width:7px;height:7px;background-color:#7b5ea7;border-radius:50%;\"></div></td>\n                  <td valign=\"middle\"><p style=\"margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;color:#1a1f2e;\">${esc(e.title)}</p></td>\n                </tr>\n              </table>\n            </td></tr>\n          </table>\n        </td></tr>`).join('');\n\n    return sectionHeader('Today', 'Reminders', '#7b5ea7') +\n        `<tr><td style=\"padding:16px 40px 0;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">${items}</table></td></tr>` +\n        divider();\n}\n\nfunction buildTrash() {\n    const hasToday = trashToday && trashToday.length > 0;\n    const hasTomorrow = trashTomorrow && trashTomorrow.length > 0;\n    if (!hasToday && !hasTomorrow) return '';\n\n    const label = hasToday ? 'Today' : 'Tomorrow';\n    const date = hasToday ? today : tomorrow;\n\n    return sectionHeader('Pickup Schedule', 'Trash &amp; Recycling', '#e8734a') +\n        `<tr><td style=\"padding:16px 40px 0;\">\n          <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:#fff8f5;border-radius:8px;border:1px solid #fdddd0;\">\n            <tr><td style=\"padding:20px 24px;\">\n              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n                <tr>\n                  <td width=\"50%\" valign=\"top\" style=\"padding-right:16px;\">\n                    <p style=\"margin:0 0 3px 0;font-family:'Courier New',Courier,monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#e8734a;\">Trash</p>\n                    <p style=\"margin:0 0 2px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:20px;font-weight:700;color:#1a1f2e;\">${label}</p>\n                    <p style=\"margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;color:#9ca3af;\">${formatDateFull(date)}</p>\n                  </td>\n                  <td width=\"1\" style=\"background-color:#fdddd0;\"></td>\n                  <td width=\"50%\" valign=\"top\" style=\"padding-left:24px;\">\n                    <p style=\"margin:0 0 3px 0;font-family:'Courier New',Courier,monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#e8734a;\">Recycling</p>\n                    <p style=\"margin:0 0 2px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:20px;font-weight:700;color:#1a1f2e;\">${label}</p>\n                    <p style=\"margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;color:#9ca3af;\">${formatDateFull(date)}</p>\n                  </td>\n                </tr>\n              </table>\n            </td></tr>\n          </table>\n        </td></tr>` +\n        divider();\n}\n\nfunction buildWeather() {\n    if (!todayForecast) return '';\n\n    const day = todayForecast.daytime;\n    const night = todayForecast.overnight;\n\n    const alertBanners = (activeAlerts || []).map(a => `\n        <tr><td style=\"padding:0 0 10px 0;\">\n          <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:${severityBg(a.severity)};border-radius:8px;border-left:4px solid ${severityColor(a.severity)};\">\n            <tr><td style=\"padding:14px 18px;\">\n              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n                <tr>\n                  <td valign=\"top\" width=\"28\"><p style=\"margin:0;font-size:15px;line-height:1.3;\">&#9888;&#65039;</p></td>\n                  <td valign=\"top\" style=\"padding-left:8px;\">\n                    <p style=\"margin:0 0 2px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;font-weight:700;color:${severityColor(a.severity)};\">${esc(a.event)}</p>\n                    <p style=\"margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;color:#374151;\">${esc(a.headline)}</p>\n                  </td>\n                </tr>\n              </table>\n            </td></tr>\n          </table>\n        </td></tr>`).join('');\n\n    const dayPanel = day ? `\n        <td width=\"50%\" valign=\"top\" align=\"center\" style=\"padding-right:20px;\">\n          <p style=\"margin:0 0 10px 0;font-family:'Courier New',Courier,monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#0ea5e9;\">Today</p>\n          <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"margin-bottom:12px;\">\n            <tr><td align=\"center\" style=\"padding-bottom:8px;\">${getWeatherIconLarge(day.icon, true)}</td></tr>\n            <tr><td align=\"center\">\n              <p style=\"margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:36px;font-weight:700;color:#1a1f2e;line-height:1;\">${day.temperature}&deg;</p>\n              <p style=\"margin:3px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;color:#64748b;\">${esc(day.shortForecast)}</p>\n            </td></tr>\n          </table>\n          <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"margin:0 auto;\">\n            <tr>\n              <td style=\"width:50%;text-align:center;\">\n                <p style=\"margin:0;font-family:'Courier New',Courier,monospace;font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;\">Precip</p>\n                <p style=\"margin:2px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;color:#334155;font-weight:600;\">${day.precipChance}%</p>\n              </td>\n              <td style=\"width:50%;text-align:center;\">\n                <p style=\"margin:0;font-family:'Courier New',Courier,monospace;font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;\">Wind</p>\n                <p style=\"margin:2px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;color:#334155;font-weight:600;\">${esc(day.windDirection)} ${esc(day.windSpeed)}</p>\n              </td>\n            </tr>\n          </table>\n        </td>` : `<td width=\"50%\"></td>`;\n\n    const nightPanel = night ? `\n        <td width=\"50%\" valign=\"top\" align=\"center\" style=\"padding-left:24px;\">\n          <p style=\"margin:0 0 10px 0;font-family:'Courier New',Courier,monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#0ea5e9;\">Tonight</p>\n          <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"margin-bottom:12px;\">\n            <tr><td align=\"center\" style=\"padding-bottom:8px;\">${getWeatherIconLarge(night.icon, false)}</td></tr>\n            <tr><td align=\"center\">\n              <p style=\"margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:36px;font-weight:700;color:#1a1f2e;line-height:1;\">${night.temperature}&deg;</p>\n              <p style=\"margin:3px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;color:#64748b;\">${esc(night.shortForecast)}</p>\n            </td></tr>\n          </table>\n          <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"margin:0 auto;\">\n            <tr>\n              <td style=\"width:50%;text-align:center;\">\n                <p style=\"margin:0;font-family:'Courier New',Courier,monospace;font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;\">Precip</p>\n                <p style=\"margin:2px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;color:#334155;font-weight:600;\">${night.precipChance}%</p>\n              </td>\n              <td style=\"width:50%;text-align:center;\">\n                <p style=\"margin:0;font-family:'Courier New',Courier,monospace;font-size:9px;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;\">Wind</p>\n                <p style=\"margin:2px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;color:#334155;font-weight:600;\">${esc(night.windDirection)} ${esc(night.windSpeed)}</p>\n              </td>\n            </tr>\n          </table>\n        </td>` : `<td width=\"50%\"></td>`;\n\n    // 5-day forecast\n    const forecastData = flow.get('weather_forecast');\n    const timezone = global.get('config')?.location?.timezone || 'America/New_York';\n    const now = new Date();\n    const fiveDayDates = [];\n    for (let i = 1; i <= 5; i++) {\n        const d = new Date(now);\n        d.setDate(d.getDate() + i);\n        fiveDayDates.push(d.toLocaleDateString('en-CA', { timeZone: timezone }));\n    }\n\n    const fiveDayCols = fiveDayDates.map(date => {\n        const p = forecastData?.periods?.[date];\n        if (!p) return `<td width=\"20%\" align=\"center\" style=\"padding:0 4px;\"></td>`;\n        const dayData = p.daytime || p.overnight;\n        if (!dayData) return `<td width=\"20%\" align=\"center\" style=\"padding:0 4px;\"></td>`;\n        const dayName = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' });\n        const high = p.daytime?.temperature ?? '\\u2013';\n        const low = p.overnight?.temperature ?? '\\u2013';\n        const icon = getWeatherIconSmall(dayData.icon, !!p.daytime);\n        const label = esc(dayData.shortForecast.length > 18 ? dayData.shortForecast.slice(0, 17) + '\\u2026' : dayData.shortForecast);\n        return `<td width=\"20%\" valign=\"top\" align=\"center\" style=\"padding:0 4px;\">\n          <p style=\"margin:0 0 6px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:11px;font-weight:600;color:#64748b;\">${dayName}</p>\n          <div style=\"text-align:center;margin:0 auto 6px;\">${icon}</div>\n          <p style=\"margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;font-weight:700;color:#1a1f2e;\">${high}&deg;</p>\n          <p style=\"margin:1px 0 5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:11px;color:#94a3b8;\">${low}&deg;</p>\n          <p style=\"margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:11px;color:#475569;line-height:1.3;\">${label}</p>\n        </td>`;\n    }).join('');\n\n    const alertTopPadding = (activeAlerts && activeAlerts.length) ? 'padding:12px 40px 0;' : 'padding:16px 40px 0;';\n\n    return sectionHeader('Forecast', 'Weather', '#0ea5e9') +\n        ((activeAlerts && activeAlerts.length) ? `<tr><td style=\"padding:16px 40px 0;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">${alertBanners}</table></td></tr>` : '') +\n        `<tr><td style=\"${alertTopPadding}\">\n          <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:#f0f9ff;border-radius:8px;border:1px solid #bae6fd;\">\n            <tr><td style=\"padding:22px 24px 20px;\">\n              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n                <tr>${dayPanel}<td width=\"1\" style=\"background-color:#bae6fd;width:1px;\"></td>${nightPanel}</tr>\n              </table>\n            </td></tr>\n            <tr><td style=\"padding:0 24px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"height:1px;background-color:#bae6fd;\"></td></tr></table></td></tr>\n            <tr><td style=\"padding:18px 24px 20px;\">\n              <p style=\"margin:0 0 14px 0;font-family:'Courier New',Courier,monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#0ea5e9;\">5-Day Forecast</p>\n              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr>${fiveDayCols}</tr></table>\n            </td></tr>\n          </table>\n        </td></tr>` +\n        divider();\n}\n\nfunction buildBattery() {\n    if (!batteriesNeedingAttention || !batteriesNeedingAttention.length) return '';\n    const items = batteriesNeedingAttention.map(b => {\n        const isCritical = b.state === 'critical';\n        const bg = isCritical ? '#fff5f5' : '#fffbeb';\n        const border = isCritical ? '#ef4444' : '#f59e0b';\n        const color = isCritical ? '#ef4444' : '#f59e0b';\n        const friendlyName = esc(b.key.replace(/_/g, ' ').replace(/\\b\\w/g, c => c.toUpperCase()));\n        const batterySpec = b.battery ? `Replace ${b.battery.quantity}\\u00d7 ${b.battery.type}` : 'Replace battery';\n        return `<tr><td style=\"padding-bottom:8px;\">\n          <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:${bg};border-radius:8px;border-left:4px solid ${border};\">\n            <tr><td style=\"padding:13px 18px;\">\n              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n                <tr>\n                  <td valign=\"middle\">\n                    <p style=\"margin:0 0 2px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#1a1f2e;\">${friendlyName}</p>\n                    <p style=\"margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;color:#9ca3af;\">${batterySpec}</p>\n                  </td>\n                  <td align=\"right\" valign=\"middle\" width=\"52\">\n                    <p style=\"margin:0;font-family:'Courier New',Courier,monospace;font-size:20px;font-weight:bold;color:${color};\">${b.level}%</p>\n                  </td>\n                </tr>\n              </table>\n            </td></tr>\n          </table>\n        </td></tr>`;\n    }).join('');\n\n    return sectionHeader('Needs Attention', 'Battery Status', '#f59e0b') +\n        `<tr><td style=\"padding:16px 40px 0;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">${items}</table></td></tr>` +\n        divider();\n}\n\nfunction buildHealth() {\n    const services = [\n        { label: 'MQTT Broker', key: 'mqtt' },\n        { label: 'Home Assistant', key: 'home_assistant' }\n    ];\n    const allHealthy = services.every(s => connections[s.key] !== 'down');\n    const bg = allHealthy ? '#f0fdf4' : '#fff5f5';\n    const border = allHealthy ? '#bbf7d0' : '#fecaca';\n    const label = allHealthy ? 'All Systems' : 'Issues Detected';\n\n    const dots = services.map(s => {\n        const isUp = connections[s.key] !== 'down';\n        const dotColor = isUp ? '#10b981' : '#ef4444';\n        return `<table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n          <tr>\n            <td width=\"10\" valign=\"middle\"><div style=\"width:7px;height:7px;background-color:${dotColor};border-radius:50%;\"></div></td>\n            <td style=\"padding-left:8px;\" valign=\"middle\"><p style=\"margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;color:#374151;\">${s.label}</p></td>\n          </tr>\n        </table>`;\n    });\n\n    const rows = [];\n    for (let i = 0; i < dots.length; i += 2) {\n        rows.push(`<tr>\n          <td width=\"50%\" style=\"padding-right:8px;${i > 0 ? 'padding-top:10px;' : ''}\">${dots[i] || ''}</td>\n          <td width=\"50%\" style=\"padding-left:8px;${i > 0 ? 'padding-top:10px;' : ''}\">${dots[i+1] || ''}</td>\n        </tr>`);\n    }\n\n    return sectionHeader(label, 'System Health', '#10b981') +\n        `<tr><td style=\"padding:16px 40px 32px;\">\n          <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:${bg};border-radius:8px;border:1px solid ${border};\">\n            <tr><td style=\"padding:16px 20px;\">\n              <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">${rows.join('')}</table>\n            </td></tr>\n          </table>\n        </td></tr>`;\n}\n\n// ─────────────────────────────────────────────\n// Assemble full email\n// ─────────────────────────────────────────────\n\nconst bodyContent =\n    buildAppointments() +\n    buildReminders() +\n    buildTrash() +\n    buildWeather() +\n    buildBattery() +\n    buildHealth();\n\nconst html = `<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\">\n<title>Highland \\u2014 Daily Digest</title>\n</head>\n<body style=\"margin:0;padding:0;background-color:#f0f0ed;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;\">\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"background-color:#f0f0ed;\">\n  <tr><td align=\"center\" style=\"padding:32px 16px;\">\n    <table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"max-width:600px;width:100%;\">\n\n      <!-- HEADER -->\n      <tr><td style=\"background-color:#1a1f2e;border-radius:12px 12px 0 0;padding:36px 40px 32px;\">\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n          <tr>\n            <td>\n              <p style=\"margin:0 0 6px 0;font-family:'Courier New',Courier,monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#a0b4d0;font-weight:600;\">Daily Digest</p>\n              <h1 style=\"margin:0 0 4px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:30px;font-weight:600;color:#ffffff;letter-spacing:-0.3px;\">Highland</h1>\n              <p style=\"margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;color:#c8d8ec;font-weight:500;\">${esc(dateLabel)}</p>\n            </td>\n            <td align=\"right\" valign=\"bottom\">\n              <p style=\"margin:0;font-family:'Courier New',Courier,monospace;font-size:11px;color:#8a9bbf;font-weight:600;\">${esc(timeLabel)}</p>\n            </td>\n          </tr>\n        </table>\n      </td></tr>\n      <tr><td style=\"background-color:#1a1f2e;height:16px;\"></td></tr>\n\n      <!-- BODY -->\n      <tr><td style=\"background-color:#ffffff;padding:0;\">\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n          ${bodyContent}\n        </table>\n      </td></tr>\n\n      <!-- FOOTER -->\n      <tr><td style=\"background-color:#1a1f2e;border-radius:0 0 12px 12px;padding:20px 40px;\">\n        <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\">\n          <tr>\n            <td><p style=\"margin:0;font-family:'Courier New',Courier,monospace;font-size:10px;color:#8a9bbf;letter-spacing:1px;font-weight:600;\">HIGHLAND &nbsp;\\u00b7&nbsp; Town of Newburgh, NY</p></td>\n            <td align=\"right\"><p style=\"margin:0;font-family:'Courier New',Courier,monospace;font-size:10px;color:#8a9bbf;letter-spacing:1px;font-weight:600;\">Generated ${esc(timeLabel)}</p></td>\n          </tr>\n        </table>\n      </td></tr>\n\n    </table>\n  </td></tr>\n</table>\n</body>\n</html>`;\n\nmsg.emailHtml = html;\nmsg.emailSubject = `Highland Smart Home Daily Digest \\u2014 ${dateLabel}`;\nmsg.usedIcons = Array.from(usedIcons);\nnode.status({ fill: 'green', shape: 'dot', text: formatStatus(`Email built — ${usedIcons.size} icons`) });\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 730,
+        "y": 80,
+        "wires": [
+            [
+                "78f153211dc97edb"
+            ]
+        ]
+    },
+    {
+        "id": "78f153211dc97edb",
+        "type": "function",
+        "z": "utility-daily-digest",
+        "g": "7d32e9700704032c",
+        "name": "Build SMTP Message",
+        "func": "const secrets = global.get('config')?.secrets;\nconst notifications = global.get('config')?.notifications;\nconst emailAddresses = secrets?.email_addresses || {};\nconst recipients = notifications?.daily_digest?.recipients || [];\nconst iconBasePath = '/assets/weather-icons/64/';\n\nconst to = recipients\n    .map(r => emailAddresses[r])\n    .filter(Boolean)\n    .join(',');\n\n// Build CID attachments for every icon referenced in the email.\n// msg.usedIcons is a de-duplicated array of Meteocon names (without .png)\n// set by Build Email — e.g. ['clear-day', 'overcast-night', 'rain']\nconst attachments = (msg.usedIcons || []).map(name => ({\n    filename: `${name}.png`,\n    path: `${iconBasePath}${name}.png`,\n    cid: `${name}.png`,\n    contentType: 'image/png'\n}));\n\nmsg.to = to;\nmsg.from = emailAddresses['home'];\nmsg.topic = msg.emailSubject;\nmsg.payload = msg.emailHtml;\nmsg.attachments = attachments;\n\nnode.status({\n    fill: 'blue',\n    shape: 'dot',\n    text: `Sending to ${to} — ${attachments.length} attachments`\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 960,
+        "y": 80,
+        "wires": [
+            [
+                "3768e0753ac4d1d5"
+            ]
+        ]
+    },
+    {
+        "id": "3768e0753ac4d1d5",
+        "type": "e-mail",
+        "z": "utility-daily-digest",
+        "g": "7d32e9700704032c",
+        "server": "smtp.your-domain.example",
+        "port": "465",
+        "authtype": "BASIC",
+        "saslformat": true,
+        "token": "oauth2Response.access_token",
+        "secure": true,
+        "tls": true,
+        "name": "",
+        "dname": "Send",
+        "x": 1170,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "754aad4aca7ab5c1",
+        "type": "link in",
+        "z": "utility-daily-digest",
+        "g": "7d32e9700704032c",
+        "name": "Manual Send",
+        "links": [
+            "651c97e57c819335"
+        ],
+        "x": 310,
+        "y": 140,
+        "wires": [
+            [
+                "ccd2ea5138274a6d"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "2f5e64d4bafca64c",
+        "type": "inject",
+        "z": "utility-daily-digest",
+        "g": "ef5cb2ef799c64ab",
+        "name": "Manual",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 680,
+        "wires": [
+            [
+                "651c97e57c819335"
+            ]
+        ]
+    },
+    {
+        "id": "651c97e57c819335",
+        "type": "link out",
+        "z": "utility-daily-digest",
+        "g": "ef5cb2ef799c64ab",
+        "name": "Manual Send",
+        "mode": "link",
+        "links": [
+            "754aad4aca7ab5c1"
+        ],
+        "x": 330,
+        "y": 680,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "bee73429adaf732b",
+        "type": "catch",
+        "z": "utility-daily-digest",
+        "g": "33cf746f8b4336b1",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 140,
+        "y": 560,
+        "wires": [
+            [
+                "fd23e2fee7a3b745"
+            ]
+        ]
+    },
+    {
+        "id": "fd23e2fee7a3b745",
+        "type": "debug",
+        "z": "utility-daily-digest",
+        "g": "33cf746f8b4336b1",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 310,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "d5d6214f6e5449e0",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-node-email": "5.2.1"
+        }
+    }
+]

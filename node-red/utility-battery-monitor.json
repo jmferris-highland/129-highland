@@ -1,0 +1,848 @@
+[
+    {
+        "id": "subflow-initializer-latch",
+        "type": "subflow",
+        "name": "initializer latch",
+        "info": "",
+        "category": "highland",
+        "in": [
+            {
+                "x": 80,
+                "y": 60,
+                "wires": [
+                    {
+                        "id": "081746de07ee7073"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 360,
+                "y": 300,
+                "wires": [
+                    {
+                        "id": "204c782fa7f1e192",
+                        "port": 0
+                    }
+                ]
+            },
+            {
+                "x": 400,
+                "y": 360,
+                "wires": [
+                    {
+                        "id": "0a98747907675ad9",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [
+            {
+                "name": "RETRY_INTERVAL_MS",
+                "type": "num",
+                "value": "250",
+                "ui": {
+                    "label": {
+                        "en-US": "Retry Interval (ms)"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "num"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "MAX_RETRIES",
+                "type": "num",
+                "value": "20",
+                "ui": {
+                    "label": {
+                        "en-US": "Max Retries"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "num"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "CONTEXT_PREFIX",
+                "type": "str",
+                "value": "",
+                "ui": {
+                    "label": {
+                        "en-US": "Scope"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "str"
+                        ]
+                    }
+                }
+            }
+        ],
+        "meta": {},
+        "color": "#87A980",
+        "outputLabels": [
+            "OK",
+            "TIMEOUT"
+        ],
+        "icon": "node-red/timer.svg"
+    },
+    {
+        "id": "081746de07ee7073",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Buffer Management",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\n\nif (flow.get(`${prefix}initialized`)) {\n    return [msg, null];\n}\nif (flow.get(`${prefix}degraded`)) {\n    return null;\n}\nconst buffer = flow.get(`${prefix}state_buffer`) || [];\nbuffer.push(msg);\nflow.set(`${prefix}state_buffer`, buffer);\nif (!flow.get(`${prefix}check_running`)) {\n    flow.set(`${prefix}check_running`, true);\n    flow.set(`${prefix}retries`, 0);\n    return [null, msg];\n}\n\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 250,
+        "y": 60,
+        "wires": [
+            [
+                "18fe80e042b3e229"
+            ],
+            [
+                "2ecaa5d9e39ad7a1"
+            ]
+        ]
+    },
+    {
+        "id": "2ecaa5d9e39ad7a1",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Check Readiness",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nconst maxRetries = env.get('MAX_RETRIES') || 20;\nconst retries = flow.get(`${prefix}retries`) || 0;\n\nif (global.get('initializers.ready', 'initializers') === true) {\n    flow.set(`${prefix}check_running`, false);\n    return [msg, null];\n}\nif (retries >= maxRetries) {\n    flow.set(`${prefix}check_running`, false);\n    msg.timedOut = true;\n    return [null, msg];\n}\nflow.set(`${prefix}retries`, retries + 1);\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 490,
+        "y": 120,
+        "wires": [
+            [
+                "4f8a77e8b898a9bc"
+            ],
+            [
+                "74db48c8fac39695"
+            ]
+        ]
+    },
+    {
+        "id": "74db48c8fac39695",
+        "type": "switch",
+        "z": "subflow-initializer-latch",
+        "name": "Route",
+        "property": "timedOut",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "true"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 690,
+        "y": 180,
+        "wires": [
+            [
+                "716d39543f5312f7"
+            ],
+            [
+                "3efc69215972097b"
+            ]
+        ]
+    },
+    {
+        "id": "218b4ac37cd3bb4b",
+        "type": "delay",
+        "z": "subflow-initializer-latch",
+        "name": "Retry Delay",
+        "pauseType": "delayv",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1050,
+        "y": 240,
+        "wires": [
+            [
+                "62595fe3f63fb6a4"
+            ]
+        ]
+    },
+    {
+        "id": "3efc69215972097b",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Set Delay",
+        "func": "msg.delay = env.get('RETRY_INTERVAL_MS') || 250;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 860,
+        "y": 240,
+        "wires": [
+            [
+                "218b4ac37cd3bb4b"
+            ]
+        ]
+    },
+    {
+        "id": "83c96b9bb45316e9",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Recheck Readiness",
+        "links": [
+            "62595fe3f63fb6a4"
+        ],
+        "x": 250,
+        "y": 180,
+        "wires": [
+            [
+                "2ecaa5d9e39ad7a1"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "62595fe3f63fb6a4",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Recheck Readiness",
+        "mode": "link",
+        "links": [
+            "83c96b9bb45316e9"
+        ],
+        "x": 1280,
+        "y": 240,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "4f8a77e8b898a9bc",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Open Gate",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nflow.set(`${prefix}initialized`, true);\nflow.set(`${prefix}degraded`, false);\nflow.set(`${prefix}check_running`, false);\n\nconst buffer = flow.get(`${prefix}state_buffer`) || [];\nflow.set(`${prefix}state_buffer`, []);\n\nfor (const bufferedMsg of buffer) {\n    node.send([bufferedMsg, null]);\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 710,
+        "y": 120,
+        "wires": [
+            [
+                "0d9caff7a4aadff8"
+            ]
+        ]
+    },
+    {
+        "id": "716d39543f5312f7",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Handle Timeout",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nflow.set(`${prefix}degraded`, true);\nflow.set(`${prefix}initialized`, false);\nflow.set(`${prefix}check_running`, false);\nflow.set(`${prefix}state_buffer`, []);\n\nmsg.timedOut = true;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 880,
+        "y": 180,
+        "wires": [
+            [
+                "5306e1168dacc5bf"
+            ]
+        ]
+    },
+    {
+        "id": "204c782fa7f1e192",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "links": [
+            "18fe80e042b3e229",
+            "0d9caff7a4aadff8"
+        ],
+        "x": 160,
+        "y": 300,
+        "wires": [
+            []
+        ],
+        "l": true
+    },
+    {
+        "id": "18fe80e042b3e229",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "mode": "link",
+        "links": [
+            "204c782fa7f1e192"
+        ],
+        "x": 500,
+        "y": 60,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0d9caff7a4aadff8",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "mode": "link",
+        "links": [
+            "204c782fa7f1e192"
+        ],
+        "x": 940,
+        "y": 120,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "5306e1168dacc5bf",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Discard Message Stream",
+        "mode": "link",
+        "links": [
+            "0a98747907675ad9"
+        ],
+        "x": 1130,
+        "y": 180,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0a98747907675ad9",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Discard Message Stream",
+        "links": [
+            "5306e1168dacc5bf"
+        ],
+        "x": 170,
+        "y": 360,
+        "wires": [
+            []
+        ],
+        "l": true
+    },
+    {
+        "id": "utility-battery-monitor",
+        "type": "tab",
+        "label": "Utility: Battery Monitor",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "74bee8841276c793",
+        "type": "group",
+        "z": "utility-battery-monitor",
+        "name": "Sinks",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "f20fca0481590162",
+            "710571ee9cd738d0",
+            "0b0ae6f081c77b1e",
+            "d1d04baf439c6d32"
+        ],
+        "x": 54,
+        "y": 39,
+        "w": 772,
+        "h": 82
+    },
+    {
+        "id": "cd8683aad2292cc3",
+        "type": "group",
+        "z": "utility-battery-monitor",
+        "name": "Battery State Pipeline",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "12da6b27e2030894",
+            "e84fe68765ca4fea",
+            "f3da74350db03b24",
+            "17ce91437b9cc8bf",
+            "42a6489a3a0fa37e",
+            "c1b29635bd66609a",
+            "d05550e9207dfe65",
+            "ec3ddcb5d0773389"
+        ],
+        "x": 54,
+        "y": 159,
+        "w": 1092,
+        "h": 202
+    },
+    {
+        "id": "443ea53b442576a4",
+        "type": "group",
+        "z": "utility-battery-monitor",
+        "name": "Error Handling",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "eb36b98e3caaadf9",
+            "e8ba544f97467871"
+        ],
+        "x": 54,
+        "y": 519,
+        "w": 352,
+        "h": 82
+    },
+    {
+        "id": "41b79a15fa8cf0ab",
+        "type": "group",
+        "z": "utility-battery-monitor",
+        "name": "Device Recovery",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "be3f074b81672639",
+            "4f2cbefb326ebf6f",
+            "4679e39ca3668870",
+            "5e689f60e3173dea"
+        ],
+        "x": 54,
+        "y": 399,
+        "w": 812,
+        "h": 82
+    },
+    {
+        "id": "f20fca0481590162",
+        "type": "mqtt in",
+        "z": "utility-battery-monitor",
+        "g": "74bee8841276c793",
+        "name": "Zigbee2MQTT",
+        "topic": "zigbee2mqtt/#",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 80,
+        "wires": [
+            [
+                "710571ee9cd738d0"
+            ]
+        ]
+    },
+    {
+        "id": "710571ee9cd738d0",
+        "type": "subflow:subflow-initializer-latch",
+        "z": "utility-battery-monitor",
+        "g": "74bee8841276c793",
+        "name": "Latch",
+        "env": [
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "battery_sinks-",
+                "type": "str"
+            }
+        ],
+        "x": 310,
+        "y": 80,
+        "wires": [
+            [
+                "0b0ae6f081c77b1e"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "0b0ae6f081c77b1e",
+        "type": "function",
+        "z": "utility-battery-monitor",
+        "g": "74bee8841276c793",
+        "name": "Extract Battery",
+        "func": "const payload = msg.payload;\n\n// Only process messages with a battery field\nif (payload.battery === undefined || payload.battery === null) {\n    return null;\n}\n\n// Derive device key from topic: zigbee2mqtt/{device_name}\nconst topicParts = msg.topic.split('/');\nif (topicParts.length < 2) return null;\nconst deviceKey = topicParts[1];\n\n// Skip Z2M system topics\nif (deviceKey === 'bridge' || deviceKey === 'group') return null;\n\n// Derive friendly name from key — title case the naming convention\nconst derivedName = deviceKey\n    .replace(/_/g, ' ')\n    .replace(/\\b\\w/g, c => c.toUpperCase());\n\n// Look up catalog overrides and model battery specs\nconst registry = global.get('config.deviceRegistry') || {};\nconst deviceEntry = registry.devices?.[deviceKey];\nconst friendlyName = deviceEntry?.friendly_name || derivedName;\nconst modelId = deviceEntry?.model_id;\nlet batterySpec = null;\n\nif (modelId) {\n    batterySpec = registry.models?.[modelId]?.battery || null;\n    if (!batterySpec) {\n        node.warn(`No battery spec for model ${modelId} (${deviceKey})`);\n    }\n}\n\n// Parse battery level\nconst batteryLevel = typeof payload.battery === 'number'\n    ? payload.battery\n    : parseFloat(payload.battery);\n\nif (isNaN(batteryLevel)) return null;\n\n// Always proceed — registry absence is never a gate\nmsg.deviceKey = deviceKey;\nmsg.device = {\n    friendly_name: friendlyName,\n    battery: batterySpec  // may be null — downstream handles gracefully\n};\nmsg.batteryLevel = batteryLevel;\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nnode.status({ fill: 'grey', shape: 'dot', text: formatStatus(`${deviceKey}: ${batteryLevel}%`) });\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 80,
+        "wires": [
+            [
+                "d1d04baf439c6d32"
+            ]
+        ]
+    },
+    {
+        "id": "12da6b27e2030894",
+        "type": "function",
+        "z": "utility-battery-monitor",
+        "g": "cd8683aad2292cc3",
+        "name": "Evaluate State",
+        "func": "const { deviceKey, device, batteryLevel } = msg;\nconst thresholds = global.get('config')?.thresholds?.battery\n    || { warning: 35, critical: 15 };\n\n// Determine new state\nconst newState = batteryLevel < thresholds.critical ? 'critical'\n    : batteryLevel < thresholds.warning ? 'low'\n    : 'normal';\n\n// Load persisted battery states\nconst batteryStates = flow.get('battery_states') || {};\nconst previous = batteryStates[deviceKey] || { state: 'normal', level: null };\nconst previousState = previous.state;\n\n// Always update level\nbatteryStates[deviceKey] = {\n    state: newState,\n    level: batteryLevel,\n    last_notified_critical: previous.last_notified_critical || null\n};\nflow.set('battery_states', batteryStates);\n\n// No state change — nothing to do\nif (newState === previousState) {\n    return [null, msg];\n}\n\n// State changed — pass forward with transition info\nmsg.newState = newState;\nmsg.previousState = previousState;\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nnode.status({\n    fill: newState === 'critical' ? 'red' : newState === 'low' ? 'yellow' : 'green',\n    shape: newState === 'critical' ? 'ring' : 'dot',\n    text: formatStatus(`${device.friendly_name}: ${batteryLevel}% (${newState})`)\n});\n\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 260,
+        "wires": [
+            [
+                "f3da74350db03b24"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "e84fe68765ca4fea",
+        "type": "link in",
+        "z": "utility-battery-monitor",
+        "g": "cd8683aad2292cc3",
+        "name": "Evaluate State",
+        "links": [
+            "d1d04baf439c6d32"
+        ],
+        "x": 160,
+        "y": 260,
+        "wires": [
+            [
+                "12da6b27e2030894"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "f3da74350db03b24",
+        "type": "function",
+        "z": "utility-battery-monitor",
+        "g": "cd8683aad2292cc3",
+        "name": "Build Event",
+        "func": "const { deviceKey, device, batteryLevel, newState, previousState } = msg;\n\nmsg.topic = `highland/event/battery/${newState}`;\nmsg.payload = JSON.stringify({\n    timestamp: new Date().toISOString(),\n    source: 'battery_monitor',\n    entity: deviceKey,\n    friendly_name: device.friendly_name,\n    level: batteryLevel,\n    previous_state: previousState,\n    new_state: newState,\n    battery: device.battery\n});\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nconst stateColors = { normal: 'green', low: 'yellow', critical: 'red' };\nnode.status({\n    fill: stateColors[newState] || 'grey',\n    shape: newState === 'critical' ? 'ring' : 'dot',\n    text: formatStatus(`${newState}: ${device.friendly_name}`)\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 590,
+        "y": 260,
+        "wires": [
+            [
+                "17ce91437b9cc8bf",
+                "42a6489a3a0fa37e",
+                "ec3ddcb5d0773389"
+            ]
+        ]
+    },
+    {
+        "id": "17ce91437b9cc8bf",
+        "type": "mqtt out",
+        "z": "utility-battery-monitor",
+        "g": "cd8683aad2292cc3",
+        "name": "Battery Event",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 800,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "42a6489a3a0fa37e",
+        "type": "function",
+        "z": "utility-battery-monitor",
+        "g": "cd8683aad2292cc3",
+        "name": "Build Notification",
+        "func": "const { deviceKey, device, batteryLevel, newState, previousState } = msg;\n\n// Determine if this transition warrants a notification\nconst shouldNotify =\n    (newState === 'low') ||\n    (newState === 'critical') ||\n    (newState !== 'low' && previousState === 'critical') ||\n    (newState !== 'low' && previousState === 'low' && newState === 'normal');\n\n// low → normal is silent recovery\nif (previousState === 'low' && newState === 'normal') {\n    return null;\n}\n\nif (!shouldNotify) return null;\n\nconst notifications = global.get('config')?.notifications;\nconst adminOnly = notifications?.defaults?.admin_only || ['joseph'];\nconst targets = adminOnly.map(p => `people.${p}.ha_companion`);\n\nconst isCritical = newState === 'critical';\nconst isRecovery = newState !== 'critical' && newState !== 'low';\n\n// Handle critical repeat timer\nconst batteryStates = flow.get('battery_states') || {};\nconst deviceState = batteryStates[deviceKey] || {};\n\nif (isCritical) {\n    // Start/restart 24hr repeat timer\n    const timers = flow.get('battery_timers', 'volatile') || {};\n    if (timers[deviceKey]) clearTimeout(timers[deviceKey]);\n\n    timers[deviceKey] = setTimeout(() => {\n        // Re-notify after 24hrs if still critical\n        const states = flow.get('battery_states') || {};\n        if (states[deviceKey]?.state === 'critical') {\n            node.send({\n                payload: JSON.stringify({\n                    timestamp: new Date().toISOString(),\n                    targets,\n                    severity: 'high',\n                    title: `Battery Critical: ${device.friendly_name}`,\n                    message: `${device.friendly_name} battery is ${states[deviceKey].level}% — needs replacement (${device.battery?.quantity}× ${device.battery?.type})`,\n                    group: 'battery_alerts'\n                }),\n                topic: 'highland/event/notify'\n            });\n        }\n        // Clear timer handle\n        const t = flow.get('battery_timers', 'volatile') || {};\n        delete t[deviceKey];\n        flow.set('battery_timers', t, 'volatile');\n    }, 24 * 60 * 60 * 1000);\n\n    flow.set('battery_timers', timers, 'volatile');\n\n    // Record notification time\n    deviceState.last_notified_critical = new Date().toISOString();\n    batteryStates[deviceKey] = deviceState;\n    flow.set('battery_states', batteryStates);\n\n} else if (isRecovery) {\n    // Cancel repeat timer\n    const timers = flow.get('battery_timers', 'volatile') || {};\n    if (timers[deviceKey]) {\n        clearTimeout(timers[deviceKey]);\n        delete timers[deviceKey];\n        flow.set('battery_timers', timers, 'volatile');\n    }\n}\n\n// Build notification\nconst severity = isCritical ? 'high' : isRecovery ? 'low' : 'medium';\nconst title = isCritical ? `Battery Critical: ${device.friendly_name}`\n    : isRecovery ? `Battery Recovered: ${device.friendly_name}`\n    : `Battery Low: ${device.friendly_name}`;\nconst message = isCritical\n    ? `${device.friendly_name} battery is ${batteryLevel}% — needs replacement (${device.battery?.quantity}× ${device.battery?.type})`\n    : isRecovery\n    ? `${device.friendly_name} battery has recovered to ${batteryLevel}%`\n    : `${device.friendly_name} battery is ${batteryLevel}% — plan replacement soon (${device.battery?.quantity}× ${device.battery?.type})`;\n\nmsg.topic = 'highland/event/notify';\nmsg.payload = JSON.stringify({\n    timestamp: new Date().toISOString(),\n    source: 'battery_monitor',\n    targets,\n    severity,\n    title,\n    message,\n    group: 'battery_alerts'\n});\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nnode.status({\n    fill: isCritical ? 'red' : isRecovery ? 'green' : 'yellow',\n    shape: isCritical ? 'ring' : 'dot',\n    text: formatStatus(title)\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 810,
+        "y": 260,
+        "wires": [
+            [
+                "c1b29635bd66609a"
+            ]
+        ]
+    },
+    {
+        "id": "c1b29635bd66609a",
+        "type": "mqtt out",
+        "z": "utility-battery-monitor",
+        "g": "cd8683aad2292cc3",
+        "name": "Notify",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 1010,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "be3f074b81672639",
+        "type": "inject",
+        "z": "utility-battery-monitor",
+        "g": "41b79a15fa8cf0ab",
+        "name": "On Startup",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 440,
+        "wires": [
+            [
+                "5e689f60e3173dea"
+            ]
+        ]
+    },
+    {
+        "id": "4f2cbefb326ebf6f",
+        "type": "function",
+        "z": "utility-battery-monitor",
+        "g": "41b79a15fa8cf0ab",
+        "name": "Recover Critical State",
+        "func": "const batteryStates = flow.get('battery_states') || {};\nconst notifications = global.get('config')?.notifications;\nconst adminOnly = notifications?.defaults?.admin_only || ['joseph'];\nconst targets = adminOnly.map(p => `people.${p}.ha_companion`);\nconst registry = global.get('config.deviceRegistry') || {};\n\nconst now = Date.now();\nconst twentyFourHours = 24 * 60 * 60 * 1000;\nconst timers = {};\n\nfor (const [deviceKey, deviceState] of Object.entries(batteryStates)) {\n    if (deviceState.state !== 'critical') continue;\n\n    const device = registry.devices?.[deviceKey];\n    if (!device) continue;\n\n    const lastNotified = deviceState.last_notified_critical\n        ? new Date(deviceState.last_notified_critical).getTime()\n        : 0;\n    const elapsed = now - lastNotified;\n    const remaining = twentyFourHours - elapsed;\n\n    const notifyAndReschedule = () => {\n        const states = flow.get('battery_states') || {};\n        if (states[deviceKey]?.state !== 'critical') return;\n        node.send({\n            payload: JSON.stringify({\n                timestamp: new Date().toISOString(),\n                targets,\n                severity: 'high',\n                title: `Battery Critical: ${device.friendly_name}`,\n                message: `${device.friendly_name} battery is ${states[deviceKey].level}% — needs replacement (${device.battery?.quantity}× ${device.battery?.type})`,\n                group: 'battery_alerts'\n            }),\n            topic: 'highland/event/notify'\n        });\n        states[deviceKey].last_notified_critical = new Date().toISOString();\n        flow.set('battery_states', states);\n    };\n\n    if (remaining <= 0) {\n        // Overdue — notify immediately then set fresh 24hr timer\n        notifyAndReschedule();\n        timers[deviceKey] = setTimeout(notifyAndReschedule, twentyFourHours);\n    } else {\n        // Not yet due — resume from where we left off\n        timers[deviceKey] = setTimeout(notifyAndReschedule, remaining);\n    }\n}\n\nflow.set('battery_timers', timers, 'volatile');\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nconst count = Object.keys(timers).length;\nnode.status({\n    fill: count > 0 ? 'yellow' : 'green',\n    shape: count > 0 ? 'ring' : 'dot',\n    text: formatStatus(`${count} critical timer(s) recovered`)\n});\n\nnode.send({\n    topic: 'highland/state/battery/states',\n    payload: JSON.stringify({\n        timestamp: new Date().toISOString(),\n        source: 'battery_monitor',\n        states: batteryStates\n    }),\n    retain: true,\n    qos: 1\n});\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 440,
+        "wires": [
+            [
+                "4679e39ca3668870"
+            ]
+        ]
+    },
+    {
+        "id": "eb36b98e3caaadf9",
+        "type": "catch",
+        "z": "utility-battery-monitor",
+        "g": "443ea53b442576a4",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 140,
+        "y": 560,
+        "wires": [
+            [
+                "e8ba544f97467871"
+            ]
+        ]
+    },
+    {
+        "id": "e8ba544f97467871",
+        "type": "debug",
+        "z": "utility-battery-monitor",
+        "g": "443ea53b442576a4",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 310,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "4679e39ca3668870",
+        "type": "mqtt out",
+        "z": "utility-battery-monitor",
+        "g": "41b79a15fa8cf0ab",
+        "name": "Dispatch",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 780,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "d1d04baf439c6d32",
+        "type": "link out",
+        "z": "utility-battery-monitor",
+        "g": "74bee8841276c793",
+        "name": "Evaluate State",
+        "mode": "link",
+        "links": [
+            "e84fe68765ca4fea"
+        ],
+        "x": 720,
+        "y": 80,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "5e689f60e3173dea",
+        "type": "subflow:subflow-initializer-latch",
+        "z": "utility-battery-monitor",
+        "g": "41b79a15fa8cf0ab",
+        "name": "Latch",
+        "env": [
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "battery_recovery-",
+                "type": "str"
+            }
+        ],
+        "x": 350,
+        "y": 440,
+        "wires": [
+            [
+                "4f2cbefb326ebf6f"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "d05550e9207dfe65",
+        "type": "mqtt out",
+        "z": "utility-battery-monitor",
+        "g": "cd8683aad2292cc3",
+        "name": "Battery States",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 1040,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "ec3ddcb5d0773389",
+        "type": "function",
+        "z": "utility-battery-monitor",
+        "g": "cd8683aad2292cc3",
+        "name": "Build Battery States",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nconst batteryStates = flow.get('battery_states') || {};\n\nmsg.topic = 'highland/state/battery/states';\nmsg.retain = true;\nmsg.qos = 1;\nmsg.payload = JSON.stringify({\n    timestamp: new Date().toISOString(),\n    source: 'battery_monitor',\n    states: batteryStates\n});\n\nnode.status({\n    fill: 'green',\n    shape: 'dot',\n    text: formatStatus(`${Object.keys(batteryStates).length} device(s) published`)\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 810,
+        "y": 200,
+        "wires": [
+            [
+                "d05550e9207dfe65"
+            ]
+        ]
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]

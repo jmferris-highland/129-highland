@@ -1,0 +1,941 @@
+[
+    {
+        "id": "subflow-initializer-latch",
+        "type": "subflow",
+        "name": "initializer latch",
+        "info": "",
+        "category": "highland",
+        "in": [
+            {
+                "x": 80,
+                "y": 60,
+                "wires": [
+                    {
+                        "id": "081746de07ee7073"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 360,
+                "y": 300,
+                "wires": [
+                    {
+                        "id": "204c782fa7f1e192",
+                        "port": 0
+                    }
+                ]
+            },
+            {
+                "x": 400,
+                "y": 360,
+                "wires": [
+                    {
+                        "id": "0a98747907675ad9",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [
+            {
+                "name": "RETRY_INTERVAL_MS",
+                "type": "num",
+                "value": "250",
+                "ui": {
+                    "label": {
+                        "en-US": "Retry Interval (ms)"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "num"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "MAX_RETRIES",
+                "type": "num",
+                "value": "20",
+                "ui": {
+                    "label": {
+                        "en-US": "Max Retries"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "num"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "CONTEXT_PREFIX",
+                "type": "str",
+                "value": "",
+                "ui": {
+                    "label": {
+                        "en-US": "Scope"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "str"
+                        ]
+                    }
+                }
+            }
+        ],
+        "meta": {},
+        "color": "#87A980",
+        "outputLabels": [
+            "OK",
+            "TIMEOUT"
+        ],
+        "icon": "node-red/timer.svg"
+    },
+    {
+        "id": "081746de07ee7073",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Buffer Management",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\n\nif (flow.get(`${prefix}initialized`)) {\n    return [msg, null];\n}\nif (flow.get(`${prefix}degraded`)) {\n    return null;\n}\nconst buffer = flow.get(`${prefix}state_buffer`) || [];\nbuffer.push(msg);\nflow.set(`${prefix}state_buffer`, buffer);\nif (!flow.get(`${prefix}check_running`)) {\n    flow.set(`${prefix}check_running`, true);\n    flow.set(`${prefix}retries`, 0);\n    return [null, msg];\n}\n\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 250,
+        "y": 60,
+        "wires": [
+            [
+                "18fe80e042b3e229"
+            ],
+            [
+                "2ecaa5d9e39ad7a1"
+            ]
+        ]
+    },
+    {
+        "id": "2ecaa5d9e39ad7a1",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Check Readiness",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nconst maxRetries = env.get('MAX_RETRIES') || 20;\nconst retries = flow.get(`${prefix}retries`) || 0;\n\nif (global.get('initializers.ready', 'initializers') === true) {\n    flow.set(`${prefix}check_running`, false);\n    return [msg, null];\n}\nif (retries >= maxRetries) {\n    flow.set(`${prefix}check_running`, false);\n    msg.timedOut = true;\n    return [null, msg];\n}\nflow.set(`${prefix}retries`, retries + 1);\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 490,
+        "y": 120,
+        "wires": [
+            [
+                "4f8a77e8b898a9bc"
+            ],
+            [
+                "74db48c8fac39695"
+            ]
+        ]
+    },
+    {
+        "id": "74db48c8fac39695",
+        "type": "switch",
+        "z": "subflow-initializer-latch",
+        "name": "Route",
+        "property": "timedOut",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "true"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 690,
+        "y": 180,
+        "wires": [
+            [
+                "716d39543f5312f7"
+            ],
+            [
+                "3efc69215972097b"
+            ]
+        ]
+    },
+    {
+        "id": "218b4ac37cd3bb4b",
+        "type": "delay",
+        "z": "subflow-initializer-latch",
+        "name": "Retry Delay",
+        "pauseType": "delayv",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1050,
+        "y": 240,
+        "wires": [
+            [
+                "62595fe3f63fb6a4"
+            ]
+        ]
+    },
+    {
+        "id": "3efc69215972097b",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Set Delay",
+        "func": "msg.delay = env.get('RETRY_INTERVAL_MS') || 250;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 860,
+        "y": 240,
+        "wires": [
+            [
+                "218b4ac37cd3bb4b"
+            ]
+        ]
+    },
+    {
+        "id": "83c96b9bb45316e9",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Recheck Readiness",
+        "links": [
+            "62595fe3f63fb6a4"
+        ],
+        "x": 250,
+        "y": 180,
+        "wires": [
+            [
+                "2ecaa5d9e39ad7a1"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "62595fe3f63fb6a4",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Recheck Readiness",
+        "mode": "link",
+        "links": [
+            "83c96b9bb45316e9"
+        ],
+        "x": 1280,
+        "y": 240,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "4f8a77e8b898a9bc",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Open Gate",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nflow.set(`${prefix}initialized`, true);\nflow.set(`${prefix}degraded`, false);\nflow.set(`${prefix}check_running`, false);\n\nconst buffer = flow.get(`${prefix}state_buffer`) || [];\nflow.set(`${prefix}state_buffer`, []);\n\nfor (const bufferedMsg of buffer) {\n    node.send([bufferedMsg, null]);\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 710,
+        "y": 120,
+        "wires": [
+            [
+                "0d9caff7a4aadff8"
+            ]
+        ]
+    },
+    {
+        "id": "716d39543f5312f7",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Handle Timeout",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nflow.set(`${prefix}degraded`, true);\nflow.set(`${prefix}initialized`, false);\nflow.set(`${prefix}check_running`, false);\nflow.set(`${prefix}state_buffer`, []);\n\nmsg.timedOut = true;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 880,
+        "y": 180,
+        "wires": [
+            [
+                "5306e1168dacc5bf"
+            ]
+        ]
+    },
+    {
+        "id": "204c782fa7f1e192",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "links": [
+            "18fe80e042b3e229",
+            "0d9caff7a4aadff8"
+        ],
+        "x": 160,
+        "y": 300,
+        "wires": [
+            []
+        ],
+        "l": true
+    },
+    {
+        "id": "18fe80e042b3e229",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "mode": "link",
+        "links": [
+            "204c782fa7f1e192"
+        ],
+        "x": 500,
+        "y": 60,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0d9caff7a4aadff8",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "mode": "link",
+        "links": [
+            "204c782fa7f1e192"
+        ],
+        "x": 940,
+        "y": 120,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "5306e1168dacc5bf",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Discard Message Stream",
+        "mode": "link",
+        "links": [
+            "0a98747907675ad9"
+        ],
+        "x": 1130,
+        "y": 180,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0a98747907675ad9",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Discard Message Stream",
+        "links": [
+            "5306e1168dacc5bf"
+        ],
+        "x": 170,
+        "y": 360,
+        "wires": [
+            []
+        ],
+        "l": true
+    },
+    {
+        "id": "utility-connections",
+        "type": "tab",
+        "label": "Utility: Connections",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "f11776fc87bfe641",
+        "type": "group",
+        "z": "utility-connections",
+        "name": "Home Assistant Connection Monitor",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "b2986bd3dcd4390b",
+            "eda7fed47fc71961",
+            "fab840a71262eec6",
+            "99d3e4803aadf3af",
+            "71ae1b9113e4988e",
+            "c389cf0612bb648e"
+        ],
+        "x": 54,
+        "y": 39,
+        "w": 752,
+        "h": 142
+    },
+    {
+        "id": "a1766f6d6d10467b",
+        "type": "group",
+        "z": "utility-connections",
+        "name": "MQTT Connection Monitor",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "7628fb2c8e554275",
+            "d32891045aeeeeb6",
+            "1829721f3cc65991",
+            "e25cbc28b6d5f30d",
+            "34ae0d643a8e3099",
+            "66280cfed5fb5ce1"
+        ],
+        "x": 54,
+        "y": 219,
+        "w": 752,
+        "h": 142
+    },
+    {
+        "id": "c6e8dfc8cac8be10",
+        "type": "group",
+        "z": "utility-connections",
+        "name": "State Change Logging",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "6e64f7c0b1cfa988",
+            "caf7fdfcb82a0ed7",
+            "a601e6b6194eb50e",
+            "f7cc4988cd8805ac",
+            "984365870287e0cd"
+        ],
+        "x": 54,
+        "y": 399,
+        "w": 852,
+        "h": 142
+    },
+    {
+        "id": "b458401fcacd43ef",
+        "type": "group",
+        "z": "utility-connections",
+        "name": "Startup Tasks",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "55e4881278802946",
+            "25e54ae6770f746c"
+        ],
+        "x": 54,
+        "y": 579,
+        "w": 452,
+        "h": 82
+    },
+    {
+        "id": "b2986bd3dcd4390b",
+        "type": "status",
+        "z": "utility-connections",
+        "g": "f11776fc87bfe641",
+        "name": "Status Monitor",
+        "scope": [
+            "eda7fed47fc71961"
+        ],
+        "x": 150,
+        "y": 140,
+        "wires": [
+            [
+                "c389cf0612bb648e"
+            ]
+        ]
+    },
+    {
+        "id": "eda7fed47fc71961",
+        "type": "server-state-changed",
+        "z": "utility-connections",
+        "g": "f11776fc87bfe641",
+        "name": "Time Sensor",
+        "server": "aa5463113481df19",
+        "version": 6,
+        "outputs": 1,
+        "exposeAsEntityConfig": "",
+        "entities": {
+            "entity": [
+                "sensor.time"
+            ],
+            "substring": [],
+            "regex": []
+        },
+        "outputInitially": false,
+        "stateType": "str",
+        "ifState": "",
+        "ifStateType": "str",
+        "ifStateOperator": "is",
+        "outputOnlyOnStateChange": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "triggerId"
+            }
+        ],
+        "x": 150,
+        "y": 80,
+        "wires": [
+            [
+                "fab840a71262eec6"
+            ]
+        ]
+    },
+    {
+        "id": "fab840a71262eec6",
+        "type": "debug",
+        "z": "utility-connections",
+        "g": "f11776fc87bfe641",
+        "name": "Current State",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 350,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "7628fb2c8e554275",
+        "type": "status",
+        "z": "utility-connections",
+        "g": "a1766f6d6d10467b",
+        "name": "Status Monitor",
+        "scope": [
+            "1829721f3cc65991"
+        ],
+        "x": 150,
+        "y": 320,
+        "wires": [
+            [
+                "e25cbc28b6d5f30d"
+            ]
+        ]
+    },
+    {
+        "id": "d32891045aeeeeb6",
+        "type": "debug",
+        "z": "utility-connections",
+        "g": "a1766f6d6d10467b",
+        "name": "Current State",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 350,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "1829721f3cc65991",
+        "type": "mqtt in",
+        "z": "utility-connections",
+        "g": "a1766f6d6d10467b",
+        "name": "Health Probe",
+        "topic": "highland/status/mqtt/probe",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 260,
+        "wires": [
+            [
+                "d32891045aeeeeb6"
+            ]
+        ]
+    },
+    {
+        "id": "6e64f7c0b1cfa988",
+        "type": "link in",
+        "z": "utility-connections",
+        "g": "c6e8dfc8cac8be10",
+        "name": "Log Event",
+        "links": [
+            "71ae1b9113e4988e",
+            "66280cfed5fb5ce1"
+        ],
+        "x": 140,
+        "y": 440,
+        "wires": [
+            [
+                "caf7fdfcb82a0ed7"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "caf7fdfcb82a0ed7",
+        "type": "switch",
+        "z": "utility-connections",
+        "g": "c6e8dfc8cac8be10",
+        "name": "MQTT Available?",
+        "property": "connections.mqtt",
+        "propertyType": "global",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "up",
+                "vt": "str"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 350,
+        "y": 440,
+        "wires": [
+            [
+                "a601e6b6194eb50e"
+            ],
+            [
+                "984365870287e0cd"
+            ]
+        ]
+    },
+    {
+        "id": "a601e6b6194eb50e",
+        "type": "function",
+        "z": "utility-connections",
+        "g": "c6e8dfc8cac8be10",
+        "name": "Format Log Message",
+        "func": "msg.payload = {\n    timestamp: new Date().toISOString(),\n    system: 'node_red',\n    source: 'connections',\n    level: msg.connection.state === 'up' ? 'INFO' : 'WARN',\n    message: `${msg.connection.name} connection ${msg.connection.state === 'up' ? 'established' : 'lost'}`,\n    context: {}\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 440,
+        "wires": [
+            [
+                "f7cc4988cd8805ac"
+            ]
+        ]
+    },
+    {
+        "id": "f7cc4988cd8805ac",
+        "type": "mqtt out",
+        "z": "utility-connections",
+        "g": "c6e8dfc8cac8be10",
+        "name": "Log Event",
+        "topic": "highland/event/log",
+        "qos": "2",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 820,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "984365870287e0cd",
+        "type": "function",
+        "z": "utility-connections",
+        "g": "c6e8dfc8cac8be10",
+        "name": "Log to Console",
+        "func": "if (msg.connection.state === 'up') {\n    node.warn(`${msg.connection.name} connection established.`);\n} else {\n    node.error(`${msg.connection.name} connection lost.`);\n}",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 580,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "99d3e4803aadf3af",
+        "type": "function",
+        "z": "utility-connections",
+        "g": "f11776fc87bfe641",
+        "name": "Evaluate State",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers');\nconst TIMER_CADENCE = flow.get('timer_cadence') || 5000;\n\nconst NAME = 'Home Assistant';\nconst KEY = 'home_assistant';\n\nconst CURRENT_STATE = (msg.status.fill === 'red' || msg.status.fill === 'yellow') ? 'down' : 'up';\nconst LAST_STATE = global.get(`connections.${KEY}`) || 'unknown';\n\n// Always update the global flag and node status immediately\nglobal.set(`connections.${KEY}`, CURRENT_STATE);\nnode.status({\n    fill: CURRENT_STATE === 'up' ? 'green' : 'red',\n    shape: CURRENT_STATE === 'up' ? 'dot' : 'ring',\n    text: formatStatus(CURRENT_STATE.toUpperCase())\n});\n\nif (CURRENT_STATE === LAST_STATE) return null;\n\nconst SETTLED = flow.get('settled', 'volatile') || false;\n\nif (!SETTLED) {\n    // Startup window — debounce down transitions\n    if (CURRENT_STATE === 'down') {\n        const CONNECTION_SNAPSHOT = { key: KEY, name: NAME, state: 'down' };\n        const TIMER_ID = setTimeout(() => {\n            if (global.get(`connections.${KEY}`) === 'down') {\n                flow.set(`${KEY}_timer`, null, 'volatile');\n                node.send({ connection: CONNECTION_SNAPSHOT });\n            }\n        }, TIMER_CADENCE);\n        flow.set(`${KEY}_timer`, TIMER_ID, 'volatile');\n        return null;\n    }\n    // Coming up during startup window — cancel any pending timer, no log\n    const TIMER_ID = flow.get(`${KEY}_timer`, 'volatile');\n    if (TIMER_ID) {\n        clearTimeout(TIMER_ID);\n        flow.set(`${KEY}_timer`, null, 'volatile');\n    }\n    return null;\n}\n\n// Settled — real-time, log immediately\nmsg.connection = { key: KEY, name: NAME, state: CURRENT_STATE };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 520,
+        "y": 140,
+        "wires": [
+            [
+                "71ae1b9113e4988e"
+            ]
+        ]
+    },
+    {
+        "id": "71ae1b9113e4988e",
+        "type": "link out",
+        "z": "utility-connections",
+        "g": "f11776fc87bfe641",
+        "name": "Log Event",
+        "mode": "link",
+        "links": [
+            "6e64f7c0b1cfa988"
+        ],
+        "x": 720,
+        "y": 140,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "c389cf0612bb648e",
+        "type": "subflow:subflow-initializer-latch",
+        "z": "utility-connections",
+        "g": "f11776fc87bfe641",
+        "name": "Latch",
+        "env": [
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "ha_connection-",
+                "type": "str"
+            }
+        ],
+        "x": 330,
+        "y": 140,
+        "wires": [
+            [
+                "99d3e4803aadf3af"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "e25cbc28b6d5f30d",
+        "type": "subflow:subflow-initializer-latch",
+        "z": "utility-connections",
+        "g": "a1766f6d6d10467b",
+        "name": "Latch",
+        "env": [
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "mqtt_connection-",
+                "type": "str"
+            }
+        ],
+        "x": 330,
+        "y": 320,
+        "wires": [
+            [
+                "34ae0d643a8e3099"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "34ae0d643a8e3099",
+        "type": "function",
+        "z": "utility-connections",
+        "g": "a1766f6d6d10467b",
+        "name": "Evaluate State",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers');\nconst TIMER_CADENCE = flow.get('timer_cadence') || 5000;\n\nconst NAME = 'MQTT';\nconst KEY = 'mqtt';\n\nconst CURRENT_STATE = (msg.status.fill === 'red' || msg.status.fill === 'yellow') ? 'down' : 'up';\nconst LAST_STATE = global.get(`connections.${KEY}`) || 'unknown';\n\n// Always update the global flag and node status immediately\nglobal.set(`connections.${KEY}`, CURRENT_STATE);\nnode.status({\n    fill: CURRENT_STATE === 'up' ? 'green' : 'red',\n    shape: CURRENT_STATE === 'up' ? 'dot' : 'ring',\n    text: formatStatus(CURRENT_STATE.toUpperCase())\n});\n\nif (CURRENT_STATE === LAST_STATE) return null;\n\nconst SETTLED = flow.get('settled', 'volatile') || false;\n\nif (!SETTLED) {\n    // Startup window — debounce down transitions\n    if (CURRENT_STATE === 'down') {\n        const CONNECTION_SNAPSHOT = { key: KEY, name: NAME, state: 'down' };\n        const TIMER_ID = setTimeout(() => {\n            if (global.get(`connections.${KEY}`) === 'down') {\n                flow.set(`${KEY}_timer`, null, 'volatile');\n                node.send({ connection: CONNECTION_SNAPSHOT });\n            }\n        }, TIMER_CADENCE);\n        flow.set(`${KEY}_timer`, TIMER_ID, 'volatile');\n        return null;\n    }\n    // Coming up during startup window — cancel any pending timer, no log\n    const TIMER_ID = flow.get(`${KEY}_timer`, 'volatile');\n    if (TIMER_ID) {\n        clearTimeout(TIMER_ID);\n        flow.set(`${KEY}_timer`, null, 'volatile');\n    }\n    return null;\n}\n\n// Settled — real-time, log immediately\nmsg.connection = { key: KEY, name: NAME, state: CURRENT_STATE };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 520,
+        "y": 320,
+        "wires": [
+            [
+                "66280cfed5fb5ce1"
+            ]
+        ]
+    },
+    {
+        "id": "66280cfed5fb5ce1",
+        "type": "link out",
+        "z": "utility-connections",
+        "g": "a1766f6d6d10467b",
+        "name": "Log Event",
+        "mode": "link",
+        "links": [
+            "6e64f7c0b1cfa988"
+        ],
+        "x": 720,
+        "y": 320,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "55e4881278802946",
+        "type": "inject",
+        "z": "utility-connections",
+        "g": "b458401fcacd43ef",
+        "name": "On Startup",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "0.1",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 620,
+        "wires": [
+            [
+                "25e54ae6770f746c"
+            ]
+        ]
+    },
+    {
+        "id": "25e54ae6770f746c",
+        "type": "function",
+        "z": "utility-connections",
+        "g": "b458401fcacd43ef",
+        "name": "Establish Cadence",
+        "func": "const TIMER_CADENCE = 5000;\n\nflow.set('timer_cadence', TIMER_CADENCE);\n\nsetTimeout(() => {\n    flow.set('settled', true, 'volatile');\n}, TIMER_CADENCE);",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "aa5463113481df19",
+        "type": "server",
+        "name": "Home Assistant",
+        "version": 6,
+        "addon": false,
+        "rejectUnauthorizedCerts": true,
+        "ha_boolean": [
+            "y",
+            "yes",
+            "true",
+            "on",
+            "home",
+            "open"
+        ],
+        "connectionDelay": true,
+        "cacheJson": true,
+        "heartbeat": false,
+        "heartbeatInterval": 30,
+        "areaSelector": "friendlyName",
+        "deviceSelector": "friendlyName",
+        "entitySelector": "friendlyName",
+        "statusSeparator": ": ",
+        "statusYear": "hidden",
+        "statusMonth": "short",
+        "statusDay": "numeric",
+        "statusHourCycle": "default",
+        "statusTimeFormat": "h:m",
+        "enableGlobalContextStore": false
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "aa444a4f1916d970",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-home-assistant-websocket": "0.80.3"
+        }
+    }
+]

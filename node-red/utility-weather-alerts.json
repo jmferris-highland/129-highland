@@ -1,0 +1,300 @@
+[
+    {
+        "id": "utility-weather-alerts",
+        "type": "tab",
+        "label": "Utility: Weather Alerts",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "6d393237548316ec",
+        "type": "group",
+        "z": "utility-weather-alerts",
+        "name": "Sinks",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "488ad26dd025bd04",
+            "2a862225c1fc2389"
+        ],
+        "x": 54,
+        "y": 159,
+        "w": 432,
+        "h": 82
+    },
+    {
+        "id": "806e9ecc0ebe893f",
+        "type": "group",
+        "z": "utility-weather-alerts",
+        "name": "Alert Pipeline",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "cc34ec182e1fc0ca",
+            "82fb478322644428",
+            "2e0592686a77b2d1",
+            "536b3a09469835a1",
+            "6419bac00c55416d",
+            "f3491f6a167a9780"
+        ],
+        "x": 54,
+        "y": 39,
+        "w": 1192,
+        "h": 82
+    },
+    {
+        "id": "d95945a45dda81f5",
+        "type": "group",
+        "z": "utility-weather-alerts",
+        "name": "Error Handling",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "ad2efd39b393cb9c",
+            "35bbbb9283ea5e80"
+        ],
+        "x": 54,
+        "y": 279,
+        "w": 352,
+        "h": 82
+    },
+    {
+        "id": "488ad26dd025bd04",
+        "type": "inject",
+        "z": "utility-weather-alerts",
+        "g": "6d393237548316ec",
+        "name": "Every 30 Seconds",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "30",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 190,
+        "y": 200,
+        "wires": [
+            [
+                "2a862225c1fc2389"
+            ]
+        ]
+    },
+    {
+        "id": "2a862225c1fc2389",
+        "type": "link out",
+        "z": "utility-weather-alerts",
+        "g": "6d393237548316ec",
+        "name": "Poll Alerts",
+        "mode": "link",
+        "links": [
+            "cc34ec182e1fc0ca"
+        ],
+        "x": 400,
+        "y": 200,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "ad2efd39b393cb9c",
+        "type": "catch",
+        "z": "utility-weather-alerts",
+        "g": "d95945a45dda81f5",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 140,
+        "y": 320,
+        "wires": [
+            [
+                "35bbbb9283ea5e80"
+            ]
+        ]
+    },
+    {
+        "id": "cc34ec182e1fc0ca",
+        "type": "link in",
+        "z": "utility-weather-alerts",
+        "g": "806e9ecc0ebe893f",
+        "name": "Poll Alerts",
+        "links": [
+            "2a862225c1fc2389"
+        ],
+        "x": 140,
+        "y": 80,
+        "wires": [
+            [
+                "82fb478322644428"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "82fb478322644428",
+        "type": "function",
+        "z": "utility-weather-alerts",
+        "g": "806e9ecc0ebe893f",
+        "name": "Build Request",
+        "func": "const location = global.get('config')?.location;\nconst lat = location?.latitude;\nconst lon = location?.longitude;\n\nmsg.url = `https://api.weather.gov/alerts/active?point=${lat},${lon}`;\n\nmsg.headers = { \n    'Accept': 'application/geo+json',\n    'User-Agent': global.get('config')?.system?.http?.user_agent\n};\n\nmsg.payload = '';\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 80,
+        "wires": [
+            [
+                "2e0592686a77b2d1"
+            ]
+        ]
+    },
+    {
+        "id": "2e0592686a77b2d1",
+        "type": "http request",
+        "z": "utility-weather-alerts",
+        "g": "806e9ecc0ebe893f",
+        "name": "Fetch Alerts",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 550,
+        "y": 80,
+        "wires": [
+            [
+                "536b3a09469835a1"
+            ]
+        ]
+    },
+    {
+        "id": "536b3a09469835a1",
+        "type": "function",
+        "z": "utility-weather-alerts",
+        "g": "806e9ecc0ebe893f",
+        "name": "Process Alerts",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nconst location = global.get('config')?.location;\nconst lat = location?.latitude;\nconst lon = location?.longitude;\n\nif (msg.statusCode !== 200) {\n    node.error(`Alerts fetch failed: ${msg.statusCode}`, msg);\n    return null;\n}\n\nconst incoming = msg.payload.features || [];\nconst known = flow.get('known_alerts') || {};\nconst now = new Date();\n\nconst severityMap = {\n    'Extreme': 'critical',\n    'Severe': 'high',\n    'Moderate': 'medium',\n    'Minor': 'low'\n};\n\nconst events = [];\nconst updatedKnown = {};\n\n// Process incoming alerts\nfor (const feature of incoming) {\n    const p = feature.properties;\n    const id = p.id;\n    const existing = known[id];\n\n    updatedKnown[id] = {\n        sent: p.sent,\n        event: p.event,\n        severity: p.severity,\n        headline: p.headline,\n        ends: p.ends\n    };\n\n    const eventPayload = {\n        timestamp: now.toISOString(),\n        source: 'weather_alerts',\n        event: p.event,\n        headline: p.headline,\n        severity: p.severity,\n        notification_severity: severityMap[p.severity] || 'medium',\n        sent: p.sent,\n        ends: p.ends,\n        url: `https://forecast.weather.gov/MapClick.php?lat=${lat}&lon=${lon}`\n    };\n\n    if (!existing) {\n        // New alert\n        events.push({ topic: 'highland/event/weather/alert/new', payload: eventPayload });\n    } else if (existing.sent !== p.sent) {\n        // Updated alert\n        events.push({ topic: 'highland/event/weather/alert/updated', payload: eventPayload });\n    }\n    // Otherwise ongoing — no event\n}\n\n// Check for expired alerts\nfor (const [id, data] of Object.entries(known)) {\n    if (!updatedKnown[id]) {\n        const endsTime = data.ends ? new Date(data.ends) : null;\n        if (!endsTime || endsTime <= now) {\n            events.push({\n                topic: 'highland/event/weather/alert/expired',\n                payload: {\n                    timestamp: now.toISOString(),\n                    source: 'weather_alerts',\n                    event: data.event,\n                    headline: data.headline,\n                    severity: data.severity,\n                    ends: data.ends\n                }\n            });\n        } else {\n            // Ends in future but not in response — keep in known for now\n            updatedKnown[id] = data;\n        }\n    }\n}\n\n// Persist updated known set\nflow.set('known_alerts', updatedKnown);\n\n// Build snapshot payload\nconst activeAlerts = Object.values(updatedKnown).map(a => ({\n    event: a.event,\n    headline: a.headline,\n    severity: a.severity,\n    ends: a.ends\n}));\n\nconst snapshot = {\n    topic: 'highland/state/weather/alerts',\n    retain: true,\n    qos: 1,\n    payload: JSON.stringify({\n        timestamp: now.toISOString(),\n        source: 'weather_alerts',\n        alerts: activeAlerts\n    })\n};\n\n// Status — only update on change\nconst previousCount = flow.get('last_alert_count') ?? -1;\nconst currentCount = activeAlerts.length;\nif (currentCount !== previousCount) {\n    flow.set('last_alert_count', currentCount);\n}\n\nnode.status({\n    fill: currentCount > 0 ? 'yellow' : 'green',\n    shape: currentCount > 0 ? 'ring' : 'dot',\n    text: formatStatus(`${currentCount} active alert(s)`)\n});\n\nmsg.snapshot = snapshot;\nmsg.events = events;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 760,
+        "y": 80,
+        "wires": [
+            [
+                "6419bac00c55416d"
+            ]
+        ]
+    },
+    {
+        "id": "6419bac00c55416d",
+        "type": "function",
+        "z": "utility-weather-alerts",
+        "g": "806e9ecc0ebe893f",
+        "name": "Dispatch",
+        "func": "// Always publish snapshot\nnode.send({ topic: msg.snapshot.topic, payload: msg.snapshot.payload, retain: true, qos: 1 });\n\n// Fire any lifecycle events\nfor (const evt of msg.events) {\n    node.send({ topic: evt.topic, payload: JSON.stringify(evt.payload), retain: false, qos: 0 });\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 960,
+        "y": 80,
+        "wires": [
+            [
+                "f3491f6a167a9780"
+            ]
+        ]
+    },
+    {
+        "id": "f3491f6a167a9780",
+        "type": "mqtt out",
+        "z": "utility-weather-alerts",
+        "g": "806e9ecc0ebe893f",
+        "name": "Alert Output",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 1150,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "35bbbb9283ea5e80",
+        "type": "debug",
+        "z": "utility-weather-alerts",
+        "g": "d95945a45dda81f5",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 310,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]

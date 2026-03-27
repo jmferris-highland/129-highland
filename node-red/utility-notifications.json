@@ -1,0 +1,1672 @@
+[
+    {
+        "id": "subflow-connection-gate",
+        "type": "subflow",
+        "name": "connection gate",
+        "info": "",
+        "category": "highland",
+        "in": [
+            {
+                "x": 60,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "cg-evaluate-gate"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 380,
+                "y": 40,
+                "wires": [
+                    {
+                        "id": "cg-evaluate-gate",
+                        "port": 0
+                    }
+                ]
+            },
+            {
+                "x": 380,
+                "y": 120,
+                "wires": [
+                    {
+                        "id": "cg-evaluate-gate",
+                        "port": 1
+                    }
+                ]
+            }
+        ],
+        "env": [
+            {
+                "name": "CONNECTION_TYPE",
+                "type": "str",
+                "value": "",
+                "ui": {
+                    "label": {
+                        "en-US": "Connection Type"
+                    },
+                    "type": "select",
+                    "opts": {
+                        "opts": [
+                            {
+                                "l": {
+                                    "en-US": "Home Assistant"
+                                },
+                                "v": "home_assistant"
+                            },
+                            {
+                                "l": {
+                                    "en-US": "MQTT"
+                                },
+                                "v": "mqtt"
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "RETENTION_MS",
+                "type": "num",
+                "value": "10000",
+                "ui": {
+                    "label": {
+                        "en-US": "Retention (ms)"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "num"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "CONTEXT_PREFIX",
+                "type": "str",
+                "value": "",
+                "ui": {
+                    "label": {
+                        "en-US": "Scope"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "str"
+                        ]
+                    }
+                }
+            }
+        ],
+        "meta": {},
+        "color": "#A6BBCF",
+        "icon": "font-awesome/fa-filter",
+        "status": {
+            "x": 440,
+            "y": 180,
+            "wires": [
+                {
+                    "id": "0242431e8d5fb057",
+                    "port": 0
+                }
+            ]
+        }
+    },
+    {
+        "id": "cg-evaluate-gate",
+        "type": "function",
+        "z": "subflow-connection-gate",
+        "name": "Evaluate Gate",
+        "func": "const CONNECTION_TYPE = env.get('CONNECTION_TYPE');\nconst RETENTION_MS = env.get('RETENTION_MS') || 0;\nconst POLL_INTERVAL_MS = 500;\nconst PREFIX = env.get('CONTEXT_PREFIX') || '';\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers');\nconst state = global.get(`connections.${CONNECTION_TYPE}`);\n\n// OPEN GATE - Immediate passthrough\nif (state !== 'down') {\n    node.status({ fill: 'green', shape: 'dot', text: formatStatus('PASSTHROUGH') });\n    return [msg, null];\n}\n\n// CLOSED GATE - NO RETENTION - Immediate drop\nif (!RETENTION_MS) {\n    node.status({ fill: 'red', shape: 'dot', text: formatStatus('DROPPED') });\n    return [null, msg];\n}\n\n// CLOSED GATE - WITH RETENTION - Poll for disposition\nconst existing = flow.get(`${PREFIX}retention_poll`, 'volatile');\nif (existing) {\n    clearInterval(existing);\n    flow.set(`${PREFIX}retention_poll`, null, 'volatile');\n}\n\nlet elapsed = 0;\nconst snapshot = msg;\n\nnode.status({ fill: 'yellow', shape: 'ring', text: formatStatus('WAITING') });\n\nconst pollId = setInterval(() => {\n    elapsed += POLL_INTERVAL_MS;\n    const currentState = global.get(`connections.${CONNECTION_TYPE}`);\n\n    // GATE OPENED WITHIN RETENTION - Passthrough as recovered.\n    if (currentState !== 'down') {\n        clearInterval(flow.get(`${PREFIX}retention_poll`, 'volatile'));\n        flow.set(`${PREFIX}retention_poll`, null, 'volatile');\n        node.status({ fill: 'green', shape: 'ring', text: formatStatus('RECOVERED') });\n        node.send([snapshot, null]);\n        return;\n    }\n\n    // GATE CLOSED AT EXPIRATION - Dropped as expired.\n    if (elapsed >= RETENTION_MS) {\n        clearInterval(flow.get(`${PREFIX}retention_poll`, 'volatile'));\n        flow.set(`${PREFIX}retention_poll`, null, 'volatile');\n        node.status({ fill: 'red', shape: 'ring', text: formatStatus('EXPIRED') });\n        node.send([null, snapshot]);\n    }\n}, POLL_INTERVAL_MS);\n\nflow.set(`${PREFIX}retention_poll`, pollId, 'volatile');\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 220,
+        "y": 80,
+        "wires": [
+            [],
+            []
+        ]
+    },
+    {
+        "id": "864c686316d96e5e",
+        "type": "status",
+        "z": "subflow-connection-gate",
+        "name": "",
+        "scope": [
+            "cg-evaluate-gate"
+        ],
+        "x": 100,
+        "y": 180,
+        "wires": [
+            [
+                "0242431e8d5fb057"
+            ]
+        ]
+    },
+    {
+        "id": "0242431e8d5fb057",
+        "type": "function",
+        "z": "subflow-connection-gate",
+        "name": "Mirror Status",
+        "func": "msg.payload = {\n    fill: msg.status.fill,\n    shape: msg.status.shape,\n    text: msg.status.text\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 290,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "subflow-initializer-latch",
+        "type": "subflow",
+        "name": "initializer latch",
+        "info": "",
+        "category": "highland",
+        "in": [
+            {
+                "x": 80,
+                "y": 60,
+                "wires": [
+                    {
+                        "id": "081746de07ee7073"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 360,
+                "y": 300,
+                "wires": [
+                    {
+                        "id": "204c782fa7f1e192",
+                        "port": 0
+                    }
+                ]
+            },
+            {
+                "x": 400,
+                "y": 360,
+                "wires": [
+                    {
+                        "id": "0a98747907675ad9",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [
+            {
+                "name": "RETRY_INTERVAL_MS",
+                "type": "num",
+                "value": "250",
+                "ui": {
+                    "label": {
+                        "en-US": "Retry Interval (ms)"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "num"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "MAX_RETRIES",
+                "type": "num",
+                "value": "20",
+                "ui": {
+                    "label": {
+                        "en-US": "Max Retries"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "num"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "CONTEXT_PREFIX",
+                "type": "str",
+                "value": "",
+                "ui": {
+                    "label": {
+                        "en-US": "Scope"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "str"
+                        ]
+                    }
+                }
+            }
+        ],
+        "meta": {},
+        "color": "#87A980",
+        "outputLabels": [
+            "OK",
+            "TIMEOUT"
+        ],
+        "icon": "node-red/timer.svg"
+    },
+    {
+        "id": "081746de07ee7073",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Buffer Management",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\n\nif (flow.get(`${prefix}initialized`)) {\n    return [msg, null];\n}\nif (flow.get(`${prefix}degraded`)) {\n    return null;\n}\nconst buffer = flow.get(`${prefix}state_buffer`) || [];\nbuffer.push(msg);\nflow.set(`${prefix}state_buffer`, buffer);\nif (!flow.get(`${prefix}check_running`)) {\n    flow.set(`${prefix}check_running`, true);\n    flow.set(`${prefix}retries`, 0);\n    return [null, msg];\n}\n\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 250,
+        "y": 60,
+        "wires": [
+            [
+                "18fe80e042b3e229"
+            ],
+            [
+                "2ecaa5d9e39ad7a1"
+            ]
+        ]
+    },
+    {
+        "id": "2ecaa5d9e39ad7a1",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Check Readiness",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nconst maxRetries = env.get('MAX_RETRIES') || 20;\nconst retries = flow.get(`${prefix}retries`) || 0;\n\nif (global.get('initializers.ready', 'initializers') === true) {\n    flow.set(`${prefix}check_running`, false);\n    return [msg, null];\n}\nif (retries >= maxRetries) {\n    flow.set(`${prefix}check_running`, false);\n    msg.timedOut = true;\n    return [null, msg];\n}\nflow.set(`${prefix}retries`, retries + 1);\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 490,
+        "y": 120,
+        "wires": [
+            [
+                "4f8a77e8b898a9bc"
+            ],
+            [
+                "74db48c8fac39695"
+            ]
+        ]
+    },
+    {
+        "id": "74db48c8fac39695",
+        "type": "switch",
+        "z": "subflow-initializer-latch",
+        "name": "Route",
+        "property": "timedOut",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "true"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 690,
+        "y": 180,
+        "wires": [
+            [
+                "716d39543f5312f7"
+            ],
+            [
+                "3efc69215972097b"
+            ]
+        ]
+    },
+    {
+        "id": "218b4ac37cd3bb4b",
+        "type": "delay",
+        "z": "subflow-initializer-latch",
+        "name": "Retry Delay",
+        "pauseType": "delayv",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1050,
+        "y": 240,
+        "wires": [
+            [
+                "62595fe3f63fb6a4"
+            ]
+        ]
+    },
+    {
+        "id": "3efc69215972097b",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Set Delay",
+        "func": "msg.delay = env.get('RETRY_INTERVAL_MS') || 250;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 860,
+        "y": 240,
+        "wires": [
+            [
+                "218b4ac37cd3bb4b"
+            ]
+        ]
+    },
+    {
+        "id": "83c96b9bb45316e9",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Recheck Readiness",
+        "links": [
+            "62595fe3f63fb6a4"
+        ],
+        "x": 250,
+        "y": 180,
+        "wires": [
+            [
+                "2ecaa5d9e39ad7a1"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "62595fe3f63fb6a4",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Recheck Readiness",
+        "mode": "link",
+        "links": [
+            "83c96b9bb45316e9"
+        ],
+        "x": 1280,
+        "y": 240,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "4f8a77e8b898a9bc",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Open Gate",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nflow.set(`${prefix}initialized`, true);\nflow.set(`${prefix}degraded`, false);\nflow.set(`${prefix}check_running`, false);\n\nconst buffer = flow.get(`${prefix}state_buffer`) || [];\nflow.set(`${prefix}state_buffer`, []);\n\nfor (const bufferedMsg of buffer) {\n    node.send([bufferedMsg, null]);\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 710,
+        "y": 120,
+        "wires": [
+            [
+                "0d9caff7a4aadff8"
+            ]
+        ]
+    },
+    {
+        "id": "716d39543f5312f7",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Handle Timeout",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nflow.set(`${prefix}degraded`, true);\nflow.set(`${prefix}initialized`, false);\nflow.set(`${prefix}check_running`, false);\nflow.set(`${prefix}state_buffer`, []);\n\nmsg.timedOut = true;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 880,
+        "y": 180,
+        "wires": [
+            [
+                "5306e1168dacc5bf"
+            ]
+        ]
+    },
+    {
+        "id": "204c782fa7f1e192",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "links": [
+            "18fe80e042b3e229",
+            "0d9caff7a4aadff8"
+        ],
+        "x": 160,
+        "y": 300,
+        "wires": [
+            []
+        ],
+        "l": true
+    },
+    {
+        "id": "18fe80e042b3e229",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "mode": "link",
+        "links": [
+            "204c782fa7f1e192"
+        ],
+        "x": 500,
+        "y": 60,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0d9caff7a4aadff8",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "mode": "link",
+        "links": [
+            "204c782fa7f1e192"
+        ],
+        "x": 940,
+        "y": 120,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "5306e1168dacc5bf",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Discard Message Stream",
+        "mode": "link",
+        "links": [
+            "0a98747907675ad9"
+        ],
+        "x": 1130,
+        "y": 180,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0a98747907675ad9",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Discard Message Stream",
+        "links": [
+            "5306e1168dacc5bf"
+        ],
+        "x": 170,
+        "y": 360,
+        "wires": [
+            []
+        ],
+        "l": true
+    },
+    {
+        "id": "utility-notifications",
+        "type": "tab",
+        "label": "Utility: Notifications",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "un-receive-group",
+        "type": "group",
+        "z": "utility-notifications",
+        "name": "Receive Notification",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "un-mqtt-in",
+            "un-validate-payload",
+            "un-fan-out",
+            "b4f6622faadd431d",
+            "8e898d17ccb5818a",
+            "1bec6aa6e36936dd"
+        ],
+        "x": 54,
+        "y": 59,
+        "w": 1152,
+        "h": 82
+    },
+    {
+        "id": "un-ha-delivery-group",
+        "type": "group",
+        "z": "utility-notifications",
+        "name": "Home Assistant Companion Delivery",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "un-ha-link-in",
+            "un-build-service-call",
+            "un-ha-service-call",
+            "2cee9f602c3cc03b",
+            "10d0c579b671c76f"
+        ],
+        "x": 54,
+        "y": 299,
+        "w": 982,
+        "h": 82
+    },
+    {
+        "id": "un-clear-group",
+        "type": "group",
+        "z": "utility-notifications",
+        "name": "Clear Notification",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "un-clear-mqtt-in",
+            "un-build-clear-call",
+            "un-clear-log-link-out",
+            "ba8d52d55dfaee02",
+            "672b192343a5466f"
+        ],
+        "x": 54,
+        "y": 179,
+        "w": 952,
+        "h": 82
+    },
+    {
+        "id": "un-logging-group",
+        "type": "group",
+        "z": "utility-notifications",
+        "name": "Logging",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "un-log-link-in",
+            "un-format-log-message",
+            "un-log-mqtt-out",
+            "un-log-to-console",
+            "c429fd81ed1ad975"
+        ],
+        "x": 54,
+        "y": 839,
+        "w": 812,
+        "h": 142
+    },
+    {
+        "id": "un-test-group",
+        "type": "group",
+        "z": "utility-notifications",
+        "name": "Test Cases",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "un-test-inject",
+            "un-test-build-message",
+            "un-test-mqtt-out",
+            "974b543e63f0b225",
+            "5cea0bbf5d65863d",
+            "1977d3cb92d3e957",
+            "069a76d30ec3de29",
+            "9fe3889554db0a66",
+            "05d5c9a8a0b7fa39"
+        ],
+        "x": 54,
+        "y": 1039,
+        "w": 712,
+        "h": 202
+    },
+    {
+        "id": "un-tv-routing-group",
+        "type": "group",
+        "z": "utility-notifications",
+        "name": "Television Delivery",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "un-tv-link-in",
+            "un-tv-set-entity-id",
+            "un-tv-get-state",
+            "un-tv-resolve-endpoint",
+            "un-tv-dispatch",
+            "un-tv-return",
+            "080636f8e374ea61"
+        ],
+        "x": 54,
+        "y": 419,
+        "w": 1162,
+        "h": 142
+    },
+    {
+        "id": "un-androidtv-group",
+        "type": "group",
+        "z": "utility-notifications",
+        "name": "Android TV Delivery",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "un-androidtv-link-in",
+            "un-androidtv-build-call",
+            "un-androidtv-service-call",
+            "un-androidtv-return"
+        ],
+        "x": 54,
+        "y": 599,
+        "w": 822,
+        "h": 82
+    },
+    {
+        "id": "un-webos-group",
+        "type": "group",
+        "z": "utility-notifications",
+        "name": "WebOS Delivery",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "un-webos-link-in",
+            "un-webos-build-call",
+            "un-webos-service-call",
+            "un-webos-return"
+        ],
+        "x": 54,
+        "y": 719,
+        "w": 782,
+        "h": 82
+    },
+    {
+        "id": "un-mqtt-in",
+        "type": "mqtt in",
+        "z": "utility-notifications",
+        "g": "un-receive-group",
+        "name": "Notification In",
+        "topic": "highland/event/notify",
+        "qos": "2",
+        "datatype": "json",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 150,
+        "y": 100,
+        "wires": [
+            [
+                "b4f6622faadd431d"
+            ]
+        ]
+    },
+    {
+        "id": "un-validate-payload",
+        "type": "function",
+        "z": "utility-notifications",
+        "g": "un-receive-group",
+        "name": "Validate Payload",
+        "func": "const required = ['targets', 'severity', 'title', 'message'];\nconst missing = required.filter(f => !msg.payload[f]);\n\nif (missing.length > 0) {\n    node.warn(`Notification dropped — missing required fields: ${missing.join(', ')}`);\n    return null;\n}\n\nif (!Array.isArray(msg.payload.targets) || msg.payload.targets.length === 0) {\n    node.warn('Notification dropped — targets must be a non-empty array');\n    return null;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 530,
+        "y": 100,
+        "wires": [
+            [
+                "un-fan-out"
+            ]
+        ]
+    },
+    {
+        "id": "un-fan-out",
+        "type": "function",
+        "z": "utility-notifications",
+        "g": "un-receive-group",
+        "name": "Build Targets",
+        "func": "const notifications = global.get('config').notifications;\nconst { targets } = msg.payload;\n\nfor (const target of targets) {\n    const parts = target.split('.');\n    if (parts.length !== 3) {\n        node.warn(`Invalid target format: ${target}`);\n        continue;\n    }\n    const [namespace, key, channel] = parts;\n    const section = notifications[namespace];\n    if (!section) {\n        node.warn(`Unknown namespace: ${namespace}`);\n        continue;\n    }\n    const keys = key === '*' ? Object.keys(section) : [key];\n    for (const k of keys) {\n        const entry = section[k];\n        if (!entry) {\n            node.warn(`Unknown ${namespace} key: ${k}`);\n            continue;\n        }\n        const address = entry.channels?.[channel];\n        if (!address) {\n            node.warn(`No channel '${channel}' for ${namespace}.${k}`);\n            continue;\n        }\n        node.send({\n            payload: {\n                ...msg.payload,\n                _delivery: { namespace, key: k, channel, address }\n            },\n            target: resolveLinkTarget(channel)\n        });\n    }\n}\nreturn null;\n\nfunction resolveLinkTarget(channel) {\n    switch (channel) {\n        case 'ha_companion': return 'Home Assistant Companion';\n        case 'tv':           return 'Television Routing';\n        default: throw new Error(`Unable to resolve channel: ${channel}`);\n    }\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 750,
+        "y": 100,
+        "wires": [
+            [
+                "8e898d17ccb5818a"
+            ]
+        ]
+    },
+    {
+        "id": "b4f6622faadd431d",
+        "type": "subflow:subflow-initializer-latch",
+        "z": "utility-notifications",
+        "g": "un-receive-group",
+        "name": "Latch",
+        "env": [
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "notify_in-",
+                "type": "str"
+            }
+        ],
+        "x": 330,
+        "y": 100,
+        "wires": [
+            [
+                "un-validate-payload"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "un-ha-link-in",
+        "type": "link in",
+        "z": "utility-notifications",
+        "g": "un-ha-delivery-group",
+        "name": "Home Assistant Companion",
+        "links": [],
+        "x": 200,
+        "y": 340,
+        "wires": [
+            [
+                "2cee9f602c3cc03b"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "un-build-service-call",
+        "type": "function",
+        "z": "utility-notifications",
+        "g": "un-ha-delivery-group",
+        "name": "Build Service Call",
+        "func": "const { _delivery } = msg.payload;\n\n// Clear path\nif (_delivery.type === 'clear') {\n    msg.payload = {\n        action: _delivery.address,\n        data: {\n            message: 'clear_notification',\n            data: { tag: msg.payload.correlation_id }\n        }\n    };\n    msg.log_message = `Notification cleared for ${_delivery.recipient} via ${_delivery.channel}`;\n    return msg;\n}\n\n// Delivery path\nconst { severity, title, message,\n        sticky, group, correlation_id,\n        dnd_override, media, actionable, actions } = msg.payload;\n\nconst channelMap = {\n    low:      'highland_low',\n    medium:   'highland_default',\n    high:     'highland_high',\n    critical: 'highland_critical'\n};\n\nconst persistentMap = {\n    low: false, medium: false, high: false, critical: true\n};\n\nconst data = {\n    channel:    channelMap[severity] || 'highland_default',\n    importance: severity === 'low' ? 'low' : severity === 'medium' ? 'default' : 'high',\n    persistent: sticky || persistentMap[severity] || false\n};\n\nif (correlation_id) data.tag   = correlation_id;\nif (group)          data.group = group;\nif (media?.image)   data.image = media.image;\n\nif (actionable && actions?.length) {\n    data.actions = actions.map(a => ({\n        action: `${a.id.toUpperCase()}_${correlation_id}`,\n        title:  a.label\n    }));\n}\n\nmsg.payload = {\n    action: _delivery.address,\n    data: { title, message, data }\n};\n\nmsg.log_message = `Notification delivered to ${_delivery.recipient} via ${_delivery.channel}`;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 670,
+        "y": 340,
+        "wires": [
+            [
+                "un-ha-service-call"
+            ]
+        ]
+    },
+    {
+        "id": "un-ha-service-call",
+        "type": "api-call-service",
+        "z": "utility-notifications",
+        "g": "un-ha-delivery-group",
+        "name": "Notify",
+        "server": "aa5463113481df19",
+        "version": 7,
+        "debugenabled": false,
+        "action": "",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "labelId": [],
+        "data": "payload.data",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": false,
+        "domain": "notify",
+        "service": "{{payload",
+        "x": 870,
+        "y": 340,
+        "wires": [
+            [
+                "10d0c579b671c76f"
+            ]
+        ]
+    },
+    {
+        "id": "2cee9f602c3cc03b",
+        "type": "subflow:subflow-connection-gate",
+        "z": "utility-notifications",
+        "g": "un-ha-delivery-group",
+        "name": "Availability",
+        "env": [
+            {
+                "name": "CONNECTION_TYPE",
+                "value": "home_assistant",
+                "type": "str"
+            },
+            {
+                "name": "RETENTION_MS",
+                "value": "0",
+                "type": "num"
+            },
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "ha-",
+                "type": "str"
+            }
+        ],
+        "x": 450,
+        "y": 340,
+        "wires": [
+            [
+                "un-build-service-call"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "un-clear-mqtt-in",
+        "type": "mqtt in",
+        "z": "utility-notifications",
+        "g": "un-clear-group",
+        "name": "Clear Notification",
+        "topic": "highland/command/notify/clear",
+        "qos": "2",
+        "datatype": "json",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 160,
+        "y": 220,
+        "wires": [
+            [
+                "ba8d52d55dfaee02"
+            ]
+        ]
+    },
+    {
+        "id": "un-build-clear-call",
+        "type": "function",
+        "z": "utility-notifications",
+        "g": "un-clear-group",
+        "name": "Build Clear Call",
+        "func": "const notifications = global.get('config').notifications;\nconst { correlation_id, targets } = msg.payload;\n\nif (!correlation_id) {\n    node.warn('Clear notification dropped — missing correlation_id');\n    return null;\n}\nif (!Array.isArray(targets) || targets.length === 0) {\n    node.warn('Clear notification dropped — targets must be a non-empty array');\n    return null;\n}\n\nfor (const target of targets) {\n    const parts = target.split('.');\n    if (parts.length !== 3) {\n        node.warn(`Invalid target format: ${target}`);\n        continue;\n    }\n    const [namespace, key, channel] = parts;\n    const section = notifications[namespace];\n    if (!section) { node.warn(`Unknown namespace: ${namespace}`); continue; }\n\n    const keys = key === '*' ? Object.keys(section) : [key];\n    for (const k of keys) {\n        const entry = section[k];\n        if (!entry) { node.warn(`Unknown ${namespace} key: ${k}`); continue; }\n        const address = entry.channels?.[channel];\n        if (!address) { node.warn(`No channel '${channel}' for ${namespace}.${k}`); continue; }\n        node.send({\n            payload: {\n                _delivery: { namespace, key: k, channel, address, type: 'clear' },\n                correlation_id\n            },\n            target: resolveLinkTarget(channel)\n        });\n    }\n}\nreturn null;\n\nfunction resolveLinkTarget(channel) {\n    switch (channel) {\n        case 'ha_companion': return 'Home Assistant Companion';\n        case 'tv':           return 'Television Routing';\n        default: throw new Error(`Unable to resolve channel: ${channel}`);\n    }\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 540,
+        "y": 220,
+        "wires": [
+            [
+                "672b192343a5466f"
+            ]
+        ]
+    },
+    {
+        "id": "un-clear-log-link-out",
+        "type": "link out",
+        "z": "utility-notifications",
+        "g": "un-clear-group",
+        "name": "Log Event",
+        "mode": "link",
+        "links": [
+            "un-log-link-in"
+        ],
+        "x": 920,
+        "y": 220,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "ba8d52d55dfaee02",
+        "type": "subflow:subflow-initializer-latch",
+        "z": "utility-notifications",
+        "g": "un-clear-group",
+        "name": "Latch",
+        "env": [
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "notify_clear-",
+                "type": "str"
+            }
+        ],
+        "x": 350,
+        "y": 220,
+        "wires": [
+            [
+                "un-build-clear-call"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "un-log-link-in",
+        "type": "link in",
+        "z": "utility-notifications",
+        "g": "un-logging-group",
+        "name": "Log Event",
+        "links": [
+            "un-clear-log-link-out",
+            "1bec6aa6e36936dd"
+        ],
+        "x": 140,
+        "y": 880,
+        "wires": [
+            [
+                "c429fd81ed1ad975"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "un-format-log-message",
+        "type": "function",
+        "z": "utility-notifications",
+        "g": "un-logging-group",
+        "name": "Format Log Message",
+        "func": "msg.payload = {\n    timestamp: new Date().toISOString(),\n    system: 'node_red',\n    source: 'notifications',\n    level: msg.log_level || 'INFO',\n    message: msg.log_message || 'Notification delivered',\n    context: msg.log_context || {}\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 880,
+        "wires": [
+            [
+                "un-log-mqtt-out"
+            ]
+        ]
+    },
+    {
+        "id": "un-log-mqtt-out",
+        "type": "mqtt out",
+        "z": "utility-notifications",
+        "g": "un-logging-group",
+        "name": "Log Event",
+        "topic": "highland/event/log",
+        "qos": "2",
+        "retain": "false",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 780,
+        "y": 880,
+        "wires": []
+    },
+    {
+        "id": "un-log-to-console",
+        "type": "function",
+        "z": "utility-notifications",
+        "g": "un-logging-group",
+        "name": "Log to Console",
+        "func": "const level = msg.log_level || 'INFO';\nconst message = msg.log_message || 'Notification delivered';\n\nif (level === 'WARN' || level === 'ERROR') {\n    node.error(`[notifications] ${message}`);\n} else {\n    node.warn(`[notifications] ${message}`);\n}\nreturn null;",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 540,
+        "y": 940,
+        "wires": []
+    },
+    {
+        "id": "un-test-inject",
+        "type": "inject",
+        "z": "utility-notifications",
+        "g": "un-test-group",
+        "name": "Send Basic Notification",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 200,
+        "y": 1080,
+        "wires": [
+            [
+                "un-test-build-message"
+            ]
+        ]
+    },
+    {
+        "id": "un-test-build-message",
+        "type": "function",
+        "z": "utility-notifications",
+        "g": "un-test-group",
+        "name": "Build Basic Payload",
+        "func": "msg.payload = {\n    timestamp: new Date().toISOString(),\n    source: 'test',\n    targets: ['people.joseph.ha_companion'],\n    severity: 'low',\n    title: 'Highland Test',\n    message: 'Notification pipeline test — if you can read this, it works.',\n    group: 'highland_test'\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 460,
+        "y": 1080,
+        "wires": [
+            [
+                "un-test-mqtt-out"
+            ]
+        ]
+    },
+    {
+        "id": "un-test-mqtt-out",
+        "type": "mqtt out",
+        "z": "utility-notifications",
+        "g": "un-test-group",
+        "name": "Notify",
+        "topic": "highland/event/notify",
+        "qos": "2",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 670,
+        "y": 1080,
+        "wires": []
+    },
+    {
+        "id": "974b543e63f0b225",
+        "type": "inject",
+        "z": "utility-notifications",
+        "g": "un-test-group",
+        "name": "Send Tagged Notification",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 210,
+        "y": 1140,
+        "wires": [
+            [
+                "5cea0bbf5d65863d"
+            ]
+        ]
+    },
+    {
+        "id": "5cea0bbf5d65863d",
+        "type": "function",
+        "z": "utility-notifications",
+        "g": "un-test-group",
+        "name": "Build Tagged Payload",
+        "func": "msg.payload = {\n    timestamp: new Date().toISOString(),\n    source: 'test',\n    targets: ['people.joseph.ha_companion'],\n    severity: 'low',\n    title: 'Highland Test',\n    message: 'Tagged Message Test.',\n    group: 'highland_test',\n    correlation_id: 'sample-tag'\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 1140,
+        "wires": [
+            [
+                "1977d3cb92d3e957"
+            ]
+        ]
+    },
+    {
+        "id": "1977d3cb92d3e957",
+        "type": "mqtt out",
+        "z": "utility-notifications",
+        "g": "un-test-group",
+        "name": "Notify",
+        "topic": "highland/event/notify",
+        "qos": "2",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 690,
+        "y": 1140,
+        "wires": []
+    },
+    {
+        "id": "069a76d30ec3de29",
+        "type": "inject",
+        "z": "utility-notifications",
+        "g": "un-test-group",
+        "name": "Clear Tagged Notification",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 210,
+        "y": 1200,
+        "wires": [
+            [
+                "9fe3889554db0a66"
+            ]
+        ]
+    },
+    {
+        "id": "9fe3889554db0a66",
+        "type": "function",
+        "z": "utility-notifications",
+        "g": "un-test-group",
+        "name": "Build Clear Payload",
+        "func": "msg.payload = {\n    targets: ['people.joseph.ha_companion'],\n    correlation_id: 'sample-tag'\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 1200,
+        "wires": [
+            [
+                "05d5c9a8a0b7fa39"
+            ]
+        ]
+    },
+    {
+        "id": "05d5c9a8a0b7fa39",
+        "type": "mqtt out",
+        "z": "utility-notifications",
+        "g": "un-test-group",
+        "name": "Clear",
+        "topic": "highland/command/notify/clear",
+        "qos": "2",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 670,
+        "y": 1200,
+        "wires": []
+    },
+    {
+        "id": "8e898d17ccb5818a",
+        "type": "link call",
+        "z": "utility-notifications",
+        "g": "un-receive-group",
+        "name": "Deliver",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "30",
+        "x": 940,
+        "y": 100,
+        "wires": [
+            [
+                "1bec6aa6e36936dd"
+            ]
+        ]
+    },
+    {
+        "id": "1bec6aa6e36936dd",
+        "type": "link out",
+        "z": "utility-notifications",
+        "g": "un-receive-group",
+        "name": "Log Event",
+        "mode": "link",
+        "links": [
+            "un-log-link-in"
+        ],
+        "x": 1120,
+        "y": 100,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "10d0c579b671c76f",
+        "type": "link out",
+        "z": "utility-notifications",
+        "g": "un-ha-delivery-group",
+        "name": "Home Assistant Companion Return",
+        "mode": "return",
+        "links": [],
+        "x": 995,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "672b192343a5466f",
+        "type": "link call",
+        "z": "utility-notifications",
+        "g": "un-clear-group",
+        "name": "Deliver",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "30",
+        "x": 740,
+        "y": 220,
+        "wires": [
+            [
+                "un-clear-log-link-out"
+            ]
+        ]
+    },
+    {
+        "id": "c429fd81ed1ad975",
+        "type": "subflow:subflow-connection-gate",
+        "z": "utility-notifications",
+        "g": "un-logging-group",
+        "name": "Availability",
+        "env": [
+            {
+                "name": "CONNECTION_TYPE",
+                "value": "mqtt",
+                "type": "str"
+            },
+            {
+                "name": "RETENTION_MS",
+                "value": "0",
+                "type": "num"
+            },
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "mqtt-",
+                "type": "str"
+            }
+        ],
+        "x": 330,
+        "y": 880,
+        "wires": [
+            [
+                "un-format-log-message"
+            ],
+            [
+                "un-log-to-console"
+            ]
+        ]
+    },
+    {
+        "id": "un-tv-link-in",
+        "type": "link in",
+        "z": "utility-notifications",
+        "g": "un-tv-routing-group",
+        "name": "Television Routing",
+        "links": [],
+        "x": 170,
+        "y": 460,
+        "wires": [
+            [
+                "un-tv-set-entity-id"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "un-tv-set-entity-id",
+        "type": "function",
+        "z": "utility-notifications",
+        "g": "un-tv-routing-group",
+        "name": "Set Entity ID",
+        "func": "msg.entity_id = msg.payload._delivery.address.media_player;\nreturn msg;",
+        "outputs": 1,
+        "x": 390,
+        "y": 460,
+        "wires": [
+            [
+                "un-tv-get-state"
+            ]
+        ]
+    },
+    {
+        "id": "un-tv-get-state",
+        "type": "api-current-state",
+        "z": "utility-notifications",
+        "g": "un-tv-routing-group",
+        "name": "Get TV State",
+        "server": "aa5463113481df19",
+        "version": 3,
+        "outputs": 1,
+        "halt_if": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "entity_id": "",
+        "state_type": "str",
+        "blockInputOverrides": false,
+        "outputProperties": [
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "entityState"
+            }
+        ],
+        "x": 590,
+        "y": 460,
+        "wires": [
+            [
+                "un-tv-resolve-endpoint"
+            ]
+        ]
+    },
+    {
+        "id": "un-tv-resolve-endpoint",
+        "type": "function",
+        "z": "utility-notifications",
+        "g": "un-tv-routing-group",
+        "name": "Resolve Endpoint",
+        "func": "const { _delivery } = msg.payload;\n\n// Clear path — TV auto-dismisses, return immediately\nif (_delivery.type === 'clear') {\n    msg.log_message = `TV clear ignored for ${_delivery.key} — auto-dismiss`;\n    return [null, msg];\n}\n\n// TV off or unavailable — drop\nconst entityState = msg.data;\nif (!entityState || ['off', 'unavailable', 'unknown'].includes(entityState.state)) {\n    node.warn(`TV ${_delivery.address.media_player} is ${entityState?.state || 'unknown'} — dropping notification`);\n    msg.log_level = 'WARN';\n    msg.log_message = `TV notification dropped for ${_delivery.key} — device ${entityState?.state || 'unavailable'}`;\n    return [null, msg];\n}\n\n// Resolve source → endpoint type\nconst currentSource = entityState.attributes?.source;\nconst sourceEntry = _delivery.address.sources?.find(s => s.name === currentSource);\n\nif (!sourceEntry) {\n    node.warn(`TV source '${currentSource}' not configured for ${_delivery.key} — dropping`);\n    msg.log_level = 'WARN';\n    msg.log_message = `TV notification dropped for ${_delivery.key} — source '${currentSource}' not in config`;\n    return [null, msg];\n}\n\n// Look up endpoint address\nconst endpointAddress = _delivery.address.endpoints?.[sourceEntry.type];\nif (!endpointAddress) {\n    node.warn(`No endpoint for type '${sourceEntry.type}' for ${_delivery.key}`);\n    msg.log_level = 'WARN';\n    msg.log_message = `TV notification dropped for ${_delivery.key} — no endpoint for type '${sourceEntry.type}'`;\n    return [null, msg];\n}\n\n// Update delivery with resolved address and route to correct delivery group\nmsg.payload._delivery = {\n    ..._delivery,\n    address: endpointAddress,\n    endpoint_type: sourceEntry.type\n};\n\nconst targetMap = {\n    android_tv: 'Android TV Delivery',\n    webos: 'WebOS Delivery'\n};\nmsg.target = targetMap[sourceEntry.type];\nif (!msg.target) {\n    node.warn(`Unknown TV endpoint type: ${sourceEntry.type}`);\n    msg.log_level = 'WARN';\n    msg.log_message = `TV notification dropped for ${_delivery.key} — unknown type '${sourceEntry.type}'`;\n    return [null, msg];\n}\n\nreturn [msg, null];",
+        "outputs": 2,
+        "x": 810,
+        "y": 460,
+        "wires": [
+            [
+                "un-tv-dispatch"
+            ],
+            [
+                "un-tv-return"
+            ]
+        ]
+    },
+    {
+        "id": "un-tv-dispatch",
+        "type": "link call",
+        "z": "utility-notifications",
+        "g": "un-tv-routing-group",
+        "name": "TV Dispatch",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "30",
+        "x": 1030,
+        "y": 460,
+        "wires": [
+            [
+                "080636f8e374ea61"
+            ]
+        ]
+    },
+    {
+        "id": "un-tv-return",
+        "type": "link out",
+        "z": "utility-notifications",
+        "g": "un-tv-routing-group",
+        "name": "Television Routing Return",
+        "mode": "return",
+        "links": [],
+        "x": 975,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "080636f8e374ea61",
+        "type": "link out",
+        "z": "utility-notifications",
+        "g": "un-tv-routing-group",
+        "name": "Television Routing Return",
+        "mode": "return",
+        "links": [],
+        "x": 1175,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "un-androidtv-link-in",
+        "type": "link in",
+        "z": "utility-notifications",
+        "g": "un-androidtv-group",
+        "name": "Android TV Delivery",
+        "links": [],
+        "x": 170,
+        "y": 640,
+        "wires": [
+            [
+                "un-androidtv-build-call"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "un-androidtv-build-call",
+        "type": "function",
+        "z": "utility-notifications",
+        "g": "un-androidtv-group",
+        "name": "Build Android TV Call",
+        "func": "const { _delivery, severity, title, message, media } = msg.payload;\n\n// Map severity to display duration and color\nconst durationMap = { low: 4, medium: 6, high: 10, critical: 15 };\nconst colorMap = { low: 'grey', medium: 'cyan', high: 'amber', critical: 'red' };\n\nmsg.payload = {\n    action: _delivery.address,\n    data: {\n        title,\n        message,\n        data: {\n            duration: durationMap[severity] || 6,\n            position: 'bottom-right',\n            fontsize: 'medium',\n            transparency: '25%',\n            color: colorMap[severity] || 'grey',\n            interrupt: severity === 'critical' ? 1 : 0,\n            ...(media?.image ? { image: { url: media.image } } : {})\n        }\n    }\n};\n\nmsg.log_message = `Android TV notification delivered to ${_delivery.key}`;\nreturn msg;",
+        "outputs": 1,
+        "x": 410,
+        "y": 640,
+        "wires": [
+            [
+                "un-androidtv-service-call"
+            ]
+        ]
+    },
+    {
+        "id": "un-androidtv-service-call",
+        "type": "api-call-service",
+        "z": "utility-notifications",
+        "g": "un-androidtv-group",
+        "name": "Notify Android TV",
+        "server": "aa5463113481df19",
+        "version": 7,
+        "debugenabled": false,
+        "action": "",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "labelId": [],
+        "data": "payload.data",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": false,
+        "x": 670,
+        "y": 640,
+        "wires": [
+            [
+                "un-androidtv-return"
+            ]
+        ]
+    },
+    {
+        "id": "un-androidtv-return",
+        "type": "link out",
+        "z": "utility-notifications",
+        "g": "un-androidtv-group",
+        "name": "Android TV Return",
+        "mode": "return",
+        "links": [],
+        "x": 835,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "un-webos-link-in",
+        "type": "link in",
+        "z": "utility-notifications",
+        "g": "un-webos-group",
+        "name": "WebOS Delivery",
+        "links": [],
+        "x": 160,
+        "y": 760,
+        "wires": [
+            [
+                "un-webos-build-call"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "un-webos-build-call",
+        "type": "function",
+        "z": "utility-notifications",
+        "g": "un-webos-group",
+        "name": "Build WebOS Call",
+        "func": "const { _delivery, severity, title, message } = msg.payload;\n\n// WebOS notify service — simple title + message overlay\nmsg.payload = {\n    action: _delivery.address,\n    data: {\n        title,\n        message\n    }\n};\n\nmsg.log_message = `WebOS notification delivered to ${_delivery.key}`;\nreturn msg;",
+        "outputs": 1,
+        "x": 390,
+        "y": 760,
+        "wires": [
+            [
+                "un-webos-service-call"
+            ]
+        ]
+    },
+    {
+        "id": "un-webos-service-call",
+        "type": "api-call-service",
+        "z": "utility-notifications",
+        "g": "un-webos-group",
+        "name": "Notify WebOS TV",
+        "server": "aa5463113481df19",
+        "version": 7,
+        "debugenabled": false,
+        "action": "",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [],
+        "labelId": [],
+        "data": "payload.data",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": false,
+        "x": 630,
+        "y": 760,
+        "wires": [
+            [
+                "un-webos-return"
+            ]
+        ]
+    },
+    {
+        "id": "un-webos-return",
+        "type": "link out",
+        "z": "utility-notifications",
+        "g": "un-webos-group",
+        "name": "WebOS Return",
+        "mode": "return",
+        "links": [],
+        "x": 795,
+        "y": 760,
+        "wires": []
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "aa5463113481df19",
+        "type": "server",
+        "name": "Home Assistant",
+        "version": 6,
+        "addon": false,
+        "rejectUnauthorizedCerts": true,
+        "ha_boolean": [
+            "y",
+            "yes",
+            "true",
+            "on",
+            "home",
+            "open"
+        ],
+        "connectionDelay": true,
+        "cacheJson": true,
+        "heartbeat": false,
+        "heartbeatInterval": 30,
+        "areaSelector": "friendlyName",
+        "deviceSelector": "friendlyName",
+        "entitySelector": "friendlyName",
+        "statusSeparator": ": ",
+        "statusYear": "hidden",
+        "statusMonth": "short",
+        "statusDay": "numeric",
+        "statusHourCycle": "default",
+        "statusTimeFormat": "h:m",
+        "enableGlobalContextStore": false
+    },
+    {
+        "id": "7da291aa788e7b3c",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-home-assistant-websocket": "0.80.3"
+        }
+    }
+]

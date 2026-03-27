@@ -1,0 +1,1188 @@
+[
+    {
+        "id": "subflow-connection-gate",
+        "type": "subflow",
+        "name": "connection gate",
+        "info": "",
+        "category": "highland",
+        "in": [
+            {
+                "x": 60,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "cg-evaluate-gate"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 380,
+                "y": 40,
+                "wires": [
+                    {
+                        "id": "cg-evaluate-gate",
+                        "port": 0
+                    }
+                ]
+            },
+            {
+                "x": 380,
+                "y": 120,
+                "wires": [
+                    {
+                        "id": "cg-evaluate-gate",
+                        "port": 1
+                    }
+                ]
+            }
+        ],
+        "env": [
+            {
+                "name": "CONNECTION_TYPE",
+                "type": "str",
+                "value": "",
+                "ui": {
+                    "label": {
+                        "en-US": "Connection Type"
+                    },
+                    "type": "select",
+                    "opts": {
+                        "opts": [
+                            {
+                                "l": {
+                                    "en-US": "Home Assistant"
+                                },
+                                "v": "home_assistant"
+                            },
+                            {
+                                "l": {
+                                    "en-US": "MQTT"
+                                },
+                                "v": "mqtt"
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "RETENTION_MS",
+                "type": "num",
+                "value": "10000",
+                "ui": {
+                    "label": {
+                        "en-US": "Retention (ms)"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "num"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "CONTEXT_PREFIX",
+                "type": "str",
+                "value": "",
+                "ui": {
+                    "label": {
+                        "en-US": "Scope"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "str"
+                        ]
+                    }
+                }
+            }
+        ],
+        "meta": {},
+        "color": "#A6BBCF",
+        "icon": "font-awesome/fa-filter",
+        "status": {
+            "x": 440,
+            "y": 180,
+            "wires": [
+                {
+                    "id": "0242431e8d5fb057",
+                    "port": 0
+                }
+            ]
+        }
+    },
+    {
+        "id": "cg-evaluate-gate",
+        "type": "function",
+        "z": "subflow-connection-gate",
+        "name": "Evaluate Gate",
+        "func": "const CONNECTION_TYPE = env.get('CONNECTION_TYPE');\nconst RETENTION_MS = env.get('RETENTION_MS') || 0;\nconst POLL_INTERVAL_MS = 500;\nconst PREFIX = env.get('CONTEXT_PREFIX') || '';\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers');\nconst state = global.get(`connections.${CONNECTION_TYPE}`);\n\n// OPEN GATE - Immediate passthrough\nif (state !== 'down') {\n    node.status({ fill: 'green', shape: 'dot', text: formatStatus('PASSTHROUGH') });\n    return [msg, null];\n}\n\n// CLOSED GATE - NO RETENTION - Immediate drop\nif (!RETENTION_MS) {\n    node.status({ fill: 'red', shape: 'dot', text: formatStatus('DROPPED') });\n    return [null, msg];\n}\n\n// CLOSED GATE - WITH RETENTION - Poll for disposition\nconst existing = flow.get(`${PREFIX}retention_poll`, 'volatile');\nif (existing) {\n    clearInterval(existing);\n    flow.set(`${PREFIX}retention_poll`, null, 'volatile');\n}\n\nlet elapsed = 0;\nconst snapshot = msg;\n\nnode.status({ fill: 'yellow', shape: 'ring', text: formatStatus('WAITING') });\n\nconst pollId = setInterval(() => {\n    elapsed += POLL_INTERVAL_MS;\n    const currentState = global.get(`connections.${CONNECTION_TYPE}`);\n\n    // GATE OPENED WITHIN RETENTION - Passthrough as recovered.\n    if (currentState !== 'down') {\n        clearInterval(flow.get(`${PREFIX}retention_poll`, 'volatile'));\n        flow.set(`${PREFIX}retention_poll`, null, 'volatile');\n        node.status({ fill: 'green', shape: 'ring', text: formatStatus('RECOVERED') });\n        node.send([snapshot, null]);\n        return;\n    }\n\n    // GATE CLOSED AT EXPIRATION - Dropped as expired.\n    if (elapsed >= RETENTION_MS) {\n        clearInterval(flow.get(`${PREFIX}retention_poll`, 'volatile'));\n        flow.set(`${PREFIX}retention_poll`, null, 'volatile');\n        node.status({ fill: 'red', shape: 'ring', text: formatStatus('EXPIRED') });\n        node.send([null, snapshot]);\n    }\n}, POLL_INTERVAL_MS);\n\nflow.set(`${PREFIX}retention_poll`, pollId, 'volatile');\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 220,
+        "y": 80,
+        "wires": [
+            [],
+            []
+        ]
+    },
+    {
+        "id": "864c686316d96e5e",
+        "type": "status",
+        "z": "subflow-connection-gate",
+        "name": "",
+        "scope": [
+            "cg-evaluate-gate"
+        ],
+        "x": 100,
+        "y": 180,
+        "wires": [
+            [
+                "0242431e8d5fb057"
+            ]
+        ]
+    },
+    {
+        "id": "0242431e8d5fb057",
+        "type": "function",
+        "z": "subflow-connection-gate",
+        "name": "Mirror Status",
+        "func": "msg.payload = {\n    fill: msg.status.fill,\n    shape: msg.status.shape,\n    text: msg.status.text\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 290,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "utility-backup",
+        "type": "tab",
+        "label": "Utility: Backup",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "ba-g01",
+        "type": "group",
+        "z": "utility-backup",
+        "name": "Orchestration",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "ba01",
+            "ba02",
+            "ba03",
+            "ba04",
+            "ba05",
+            "c1e7edb371e46c6f",
+            "253874f7e3f1207a"
+        ],
+        "x": 74,
+        "y": 39,
+        "w": 972,
+        "h": 202
+    },
+    {
+        "id": "ba-g02",
+        "type": "group",
+        "z": "utility-backup",
+        "name": "Workflow Backup",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "ba10",
+            "ba11",
+            "ba12",
+            "ba13",
+            "ba14",
+            "ba15",
+            "ba16",
+            "ba17",
+            "ba18",
+            "ba19",
+            "ffe7260f84645bc6",
+            "59686fabe2635315",
+            "1a58614b4bdd205f",
+            "ef2dc0bdc208de49",
+            "302ed12d52f1ea89",
+            "a658e08f12a05138"
+        ],
+        "x": 74,
+        "y": 279,
+        "w": 1312,
+        "h": 209.5
+    },
+    {
+        "id": "ba-g03",
+        "type": "group",
+        "z": "utility-backup",
+        "name": "HA Backup Check",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "ba20",
+            "ba21",
+            "ba22",
+            "ba23",
+            "ba24",
+            "0cb39c2f01cd0669"
+        ],
+        "x": 74,
+        "y": 539,
+        "w": 1152,
+        "h": 142
+    },
+    {
+        "id": "ba-g04",
+        "type": "group",
+        "z": "utility-backup",
+        "name": "Result Collection",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "ba30",
+            "ba31",
+            "ba32"
+        ],
+        "x": 74,
+        "y": 719,
+        "w": 552,
+        "h": 82
+    },
+    {
+        "id": "44cd01ac000e293b",
+        "type": "group",
+        "z": "utility-backup",
+        "name": "Test Cases",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "08250a27ea110351",
+            "9a27de12f9de793d"
+        ],
+        "x": 74,
+        "y": 959,
+        "w": 392,
+        "h": 82
+    },
+    {
+        "id": "77d4c87607012693",
+        "type": "group",
+        "z": "utility-backup",
+        "name": "Error Handling",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "98e37a81f592a10d",
+            "e21441e276cb9248"
+        ],
+        "x": 74,
+        "y": 1079,
+        "w": 352,
+        "h": 82
+    },
+    {
+        "id": "c2af89794b79b105",
+        "type": "group",
+        "z": "utility-backup",
+        "name": "State Change Logging",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "40a0a125b201952e",
+            "788bdf17d7abe2cb",
+            "79c1f8ef5eea50c2"
+        ],
+        "x": 74,
+        "y": 839,
+        "w": 592,
+        "h": 82
+    },
+    {
+        "id": "ba01",
+        "type": "mqtt in",
+        "z": "utility-backup",
+        "g": "ba-g01",
+        "name": "Backup Trigger",
+        "topic": "highland/event/scheduler/backup_daily",
+        "qos": "2",
+        "datatype": "json",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": false,
+        "rh": 0,
+        "inputs": 0,
+        "x": 180,
+        "y": 140,
+        "wires": [
+            [
+                "253874f7e3f1207a"
+            ]
+        ]
+    },
+    {
+        "id": "ba02",
+        "type": "function",
+        "z": "utility-backup",
+        "g": "ba-g01",
+        "name": "Prepare Orchestration",
+        "func": "const timestamp = new Date().toISOString();\nconst correlationId = `backup_${timestamp.slice(0,19).replace(/[:.T]/g, '')}`;\n\nmsg.payload = {\n    timestamp,\n    source: \"backup_orchestrator\",\n    task: \"backup_daily\",\n    correlation_id: correlationId\n};\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers');\nnode.status({ fill: 'blue', shape: 'dot', text: formatStatus('Triggered') });\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 620,
+        "y": 140,
+        "wires": [
+            [
+                "ba03",
+                "ba04",
+                "ba05"
+            ]
+        ]
+    },
+    {
+        "id": "ba03",
+        "type": "mqtt out",
+        "z": "utility-backup",
+        "g": "ba-g01",
+        "name": "Trigger Hub Backup",
+        "topic": "highland/command/backup/trigger/hub",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 920,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "ba04",
+        "type": "link out",
+        "z": "utility-backup",
+        "g": "ba-g01",
+        "name": "To Workflow Backup",
+        "mode": "link",
+        "links": [
+            "ba10"
+        ],
+        "x": 920,
+        "y": 80,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "ba05",
+        "type": "link out",
+        "z": "utility-backup",
+        "g": "ba-g01",
+        "name": "To HA Check",
+        "mode": "link",
+        "links": [
+            "ba20"
+        ],
+        "x": 890,
+        "y": 140,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "ba10",
+        "type": "link in",
+        "z": "utility-backup",
+        "g": "ba-g02",
+        "name": "From Orchestration",
+        "links": [
+            "ba04"
+        ],
+        "x": 190,
+        "y": 320,
+        "wires": [
+            [
+                "ba11"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "ba11",
+        "type": "function",
+        "z": "utility-backup",
+        "g": "ba-g02",
+        "name": "Build Timestamp",
+        "func": "const ts = new Date().toISOString()\n    .replace('T', '_')\n    .replace(/[:.]/g, '-')\n    .slice(0, 19);\nflow.set('backup_timestamp', ts);\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 425,
+        "y": 320,
+        "wires": [
+            [
+                "1a58614b4bdd205f"
+            ]
+        ]
+    },
+    {
+        "id": "ba12",
+        "type": "http request",
+        "z": "utility-backup",
+        "g": "ba-g02",
+        "name": "Get Flows",
+        "method": "GET",
+        "ret": "txt",
+        "paytoqs": "ignore",
+        "url": "http://localhost:1880/flows",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 400,
+        "y": 380,
+        "wires": [
+            [
+                "ba13"
+            ]
+        ]
+    },
+    {
+        "id": "ba13",
+        "type": "function",
+        "z": "utility-backup",
+        "g": "ba-g02",
+        "name": "Prepare Export",
+        "func": "const ts = flow.get('backup_timestamp');\nmsg.filename = `/backups/workflow_flows_${ts}.json`;\n// msg.payload already contains the flows JSON as a string (http request ret:txt)\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 380,
+        "wires": [
+            [
+                "ba14"
+            ]
+        ]
+    },
+    {
+        "id": "ba14",
+        "type": "file",
+        "z": "utility-backup",
+        "g": "ba-g02",
+        "name": "Write Export",
+        "filename": "filename",
+        "filenameType": "msg",
+        "appendNewline": false,
+        "createDir": false,
+        "overwriteFile": "true",
+        "encoding": "utf8",
+        "x": 810,
+        "y": 380,
+        "wires": [
+            [
+                "59686fabe2635315"
+            ]
+        ]
+    },
+    {
+        "id": "ba15",
+        "type": "function",
+        "z": "utility-backup",
+        "g": "ba-g02",
+        "name": "Prepare Command",
+        "func": "const ts = flow.get('backup_timestamp');\nconst flowsFile = `/backups/workflow_flows_${ts}.json`;\nconst tarFile = `/backups/workflow_backup_${ts}.tar.gz`;\n\n// exec node: command=\"\" addpay=true — passes msg.payload as the shell command.\n// child_process.exec runs via /bin/sh -c; leading space from concatenation is harmless.\nmsg.payload = `tar -czf ${tarFile} /config /data /assets ${flowsFile}` +\n    ` && rm -f ${flowsFile}` +\n    ` && find /backups -name 'workflow_backup_*.tar.gz' -mtime +7 -delete`;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 440,
+        "wires": [
+            [
+                "ba16"
+            ]
+        ]
+    },
+    {
+        "id": "ba16",
+        "type": "exec",
+        "z": "utility-backup",
+        "g": "ba-g02",
+        "command": "",
+        "addpay": true,
+        "append": "",
+        "useSpawn": false,
+        "timer": 300,
+        "winHide": false,
+        "oldrc": false,
+        "name": "Run Tar",
+        "x": 680,
+        "y": 440,
+        "wires": [
+            [
+                "302ed12d52f1ea89"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "ba17",
+        "type": "function",
+        "z": "utility-backup",
+        "g": "ba-g02",
+        "name": "Evaluate Result",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers');\n\nconst ts = new Date().toISOString();\nconst rc = (msg.rc !== null && typeof msg.rc === 'object') ? msg.rc.code : msg.rc;\n\nif (rc === 0) {\n    msg.payload = {\n        host: \"workflow\",\n        status: \"completed\",\n        timestamp: ts\n    };\n    msg.topic = \"highland/event/backup/completed\";\n\n    node.status({ fill: 'green', shape: 'dot', text: formatStatus('Completed') });\n\n    return [msg, null];\n} else {\n    msg.payload = {\n        host: \"workflow\",\n        status: \"failed\",\n        error: `tar exited with rc ${rc}`,\n        timestamp: ts\n    };\n    msg.topic = \"highland/event/backup/failed\";\n\n    node.status({ fill: 'red', shape: 'dot', text: formatStatus(`Failed (rc ${rc})`) });\n    \n    return [null, msg];\n}",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1085,
+        "y": 320,
+        "wires": [
+            [
+                "ba18"
+            ],
+            [
+                "ba19"
+            ]
+        ]
+    },
+    {
+        "id": "ba18",
+        "type": "mqtt out",
+        "z": "utility-backup",
+        "g": "ba-g02",
+        "name": "Completed",
+        "topic": "",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 1290,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "ba19",
+        "type": "mqtt out",
+        "z": "utility-backup",
+        "g": "ba-g02",
+        "name": "Failed",
+        "topic": "",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 1270,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "ba20",
+        "type": "link in",
+        "z": "utility-backup",
+        "g": "ba-g03",
+        "name": "From Orchestration",
+        "links": [
+            "ba05"
+        ],
+        "x": 190,
+        "y": 580,
+        "wires": [
+            [
+                "0cb39c2f01cd0669"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "ba21",
+        "type": "api-current-state",
+        "z": "utility-backup",
+        "g": "ba-g03",
+        "name": "Get Last Backup",
+        "server": "aa5463113481df19",
+        "version": 3,
+        "outputs": 1,
+        "halt_if": "",
+        "halt_if_type": "str",
+        "halt_if_compare": "is",
+        "entity_id": "sensor.backup_last_successful_automatic_backup",
+        "state_type": "str",
+        "blockInputOverrides": false,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            }
+        ],
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "x": 690,
+        "y": 580,
+        "wires": [
+            [
+                "ba22"
+            ]
+        ]
+    },
+    {
+        "id": "ba22",
+        "type": "function",
+        "z": "utility-backup",
+        "g": "ba-g03",
+        "name": "Evaluate Result",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers');\n\nconst lastBackupStr = msg.payload;  // e.g. \"2026-03-27T09:37:28+00:00\"\nconst lastBackup = new Date(lastBackupStr);\nconst now = new Date();\n// @ts-ignore\nconst elapsedMs = now - lastBackup;\n// 2 decimal places: Math.round(ms / 36000) / 100 === hours\nconst elapsedHours = Math.round(elapsedMs / 36000) / 100;\nconst windowMs = 26 * 60 * 60 * 1000;\nconst ts = now.toISOString();\n\nif (elapsedMs > windowMs) {\n    msg.payload = {\n        host: \"ha\",\n        status: \"failed\",\n        elapsed_hours: elapsedHours,\n        timestamp: ts\n    };\n    msg.topic = \"highland/event/backup/failed\";\n\n    node.status({ fill: 'red', shape: 'dot', text: formatStatus(`Stale — ${elapsedHours}h ago`) });    \n\n    return [null, msg];\n} else {\n    msg.payload = {\n        host: \"ha\",\n        status: \"completed\",\n        elapsed_hours: elapsedHours,\n        timestamp: ts\n    };\n    msg.topic = \"highland/event/backup/completed\";\n\n    node.status({ fill: 'green', shape: 'dot', text: formatStatus(`OK — ${elapsedHours}h ago`) });\n    \n    return [msg, null];\n}",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 920,
+        "y": 580,
+        "wires": [
+            [
+                "ba23"
+            ],
+            [
+                "ba24"
+            ]
+        ]
+    },
+    {
+        "id": "ba23",
+        "type": "mqtt out",
+        "z": "utility-backup",
+        "g": "ba-g03",
+        "name": "Completed",
+        "topic": "",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 1130,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "ba24",
+        "type": "mqtt out",
+        "z": "utility-backup",
+        "g": "ba-g03",
+        "name": "Failed",
+        "topic": "",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 1110,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "ba30",
+        "type": "mqtt in",
+        "z": "utility-backup",
+        "g": "ba-g04",
+        "name": "Failed",
+        "topic": "highland/event/backup/failed",
+        "qos": "2",
+        "datatype": "json",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": false,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 760,
+        "wires": [
+            [
+                "ba31"
+            ]
+        ]
+    },
+    {
+        "id": "ba31",
+        "type": "function",
+        "z": "utility-backup",
+        "g": "ba-g04",
+        "name": "Build Notification",
+        "func": "const host = msg.payload.host || 'unknown';\nconst elapsed = msg.payload.elapsed_hours;\n\nlet message;\nif (host === 'ha') {\n    message = `HA backup stale: last successful was ${elapsed} hours ago`;\n} else {\n    const error = msg.payload.error || 'unknown error';\n    message = `Backup failed: ${host} — ${error}`;\n}\n\nmsg.payload = {\n    targets: [\"people.joseph.ha_companion\"],\n    severity: \"medium\",\n    title: \"Backup Failed\",\n    message\n};\nmsg.topic = \"highland/event/notify\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 760,
+        "wires": [
+            [
+                "ba32"
+            ]
+        ]
+    },
+    {
+        "id": "ba32",
+        "type": "mqtt out",
+        "z": "utility-backup",
+        "g": "ba-g04",
+        "name": "Notify",
+        "topic": "highland/event/notify",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 550,
+        "y": 760,
+        "wires": []
+    },
+    {
+        "id": "c1e7edb371e46c6f",
+        "type": "link in",
+        "z": "utility-backup",
+        "g": "ba-g01",
+        "name": "Manual Backup",
+        "links": [
+            "08250a27ea110351"
+        ],
+        "x": 380,
+        "y": 200,
+        "wires": [
+            [
+                "ba02"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "08250a27ea110351",
+        "type": "link out",
+        "z": "utility-backup",
+        "g": "44cd01ac000e293b",
+        "name": "Manual Backup",
+        "mode": "link",
+        "links": [
+            "c1e7edb371e46c6f"
+        ],
+        "x": 360,
+        "y": 1000,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "9a27de12f9de793d",
+        "type": "inject",
+        "z": "utility-backup",
+        "g": "44cd01ac000e293b",
+        "name": "Manual",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 1000,
+        "wires": [
+            [
+                "08250a27ea110351"
+            ]
+        ]
+    },
+    {
+        "id": "ffe7260f84645bc6",
+        "type": "link in",
+        "z": "utility-backup",
+        "g": "ba-g02",
+        "name": "Export Flows",
+        "links": [],
+        "x": 210,
+        "y": 380,
+        "wires": [
+            [
+                "ba12"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "59686fabe2635315",
+        "type": "link out",
+        "z": "utility-backup",
+        "g": "ba-g02",
+        "name": "Export Flows Return",
+        "mode": "return",
+        "links": [],
+        "x": 955,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "1a58614b4bdd205f",
+        "type": "link call",
+        "z": "utility-backup",
+        "g": "ba-g02",
+        "name": "",
+        "links": [
+            "ffe7260f84645bc6"
+        ],
+        "linkType": "static",
+        "timeout": "30",
+        "x": 635,
+        "y": 320,
+        "wires": [
+            [
+                "a658e08f12a05138"
+            ]
+        ]
+    },
+    {
+        "id": "ef2dc0bdc208de49",
+        "type": "link in",
+        "z": "utility-backup",
+        "g": "ba-g02",
+        "name": "Compress Backup",
+        "links": [],
+        "x": 230,
+        "y": 440,
+        "wires": [
+            [
+                "ba15"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "302ed12d52f1ea89",
+        "type": "link out",
+        "z": "utility-backup",
+        "g": "ba-g02",
+        "name": "Compress Backup Return",
+        "mode": "return",
+        "links": [],
+        "x": 815,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "a658e08f12a05138",
+        "type": "link call",
+        "z": "utility-backup",
+        "g": "ba-g02",
+        "name": "",
+        "links": [
+            "ef2dc0bdc208de49"
+        ],
+        "linkType": "static",
+        "timeout": "30",
+        "x": 855,
+        "y": 320,
+        "wires": [
+            [
+                "ba17"
+            ]
+        ]
+    },
+    {
+        "id": "98e37a81f592a10d",
+        "type": "catch",
+        "z": "utility-backup",
+        "g": "77d4c87607012693",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 160,
+        "y": 1120,
+        "wires": [
+            [
+                "e21441e276cb9248"
+            ]
+        ]
+    },
+    {
+        "id": "e21441e276cb9248",
+        "type": "debug",
+        "z": "utility-backup",
+        "g": "77d4c87607012693",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 330,
+        "y": 1120,
+        "wires": []
+    },
+    {
+        "id": "253874f7e3f1207a",
+        "type": "subflow:subflow-connection-gate",
+        "z": "utility-backup",
+        "g": "ba-g01",
+        "name": "MQTT Gate",
+        "env": [
+            {
+                "name": "CONNECTION_TYPE",
+                "value": "mqtt",
+                "type": "str"
+            },
+            {
+                "name": "RETENTION_MS",
+                "value": "0",
+                "type": "num"
+            },
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "mqtt-",
+                "type": "str"
+            }
+        ],
+        "x": 390,
+        "y": 140,
+        "wires": [
+            [
+                "ba02"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "0cb39c2f01cd0669",
+        "type": "subflow:subflow-connection-gate",
+        "z": "utility-backup",
+        "g": "ba-g03",
+        "name": "Home Assistant Gate",
+        "env": [
+            {
+                "name": "CONNECTION_TYPE",
+                "value": "home_assistant",
+                "type": "str"
+            },
+            {
+                "name": "RETENTION_MS",
+                "value": "0",
+                "type": "num"
+            },
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "ha-",
+                "type": "str"
+            }
+        ],
+        "x": 440,
+        "y": 580,
+        "wires": [
+            [
+                "ba21"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "40a0a125b201952e",
+        "type": "function",
+        "z": "utility-backup",
+        "g": "c2af89794b79b105",
+        "name": "Format Log Event",
+        "func": "const host = msg.payload.host || 'unknown';\nconst status = msg.payload.status;\nconst level = msg.payload.status === 'completed' ? 'INFO' : 'WARN';;\n\nlet message;\nif (host === 'ha') {\n    const hours = msg.payload.elapsed_hours;\n    message = status === 'completed'\n        ? `Backup check passed: ha (${hours}h ago)`\n        : `Backup stale: ha — ${hours}h since last backup`;\n} else if (status === 'completed') {\n    message = `Backup completed: ${host}`;\n} else {\n    const error = msg.payload.error || 'unknown error';\n    message = `Backup failed: ${host} — ${error}`;\n}\n\nmsg.payload = {\n    timestamp: new Date().toISOString(),\n    system: 'node_red',\n    source: 'backup',\n    level,\n    message,\n    context: { host }\n};\nmsg.topic = 'highland/event/log';\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 880,
+        "wires": [
+            [
+                "788bdf17d7abe2cb"
+            ]
+        ]
+    },
+    {
+        "id": "788bdf17d7abe2cb",
+        "type": "mqtt out",
+        "z": "utility-backup",
+        "g": "c2af89794b79b105",
+        "name": "Log",
+        "topic": "highland/event/log",
+        "qos": "2",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 590,
+        "y": 880,
+        "wires": []
+    },
+    {
+        "id": "79c1f8ef5eea50c2",
+        "type": "mqtt in",
+        "z": "utility-backup",
+        "g": "c2af89794b79b105",
+        "name": "Backup Result",
+        "topic": "highland/event/backup/#",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 880,
+        "wires": [
+            [
+                "40a0a125b201952e"
+            ]
+        ]
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "aa5463113481df19",
+        "type": "server",
+        "name": "Home Assistant",
+        "version": 6,
+        "addon": false,
+        "rejectUnauthorizedCerts": true,
+        "ha_boolean": [
+            "y",
+            "yes",
+            "true",
+            "on",
+            "home",
+            "open"
+        ],
+        "connectionDelay": true,
+        "cacheJson": true,
+        "heartbeat": false,
+        "heartbeatInterval": 30,
+        "areaSelector": "friendlyName",
+        "deviceSelector": "friendlyName",
+        "entitySelector": "friendlyName",
+        "statusSeparator": ": ",
+        "statusYear": "hidden",
+        "statusMonth": "short",
+        "statusDay": "numeric",
+        "statusHourCycle": "default",
+        "statusTimeFormat": "h:m",
+        "enableGlobalContextStore": false
+    },
+    {
+        "id": "fe57e7407d2495b0",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-home-assistant-websocket": "0.80.3"
+        }
+    }
+]

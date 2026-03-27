@@ -1,0 +1,791 @@
+[
+    {
+        "id": "utility-scheduling",
+        "type": "tab",
+        "label": "Utility: Scheduling",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "ac5788391595c656",
+        "type": "group",
+        "z": "utility-scheduling",
+        "name": "Dynamic Periods",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "7060212203baa6cc",
+            "6b70dc61837db687",
+            "18d4071fe59f1422",
+            "2b9c1e7ead51e0c1",
+            "000a6541d62e37ab",
+            "2470183c951a40ab",
+            "2f59b91a09981c52",
+            "89015c060673db8f",
+            "e5b6e69458a12351",
+            "ef083efe87c2c88d",
+            "d39c0851c3aae8bf",
+            "9842a7bf9f035d0e",
+            "a071090618c35f8e"
+        ],
+        "x": 54,
+        "y": 39,
+        "w": 972,
+        "h": 362
+    },
+    {
+        "id": "4dc4e21ebddfe03e",
+        "type": "group",
+        "z": "utility-scheduling",
+        "name": "Fixed Events",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "a84d349a8ca40aff",
+            "4787e601bafce563",
+            "e1049be3d2ccc18e",
+            "82f4afa33feca9d9"
+        ],
+        "x": 54,
+        "y": 439,
+        "w": 652,
+        "h": 142
+    },
+    {
+        "id": "d7aca721c1443694",
+        "type": "group",
+        "z": "utility-scheduling",
+        "name": "Test Cases",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "ab0a206969afe6b7",
+            "6adb569b56f51b9d",
+            "7fe65f7a19ca3b81",
+            "d98ca68dbb6802a3",
+            "90122e4abff75c56",
+            "c545ce79c5b3f818",
+            "907d1a7e900923ab",
+            "c72a0598e7a13849"
+        ],
+        "x": 54,
+        "y": 739,
+        "w": 512,
+        "h": 262
+    },
+    {
+        "id": "sc-g-sysevents",
+        "type": "group",
+        "z": "utility-scheduling",
+        "name": "System Events",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "sc-sys01",
+            "sc-sys02",
+            "sc-sys03"
+        ],
+        "x": 54,
+        "y": 619,
+        "w": 732,
+        "h": 82
+    },
+    {
+        "id": "7060212203baa6cc",
+        "type": "schedex",
+        "z": "utility-scheduling",
+        "g": "ac5788391595c656",
+        "name": "Daytime Schedule",
+        "passthroughunhandled": false,
+        "suspended": false,
+        "lat": "41.5204",
+        "lon": "-74.0606",
+        "ontime": "sunrise",
+        "ontopic": "",
+        "onpayload": "daytime",
+        "onoffset": 0,
+        "onrandomoffset": 0,
+        "offtime": "sunset",
+        "offtopic": "",
+        "offpayload": "",
+        "offoffset": "-30",
+        "offrandomoffset": 0,
+        "mon": true,
+        "tue": true,
+        "wed": true,
+        "thu": true,
+        "fri": true,
+        "sat": true,
+        "sun": true,
+        "x": 630,
+        "y": 80,
+        "wires": [
+            [
+                "2470183c951a40ab"
+            ]
+        ]
+    },
+    {
+        "id": "6b70dc61837db687",
+        "type": "schedex",
+        "z": "utility-scheduling",
+        "g": "ac5788391595c656",
+        "name": "Evening Schedule",
+        "passthroughunhandled": false,
+        "suspended": false,
+        "lat": "41.5204",
+        "lon": "-74.0606",
+        "ontime": "sunset",
+        "ontopic": "",
+        "onpayload": "evening",
+        "onoffset": "-30",
+        "onrandomoffset": 0,
+        "offtime": "22:00",
+        "offtopic": "",
+        "offpayload": "",
+        "offoffset": 0,
+        "offrandomoffset": 0,
+        "mon": true,
+        "tue": true,
+        "wed": true,
+        "thu": true,
+        "fri": true,
+        "sat": true,
+        "sun": true,
+        "x": 630,
+        "y": 160,
+        "wires": [
+            [
+                "2f59b91a09981c52"
+            ]
+        ]
+    },
+    {
+        "id": "18d4071fe59f1422",
+        "type": "schedex",
+        "z": "utility-scheduling",
+        "g": "ac5788391595c656",
+        "name": "Overnight Schedule",
+        "passthroughunhandled": false,
+        "suspended": false,
+        "lat": "41.5204",
+        "lon": "-74.0606",
+        "ontime": "22:00",
+        "ontopic": "",
+        "onpayload": "overnight",
+        "onoffset": 0,
+        "onrandomoffset": 0,
+        "offtime": "sunrise",
+        "offtopic": "",
+        "offpayload": "",
+        "offoffset": 0,
+        "offrandomoffset": 0,
+        "mon": true,
+        "tue": true,
+        "wed": true,
+        "thu": true,
+        "fri": true,
+        "sat": true,
+        "sun": true,
+        "x": 630,
+        "y": 240,
+        "wires": [
+            [
+                "89015c060673db8f"
+            ]
+        ]
+    },
+    {
+        "id": "2b9c1e7ead51e0c1",
+        "type": "link in",
+        "z": "utility-scheduling",
+        "g": "ac5788391595c656",
+        "name": "Publish Dynamic Period",
+        "links": [
+            "2470183c951a40ab",
+            "2f59b91a09981c52",
+            "89015c060673db8f",
+            "90122e4abff75c56",
+            "c545ce79c5b3f818",
+            "907d1a7e900923ab"
+        ],
+        "x": 180,
+        "y": 300,
+        "wires": [
+            [
+                "000a6541d62e37ab"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "000a6541d62e37ab",
+        "type": "switch",
+        "z": "utility-scheduling",
+        "g": "ac5788391595c656",
+        "name": "Is Active?",
+        "property": "payload",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "nempty"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 400,
+        "y": 300,
+        "wires": [
+            [
+                "e5b6e69458a12351"
+            ]
+        ]
+    },
+    {
+        "id": "2470183c951a40ab",
+        "type": "link out",
+        "z": "utility-scheduling",
+        "g": "ac5788391595c656",
+        "name": "Publish Dynamic Period",
+        "mode": "link",
+        "links": [
+            "2b9c1e7ead51e0c1"
+        ],
+        "x": 890,
+        "y": 80,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "2f59b91a09981c52",
+        "type": "link out",
+        "z": "utility-scheduling",
+        "g": "ac5788391595c656",
+        "name": "Publish Dynamic Period",
+        "mode": "link",
+        "links": [
+            "2b9c1e7ead51e0c1"
+        ],
+        "x": 890,
+        "y": 160,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "89015c060673db8f",
+        "type": "link out",
+        "z": "utility-scheduling",
+        "g": "ac5788391595c656",
+        "name": "Publish Dynamic Period",
+        "mode": "link",
+        "links": [
+            "2b9c1e7ead51e0c1"
+        ],
+        "x": 890,
+        "y": 240,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "e5b6e69458a12351",
+        "type": "function",
+        "z": "utility-scheduling",
+        "g": "ac5788391595c656",
+        "name": "Prepare Dynamic",
+        "func": "const period = msg.payload;\n\n// Filter empty off-window responses from send_state\nif (!period || typeof period !== 'string' || period.trim() === '') {\n    return null;\n}\n\nconst isStartup = flow.get('startup_recovering', 'volatile') === true;\nconst timestamp = new Date().toISOString();\n\nnode.status({\n    fill: 'green',\n    shape: 'dot',\n    text: `${period.toUpperCase()} at ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`\n});\n\nconst stateMsg = {\n    topic: 'highland/state/scheduler/period',\n    payload: JSON.stringify({ period, timestamp, source: 'scheduler' }),\n    retain: true\n};\n\nif (isStartup) {\n    // Startup recovery — state update only, no event\n    return [null, stateMsg];\n}\n\n// Real transition — publish event + state\nconst eventMsg = {\n    topic: `highland/event/scheduler/${period}`,\n    payload: JSON.stringify({ period, timestamp, source: 'scheduler' })\n};\n\nreturn [eventMsg, stateMsg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 610,
+        "y": 300,
+        "wires": [
+            [
+                "ef083efe87c2c88d"
+            ],
+            [
+                "d39c0851c3aae8bf"
+            ]
+        ]
+    },
+    {
+        "id": "ef083efe87c2c88d",
+        "type": "mqtt out",
+        "z": "utility-scheduling",
+        "g": "ac5788391595c656",
+        "name": "Period Event",
+        "topic": "",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 830,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "d39c0851c3aae8bf",
+        "type": "mqtt out",
+        "z": "utility-scheduling",
+        "g": "ac5788391595c656",
+        "name": "Period State",
+        "topic": "",
+        "qos": "1",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 830,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "a84d349a8ca40aff",
+        "type": "inject",
+        "z": "utility-scheduling",
+        "g": "4dc4e21ebddfe03e",
+        "name": "At Midnight",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "00 00 * * *",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 480,
+        "wires": [
+            [
+                "4787e601bafce563"
+            ]
+        ]
+    },
+    {
+        "id": "4787e601bafce563",
+        "type": "function",
+        "z": "utility-scheduling",
+        "g": "4dc4e21ebddfe03e",
+        "name": "Prepare Fixed",
+        "func": "msg.topic = 'highland/event/scheduler/midnight';\n\nmsg.payload = JSON.stringify({\n    timestamp: new Date().toISOString(),\n    source: 'scheduler',\n    task: 'midnight'\n});\n\nnode.status({\n    fill: 'green',\n    shape: 'dot',\n    text: `MIDNIGHT at ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 480,
+        "wires": [
+            [
+                "e1049be3d2ccc18e"
+            ]
+        ]
+    },
+    {
+        "id": "e1049be3d2ccc18e",
+        "type": "mqtt out",
+        "z": "utility-scheduling",
+        "g": "4dc4e21ebddfe03e",
+        "name": "Midnight Event",
+        "topic": "",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 600,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "ab0a206969afe6b7",
+        "type": "inject",
+        "z": "utility-scheduling",
+        "g": "d7aca721c1443694",
+        "name": "Daytime Period",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "daytime",
+        "payloadType": "str",
+        "x": 180,
+        "y": 780,
+        "wires": [
+            [
+                "90122e4abff75c56"
+            ]
+        ]
+    },
+    {
+        "id": "6adb569b56f51b9d",
+        "type": "inject",
+        "z": "utility-scheduling",
+        "g": "d7aca721c1443694",
+        "name": "Evening Period",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "evening",
+        "payloadType": "str",
+        "x": 180,
+        "y": 840,
+        "wires": [
+            [
+                "c545ce79c5b3f818"
+            ]
+        ]
+    },
+    {
+        "id": "7fe65f7a19ca3b81",
+        "type": "inject",
+        "z": "utility-scheduling",
+        "g": "d7aca721c1443694",
+        "name": "Overnight Period",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "overnight",
+        "payloadType": "str",
+        "x": 180,
+        "y": 900,
+        "wires": [
+            [
+                "907d1a7e900923ab"
+            ]
+        ]
+    },
+    {
+        "id": "d98ca68dbb6802a3",
+        "type": "inject",
+        "z": "utility-scheduling",
+        "g": "d7aca721c1443694",
+        "name": "Midnight Event",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 180,
+        "y": 960,
+        "wires": [
+            [
+                "c72a0598e7a13849"
+            ]
+        ]
+    },
+    {
+        "id": "90122e4abff75c56",
+        "type": "link out",
+        "z": "utility-scheduling",
+        "g": "d7aca721c1443694",
+        "name": "Publish Dynamic Period",
+        "mode": "link",
+        "links": [
+            "2b9c1e7ead51e0c1"
+        ],
+        "x": 430,
+        "y": 780,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "c545ce79c5b3f818",
+        "type": "link out",
+        "z": "utility-scheduling",
+        "g": "d7aca721c1443694",
+        "name": "Publish Dynamic Period",
+        "mode": "link",
+        "links": [
+            "2b9c1e7ead51e0c1"
+        ],
+        "x": 430,
+        "y": 840,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "907d1a7e900923ab",
+        "type": "link out",
+        "z": "utility-scheduling",
+        "g": "d7aca721c1443694",
+        "name": "Publish Dynamic Period",
+        "mode": "link",
+        "links": [
+            "2b9c1e7ead51e0c1"
+        ],
+        "x": 430,
+        "y": 900,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "82f4afa33feca9d9",
+        "type": "link in",
+        "z": "utility-scheduling",
+        "g": "4dc4e21ebddfe03e",
+        "name": "Force Midnight",
+        "links": [
+            "c72a0598e7a13849"
+        ],
+        "x": 160,
+        "y": 540,
+        "wires": [
+            [
+                "4787e601bafce563"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "c72a0598e7a13849",
+        "type": "link out",
+        "z": "utility-scheduling",
+        "g": "d7aca721c1443694",
+        "name": "Force Midnight",
+        "mode": "link",
+        "links": [
+            "82f4afa33feca9d9"
+        ],
+        "x": 400,
+        "y": 960,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "9842a7bf9f035d0e",
+        "type": "inject",
+        "z": "utility-scheduling",
+        "g": "ac5788391595c656",
+        "name": "On Startup",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "send_state",
+        "payloadType": "str",
+        "x": 170,
+        "y": 160,
+        "wires": [
+            [
+                "a071090618c35f8e"
+            ]
+        ]
+    },
+    {
+        "id": "a071090618c35f8e",
+        "type": "function",
+        "z": "utility-scheduling",
+        "g": "ac5788391595c656",
+        "name": "Recover Last State",
+        "func": "flow.set('startup_recovering', true, 'volatile');\nsetTimeout(() => flow.set('startup_recovering', false, 'volatile'), 2000);\n\nnode.send({payload: msg.payload, target: 'Daytime'});\nnode.send({payload: msg.payload, target: 'Evening'});\nnode.send({payload: msg.payload, target: 'Overnight'});\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 160,
+        "wires": [
+            [
+                "6b70dc61837db687",
+                "7060212203baa6cc",
+                "18d4071fe59f1422"
+            ]
+        ]
+    },
+    {
+        "id": "sc-sys01",
+        "type": "cronplus",
+        "z": "utility-scheduling",
+        "g": "sc-g-sysevents",
+        "name": "Backup Daily",
+        "outputField": "payload",
+        "timeZone": "America/New_York",
+        "storeName": "",
+        "commandResponseMsgOutput": "output1",
+        "outputs": 1,
+        "options": [
+            {
+                "name": "backup_daily",
+                "topic": "backup_daily",
+                "payloadType": "default",
+                "payload": "",
+                "expressionType": "cron",
+                "expression": "0 15 3 * * *",
+                "location": "",
+                "offset": "0",
+                "solarType": "all",
+                "solarEvents": "sunrise,sunset"
+            }
+        ],
+        "x": 170,
+        "y": 660,
+        "wires": [
+            [
+                "sc-sys02"
+            ]
+        ]
+    },
+    {
+        "id": "sc-sys02",
+        "type": "function",
+        "z": "utility-scheduling",
+        "g": "sc-g-sysevents",
+        "name": "Prepare Backup Event",
+        "func": "node.status({ fill: 'green', shape: 'dot', text: `fired ${new Date().toLocaleTimeString()}` });\n\nmsg.payload = {\n    timestamp: new Date().toISOString(),\n    source: \"scheduler\",\n    task: \"backup_daily\"\n};\nmsg.topic = \"highland/event/scheduler/backup_daily\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 660,
+        "wires": [
+            [
+                "sc-sys03"
+            ]
+        ]
+    },
+    {
+        "id": "sc-sys03",
+        "type": "mqtt out",
+        "z": "utility-scheduling",
+        "g": "sc-g-sysevents",
+        "name": "Publish Backup Event",
+        "topic": "highland/event/scheduler/backup_daily",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 660,
+        "y": 660,
+        "wires": []
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "52143b148dabf91e",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-schedex": "1.10.7",
+            "node-red-contrib-cron-plus": "2.2.4"
+        }
+    }
+]

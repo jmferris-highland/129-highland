@@ -829,46 +829,55 @@ Camera infrastructure (Reolink NVR).
 
 ### Backup Scripts
 
-**Communication Hub (`/usr/local/bin/highland-backup.sh`):**
-```bash
-#!/bin/bash
-# Highland Backup Script - Communication Hub
+Backups are triggered by Node-RED via MQTT. The Scheduling flow fires `highland/event/scheduler/backup_daily` at 3:15 AM; the Backup Utility Flow fans this out to each host. See `architecture/BACKUP_RECOVERY.md` for full architecture and flow design.
 
-BACKUP_DIR="/var/backups/highland"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="hub_backup_${TIMESTAMP}.tar.gz"
+**Communication Hub — two scripts + systemd service:**
 
-# Create backup
-tar -czf "${BACKUP_DIR}/${BACKUP_FILE}" \
-    /opt/highland/mosquitto/config \
-    /opt/highland/zigbee2mqtt/data \
-    /opt/highland/zwavejs/data \
-    /opt/highland/docker-compose.yml
+Scripts embed the `svc_scripts` MQTT password in plaintext. Neither script is backed up; they are trivial to recreate from `architecture/BACKUP_RECOVERY.md`.
 
-# Cleanup old backups (keep 7 days)
-find "${BACKUP_DIR}" -name "hub_backup_*.tar.gz" -mtime +7 -delete
+`/usr/local/bin/highland-backup.sh` — tars Mosquitto config, Z2M data, Z-Wave JS data, docker-compose; publishes `completed` or `failed` to MQTT.
 
-# Publish result to MQTT
-if [ $? -eq 0 ]; then
-    mosquitto_pub -h localhost -u svc_scripts -P "YOUR_SVC_SCRIPTS_PASSWORD" \
-        -t "highland/event/backup/completed" \
-        -m "{\"host\":\"hub\",\"file\":\"${BACKUP_FILE}\",\"timestamp\":\"$(date -Iseconds)\"}"
-else
-    mosquitto_pub -h localhost -u svc_scripts -P "YOUR_SVC_SCRIPTS_PASSWORD" \
-        -t "highland/event/backup/failed" \
-        -m "{\"host\":\"hub\",\"error\":\"tar failed\",\"timestamp\":\"$(date -Iseconds)\"}"
-fi
-```
+`/usr/local/bin/highland-backup-listener.sh` — long-running daemon; blocks on `mosquitto_sub -C 1` for `highland/command/backup/trigger/hub`; invokes `highland-backup.sh` on receipt; retries after 5s sleep on broker disconnect.
+
+See `architecture/BACKUP_RECOVERY.md` for the full script content.
 
 ```bash
-# Make executable
 sudo chmod +x /usr/local/bin/highland-backup.sh
-
-# Add to cron (runs at 3:15 AM)
-echo "15 3 * * * root /usr/local/bin/highland-backup.sh" | sudo tee /etc/cron.d/highland-backup
+sudo chmod +x /usr/local/bin/highland-backup-listener.sh
 ```
 
-**Workflow Host:** Backup handled by Backup Utility Flow in Node-RED. See `architecture/BACKUP_RECOVERY.md` for architecture and `nodered/HEALTH_MONITORING.md` for the flow design.
+`/etc/systemd/system/highland-backup-listener.service` — starts after `network-online.target`, restarts on failure. See `architecture/BACKUP_RECOVERY.md` for the unit file content.
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable highland-backup-listener
+sudo systemctl start highland-backup-listener
+```
+
+**Workflow Host:** Backup handled entirely by the Backup Utility Flow in Node-RED. Requires a volume mount in docker-compose:
+
+```yaml
+# Add to nodered service volumes in /opt/highland/docker-compose.yml
+- /var/backups/highland:/backups
+```
+
+```bash
+cd /opt/highland
+docker compose up -d --force-recreate nodered
+```
+
+**HA:** Automatic backups remain enabled. Node-RED audits `sensor.backup_last_successful_automatic_backup` at 3:15 AM and notifies if the last backup is older than 26 hours. No changes to HA backup settings required.
+
+**Node-RED — Utility: Backup flow:**
+
+Build per `architecture/BACKUP_RECOVERY.md`. Configure:
+1. Select the `highland` MQTT broker on all MQTT nodes
+2. Select the `Highland HA` server on `Get HA Last Backup`
+3. Wire in the Initializer Latch subflow between `Receive Backup Trigger` and `Prepare Orchestration`
+
+**Node-RED — Scheduling flow:**
+
+Add the System Events group to the existing Utility: Scheduling tab per `nodered/SCHEDULING.md`.
 
 ### Watchdog Script
 
@@ -970,8 +979,12 @@ Create these flows in Node-RED to establish baseline functionality:
 
 | Check | Status |
 |-------|--------|
-| Hub backup script installed | [] |
-| Hub backup cron configured | [] |
+| Hub `highland-backup.sh` installed and executable | [X] |
+| Hub `highland-backup-listener.sh` installed and executable | [X] |
+| Hub `highland-backup-listener.service` enabled and running | [X] |
+| Workflow: `/backups` volume mount added, nodered force-recreated | [X] |
+| Utility: Backup flow built and configured | [X] |
+| Scheduling: System Events group added | [] |
 | Healthchecks.io checks configured | [X] |
 | Node-RED Health Monitor pinging Healthchecks.io | [X] |
 | Log rotation configured | [X] |
@@ -987,4 +1000,4 @@ Create these flows in Node-RED to establish baseline functionality:
 
 ---
 
-*Last Updated: 2026-03-26*
+*Last Updated: 2026-03-27*

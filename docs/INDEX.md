@@ -69,6 +69,7 @@ Everything needed to build and maintain Node-RED flows in Highland.
 | [`nodered/STARTUP_SEQUENCING.md`](nodered/STARTUP_SEQUENCING.md) | Two-condition gate, echo probe, Initializers ready signal, state vs. event handling during init, degraded state and recovery |
 | [`nodered/CONFIG_MANAGEMENT.md`](nodered/CONFIG_MANAGEMENT.md) | Config file structure, Config Loader flow, all example config file schemas, secrets.json |
 | [`nodered/DEVICE_REGISTRY.md`](nodered/DEVICE_REGISTRY.md) | Device Registry schema, Device Catalog, Command Dispatcher, ACK Tracker utility flow |
+| [`nodered/INITIALIZERS.md`](nodered/INITIALIZERS.md) | Utility: Initializers — registered helpers, `utils.formatStatus`, adding new helpers |
 | [`nodered/SUBFLOWS.md`](nodered/SUBFLOWS.md) | Initializer Latch, Connection Gate — interfaces, environment variables, behavior |
 | [`nodered/LOGGING.md`](nodered/LOGGING.md) | JSONL framework, log levels, per-flow threshold, Utility: Logging, auto-notify behavior, jq queries |
 | [`nodered/NOTIFICATIONS.md`](nodered/NOTIFICATIONS.md) | Notification payload, severity levels, target addressing, Utility: Notifications, HA Companion delivery, action responses |
@@ -162,4 +163,4 @@ New automation ideas → `AUTOMATION_BACKLOG.md`. Don't derail current work; cap
 
 ---
 
-*Last Updated: 2026-03-26*
+*Last Updated: 2026-03-27*

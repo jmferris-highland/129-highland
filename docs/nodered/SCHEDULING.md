@@ -15,7 +15,7 @@ Publishes period transitions and fixed task events to the MQTT bus. All time-bas
 | `highland/event/scheduler/evening` | No | Fired on transition to evening |
 | `highland/event/scheduler/overnight` | No | Fired on transition to overnight |
 | `highland/event/scheduler/midnight` | No | Fired daily at 00:00:00 |
-| `highland/event/scheduler/backup_daily` | No | Triggers backup orchestration |
+| `highland/event/scheduler/backup_daily` | No | Triggers backup orchestration (System Event — limited consumers) |
 
 ---
 
@@ -37,7 +37,9 @@ Schedex coordinates pulled from `config.secrets.location` (lat/lon). All 7 days 
 
 **Dynamic Periods** — Three schedex nodes (Day, Evening, Overnight), each wiring through a `link call` return pattern into a shared `Publish Dynamic Period` group: `Is Active?` switch → `Prepare Dynamic` function → two MQTT out nodes (event + state)
 
-**Fixed Events** — Midnight inject (cron `00 00 * * *`) → `Prepare Fixed` function → MQTT out
+**Fixed Events** — Midnight inject (cron `00 00 * * *`) → `Prepare Fixed` function → MQTT out. General-purpose events intended for broad consumption by any interested flow.
+
+**System Events** — CronPlus node(s) for deterministic task triggers with limited consumers. Currently: `Backup Daily` fires at 3:15 AM (`0 15 3 * * *`) → `Prepare Backup Event` function → MQTT out `highland/event/scheduler/backup_daily`. Uses `node-red-contrib-cron-plus` (6-field cron: second minute hour day month weekday). Sets `node.status()` on each fire for editor visibility.
 
 **Sinks** — On Startup inject → `Recover Last State` function → Dynamic Period `link call`
 
@@ -102,7 +104,9 @@ This is a push model, not polling. The retained state delivers once on subscript
 - Spreading a string payload with `{...msg.payload}` produces a character-indexed object — always pass string payloads directly as `msg.payload`
 - `Prepare Fixed` sets `node.status()` on every midnight fire for "last fired" visibility in the editor
 - Midnight cron uses Node-RED's 5-field format: `"00 00 * * *"` (minute hour day month weekday)
+- System Events use `node-red-contrib-cron-plus` 6-field format: `"s m h d M wd"` — e.g. `"0 15 3 * * *"` for 3:15:00 AM daily
+- **Fixed vs System Events distinction:** Fixed Events (`midnight`) are general-purpose signals for any interested flow. System Events (`backup_daily`) are task triggers with a specific, limited set of consumers; named after the task rather than the time.
 
 ---
 
-*Last Updated: 2026-03-26*
+*Last Updated: 2026-03-27*

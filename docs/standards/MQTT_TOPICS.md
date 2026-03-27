@@ -775,10 +775,71 @@ Full battery state map for all tracked devices.
 
 ### Backup
 
-**`highland/event/backup/completed`** | **`failed`**
+**`highland/event/backup/completed`**
 
+Published by the Hub backup script and the Backup Utility Flow on successful completion.
+
+Hub payload:
 ```json
-{ "timestamp": "...", "source": "hub", "host": "hub", "file": "hub_backup_20260309_031500.tar.gz" }
+{
+  "host": "hub",
+  "file": "hub_backup_20260327_031500.tar.gz",
+  "timestamp": "2026-03-27T03:15:00-04:00"
+}
+```
+
+Workflow payload:
+```json
+{
+  "host": "workflow",
+  "status": "completed",
+  "timestamp": "2026-03-27T03:15:02.000Z"
+}
+```
+
+HA audit payload (last backup within 26-hour window):
+```json
+{
+  "host": "ha",
+  "status": "completed",
+  "elapsed_hours": 14.2,
+  "timestamp": "2026-03-27T03:15:01.000Z"
+}
+```
+
+---
+
+**`highland/event/backup/failed`**
+
+Published on backup failure or stale HA backup detection. Triggers failure notification via Result Collection group.
+
+Hub payload:
+```json
+{
+  "host": "hub",
+  "error": "tar failed",
+  "timestamp": "2026-03-27T03:15:00-04:00"
+}
+```
+
+Workflow payload:
+```json
+{
+  "host": "workflow",
+  "status": "failed",
+  "error": "tar exited with rc 1",
+  "timestamp": "2026-03-27T03:15:02.000Z"
+}
+```
+
+HA audit payload (last backup older than 26 hours):
+```json
+{
+  "host": "ha",
+  "status": "failed",
+  "elapsed_hours": 29.4,
+  "timestamp": "2026-03-27T03:15:01.000Z"
+}
 ```
 
 ---
@@ -893,4 +954,4 @@ Full battery state map for all tracked devices.
 
 ---
 
-*Last Updated: 2026-03-26*
+*Last Updated: 2026-03-27*

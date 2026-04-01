@@ -102,7 +102,7 @@ Domain-specific designs. Each subsystem is fully designed and ready for implemen
 | [`subsystems/GARAGE_DOOR.md`](subsystems/GARAGE_DOOR.md) | ✅ Designed | Konnected GDO blaQ, SSE stream integration, REST commands, MQTT Discovery |
 | [`subsystems/LORA.md`](subsystems/LORA.md) | ✅ Designed | LoRaWAN gateway relay, bin monitoring state machine, mailbox delivery detection |
 | [`subsystems/VIDEO_PIPELINE.md`](subsystems/VIDEO_PIPELINE.md) | ✅ Designed | Three-stage analysis ladder, CPAI triage, Gemini analysis, zone filtering, cooldown/kill switch |
-| [`subsystems/WEATHER_FLOW.md`](subsystems/WEATHER_FLOW.md) | 🔄 Tier 1 Live | NWS forecast + alerts live; Tier 2 (Tempest + Pirate Weather synthesis) is the target state |
+| [`subsystems/WEATHER_FLOW.md`](subsystems/WEATHER_FLOW.md) | 🔄 Tier 1 + Radar Live | NWS forecast + alerts live; radar pipeline live (Python daemon on hub); Tier 2 synthesis is the target state |
 | [`subsystems/ai/ASSIST_PIPELINE.md`](subsystems/ai/ASSIST_PIPELINE.md) | 📋 Planned | HA Assist voice pipeline, two-tier conversation agent, Echo Show experiment, satellite targeting |
 | [`subsystems/ai/PERSISTENT_MEMORY.md`](subsystems/ai/PERSISTENT_MEMORY.md) | ⏸ Blocked | AI memory architecture — blocked on hardware and HA pipeline event access |
 
@@ -127,12 +127,16 @@ Domain-specific designs. Each subsystem is fully designed and ready for implemen
 - Domain-specific designs complete (video pipeline, weather, calendar, LoRaWAN, garage door, appliances)
 - Voice/AI pipeline designed (blocked on hardware prerequisites)
 - Implementation runbook complete
-- All open questions resolved
+- Communication Hub live: Mosquitto, Zigbee2MQTT, Z-Wave JS UI
+- HAOS live: Node-RED, PostgreSQL, all utility flows operational
+- Radar pipeline live: Python daemon on hub, SFTP delivery to HAOS, Node-RED MQTT integration
 
 **What's next:**
-1. Carve out time to begin the build
-2. Build order: Communication Hub → HAOS → Workflow → Edge AI
-3. Commit working configs to GitHub as baseline after each machine
+- Security system: Node-RED FSM, Noonlight integration, Frient keypads
+- Hygrostat: RoC-based bathroom fan, Inovelli Blue LED bar
+- LoRaWAN: bin monitoring, mailbox delivery detection
+- Garage door: Konnected GDO blaQ bridge
+- Remaining subsystems per `AUTOMATION_BACKLOG.md`
 
 ---
 
@@ -163,4 +167,4 @@ New automation ideas → `AUTOMATION_BACKLOG.md`. Don't derail current work; cap
 
 ---
 
-*Last Updated: 2026-03-27*
+*Last Updated: 2026-04-01*

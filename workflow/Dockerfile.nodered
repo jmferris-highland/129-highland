@@ -1,0 +1,19 @@
+# Highland — Node-RED custom image
+# Extends the official Node-RED image with system tools required by automation flows.
+#
+# Add packages here as new flows require them. Current additions:
+#   imagemagick — radar tile compositing and GIF assembly (Utility: Weather Radar)
+#   ttf-dejavu  — fonts for ImageMagick text rendering
+#   librsvg     — SVG rasterization for ImageMagick (legend gradients)
+#
+# To rebuild after changes:
+#   docker compose build nodered
+#   docker compose up -d --force-recreate nodered
+
+FROM nodered/node-red:latest
+
+USER root
+
+RUN apk add --no-cache imagemagick ttf-dejavu librsvg
+
+USER node-red

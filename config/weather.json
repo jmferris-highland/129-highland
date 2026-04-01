@@ -1,0 +1,80 @@
+{
+  "_comment": "Weather subsystem configuration. All weather-related operational config lives here.",
+
+  "radar": {
+    "base_map": {
+      "zoom": 8,
+      "grid_size": 5,
+      "crop_size": 1280,
+      "tile_style": "alidade_smooth_dark",
+      "refresh_days": 7
+    },
+    "loops": [
+      {
+        "enabled": true,
+        "frame_count": 10,
+        "frame_delay_ms": 300,
+        "loop_delay_ms": 2000,
+        "interpolated_frames": 1,
+        "product": "reflectivity",
+        "cadence_minutes": 1,
+        "color_scheme": 2,
+        "layers": [
+          {
+            "type": "radar",
+            "opacity": 0.75
+          },
+          {
+            "type": "marker",
+            "label": "Home",
+            "anchor": "center",
+            "opacity": 1.0
+          },
+          {
+            "type": "timestamp",
+            "position": "SE",
+            "padding": 12,
+            "bg_opacity": 0.6,
+            "text_color": "#ffffff",
+            "font_size": 14
+          },
+          {
+            "type": "legend",
+            "position": "SW",
+            "padding": 12,
+            "bg_opacity": 0.6
+          },
+          {
+            "type": "title",
+            "text": "Highland Radar",
+            "position": "NW",
+            "padding": 12,
+            "bg_opacity": 0.6,
+            "text_color": "#ffffff",
+            "font_size": 16
+          }
+        ]
+      }
+    ]
+  },
+
+  "tier2": {
+    "_comment": "Tier 2 synthesis config (Tempest + Pirate Weather) — reserved for future implementation",
+    "polling": {
+      "dormant_interval_min": 15,
+      "monitor_interval_min": 5,
+      "active_interval_min": 1
+    },
+    "thresholds": {
+      "dormant_to_monitor_probability": 0.40,
+      "monitor_to_active_probability": 0.70,
+      "monitor_to_active_intensity": 0.01,
+      "active_to_monitor_intensity_clear": 0.005,
+      "active_to_monitor_sustained_minutes": 30,
+      "lightning_cape": 2500,
+      "heavy_rain_intensity": 0.30,
+      "snow_notification_accumulation_inches": 2.0,
+      "ensemble_spread_confidence_ratio": 0.75
+    }
+  }
+}

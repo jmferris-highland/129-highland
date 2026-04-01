@@ -1,0 +1,155 @@
+{
+  "devices": {
+    "office_desk_presence": {
+      "ha_device_id": "b1f32de2ab0e6d26c7b3654b4bebb0f2",
+      "friendly_name": "office_desk_presence",
+      "manufacturer": "Aqara",
+      "model": "Presence sensor FP300",
+      "model_id": "PS-S04D",
+      "area_id": "office",
+      "floor_id": "second_floor",
+      "protocol": "zigbee",
+      "battery_pct_entity": "sensor.office_desk_presence_battery"
+    },
+    "kitchen_diswasher_vibration": {
+      "ha_device_id": "fa91d003c7934fce2c4e11b5a9b6b3f3",
+      "friendly_name": "kitchen_diswasher_vibration",
+      "manufacturer": "Aqara",
+      "model": "Vibration sensor",
+      "model_id": "DJT11LM",
+      "area_id": "kitchen",
+      "floor_id": "first_floor",
+      "protocol": "zigbee",
+      "battery_pct_entity": "sensor.kitchen_diswasher_vibration_battery"
+    }
+  },
+  "areas": {
+    "driveway": {
+      "name": "Driveway",
+      "floor_id": "exterior"
+    },
+    "front_porch": {
+      "name": "Front Porch",
+      "floor_id": "exterior"
+    },
+    "front_yard": {
+      "name": "Front Yard",
+      "floor_id": "exterior"
+    },
+    "rear_patio": {
+      "name": "Rear Patio",
+      "floor_id": "exterior"
+    },
+    "rear_yard": {
+      "name": "Rear Yard",
+      "floor_id": "exterior"
+    },
+    "side_yard": {
+      "name": "Side Yard",
+      "floor_id": "exterior"
+    },
+    "control_room": {
+      "name": "Control Room",
+      "floor_id": "virtual"
+    },
+    "dining_room": {
+      "name": "Dining Room",
+      "floor_id": "first_floor"
+    },
+    "foyer": {
+      "name": "Foyer",
+      "floor_id": "first_floor"
+    },
+    "garage": {
+      "name": "Garage",
+      "floor_id": "first_floor"
+    },
+    "half_bathroom": {
+      "name": "Half Bathroom",
+      "floor_id": "first_floor"
+    },
+    "kitchen": {
+      "name": "Kitchen",
+      "floor_id": "first_floor"
+    },
+    "living_room": {
+      "name": "Living Room",
+      "floor_id": "first_floor"
+    },
+    "pantry": {
+      "name": "Pantry",
+      "floor_id": "first_floor"
+    },
+    "rear_hallway": {
+      "name": "Rear Hallway",
+      "floor_id": "first_floor"
+    },
+    "stairway": {
+      "name": "Stairway",
+      "floor_id": "first_floor"
+    },
+    "guest_bathroom": {
+      "name": "Guest Bathroom",
+      "floor_id": "second_floor"
+    },
+    "guest_room_one": {
+      "name": "Guest Room One",
+      "floor_id": "second_floor"
+    },
+    "guest_room_two": {
+      "name": "Guest Room Two",
+      "floor_id": "second_floor"
+    },
+    "hallway": {
+      "name": "Hallway",
+      "floor_id": "second_floor"
+    },
+    "laundry_room": {
+      "name": "Laundry Room",
+      "floor_id": "second_floor"
+    },
+    "master_bathroom": {
+      "name": "Master Bathroom",
+      "floor_id": "second_floor"
+    },
+    "master_bedroom": {
+      "name": "Master Bedroom",
+      "floor_id": "second_floor"
+    },
+    "master_bedroom_closet_one": {
+      "name": "Master Bedroom Closet One",
+      "floor_id": "second_floor"
+    },
+    "master_bedroom_closet_two": {
+      "name": "Master Bedroom Closet Two",
+      "floor_id": "second_floor"
+    },
+    "office": {
+      "name": "Office",
+      "floor_id": "second_floor"
+    },
+    "office_bathroom": {
+      "name": "Office Bathroom",
+      "floor_id": "second_floor"
+    }
+  },
+  "models": {
+    "DJT11LM": {
+      "battery": {
+        "type": "CR2032",
+        "quantity": 1
+      }
+    },
+    "PS-S04D": {
+      "battery": {
+        "type": "CR2450",
+        "quantity": 2
+      }
+    }
+  },
+  "meta": {
+    "last_refreshed": "2026-04-01T13:44:57.074Z",
+    "device_count": 2,
+    "source": "ha_registry"
+  }
+}

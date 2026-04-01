@@ -1,0 +1,40 @@
+{
+  "people": {
+    "joseph": {
+      "admin": true,
+      "channels": {
+        "ha_companion": "notify.mobile_app_joseph_phone"
+      }
+    }
+  },
+  "areas": {
+    "living_room": {
+      "channels": {
+        "tv": {
+            "media_player": "media_player.living_room_television",
+            "android_tv": {
+                "host": "192.168.1.106",
+                "port": 5001,
+                "media_player": "media_player.living_room_android_tv"
+            },
+            "sources": [
+                { "name": "FIOS TV", "type": "android_tv" },
+                { "name": "Xbox", "type": "webos" }
+            ],
+            "endpoints": {
+                "android_tv": "notify.living_room_stb",
+                "webos": "notify.living_room_lg_tv"
+            }
+        }
+      }
+    }
+  },
+  "daily_digest": {
+    "enabled": true,
+    "recipients": ["joseph","deanna"]
+  },
+  "defaults": {
+    "admin_only": ["joseph"],
+    "all": ["joseph"]
+  }
+}

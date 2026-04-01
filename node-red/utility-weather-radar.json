@@ -1,0 +1,1120 @@
+[
+    {
+        "id": "subflow-initializer-latch",
+        "type": "subflow",
+        "name": "initializer latch",
+        "info": "",
+        "category": "highland",
+        "in": [
+            {
+                "x": 80,
+                "y": 60,
+                "wires": [
+                    {
+                        "id": "081746de07ee7073"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 360,
+                "y": 300,
+                "wires": [
+                    {
+                        "id": "204c782fa7f1e192",
+                        "port": 0
+                    }
+                ]
+            },
+            {
+                "x": 400,
+                "y": 360,
+                "wires": [
+                    {
+                        "id": "0a98747907675ad9",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [
+            {
+                "name": "RETRY_INTERVAL_MS",
+                "type": "num",
+                "value": "250",
+                "ui": {
+                    "label": {
+                        "en-US": "Retry Interval (ms)"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "num"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "MAX_RETRIES",
+                "type": "num",
+                "value": "20",
+                "ui": {
+                    "label": {
+                        "en-US": "Max Retries"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "num"
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "CONTEXT_PREFIX",
+                "type": "str",
+                "value": "",
+                "ui": {
+                    "label": {
+                        "en-US": "Scope"
+                    },
+                    "type": "input",
+                    "opts": {
+                        "types": [
+                            "str"
+                        ]
+                    }
+                }
+            }
+        ],
+        "meta": {},
+        "color": "#87A980",
+        "outputLabels": [
+            "OK",
+            "TIMEOUT"
+        ],
+        "icon": "node-red/timer.svg"
+    },
+    {
+        "id": "081746de07ee7073",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Buffer Management",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\n\nif (flow.get(`${prefix}initialized`)) {\n    return [msg, null];\n}\nif (flow.get(`${prefix}degraded`)) {\n    return null;\n}\nconst buffer = flow.get(`${prefix}state_buffer`) || [];\nbuffer.push(msg);\nflow.set(`${prefix}state_buffer`, buffer);\nif (!flow.get(`${prefix}check_running`)) {\n    flow.set(`${prefix}check_running`, true);\n    flow.set(`${prefix}retries`, 0);\n    return [null, msg];\n}\n\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 250,
+        "y": 60,
+        "wires": [
+            [
+                "18fe80e042b3e229"
+            ],
+            [
+                "2ecaa5d9e39ad7a1"
+            ]
+        ]
+    },
+    {
+        "id": "2ecaa5d9e39ad7a1",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Check Readiness",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nconst maxRetries = env.get('MAX_RETRIES') || 20;\nconst retries = flow.get(`${prefix}retries`) || 0;\n\nif (global.get('initializers.ready', 'initializers') === true) {\n    flow.set(`${prefix}check_running`, false);\n    return [msg, null];\n}\nif (retries >= maxRetries) {\n    flow.set(`${prefix}check_running`, false);\n    msg.timedOut = true;\n    return [null, msg];\n}\nflow.set(`${prefix}retries`, retries + 1);\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 490,
+        "y": 120,
+        "wires": [
+            [
+                "4f8a77e8b898a9bc"
+            ],
+            [
+                "74db48c8fac39695"
+            ]
+        ]
+    },
+    {
+        "id": "74db48c8fac39695",
+        "type": "switch",
+        "z": "subflow-initializer-latch",
+        "name": "Route",
+        "property": "timedOut",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "true"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 690,
+        "y": 180,
+        "wires": [
+            [
+                "716d39543f5312f7"
+            ],
+            [
+                "3efc69215972097b"
+            ]
+        ]
+    },
+    {
+        "id": "218b4ac37cd3bb4b",
+        "type": "delay",
+        "z": "subflow-initializer-latch",
+        "name": "Retry Delay",
+        "pauseType": "delayv",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 1050,
+        "y": 240,
+        "wires": [
+            [
+                "62595fe3f63fb6a4"
+            ]
+        ]
+    },
+    {
+        "id": "3efc69215972097b",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Set Delay",
+        "func": "msg.delay = env.get('RETRY_INTERVAL_MS') || 250;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 860,
+        "y": 240,
+        "wires": [
+            [
+                "218b4ac37cd3bb4b"
+            ]
+        ]
+    },
+    {
+        "id": "83c96b9bb45316e9",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Recheck Readiness",
+        "links": [
+            "62595fe3f63fb6a4"
+        ],
+        "x": 250,
+        "y": 180,
+        "wires": [
+            [
+                "2ecaa5d9e39ad7a1"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "62595fe3f63fb6a4",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Recheck Readiness",
+        "mode": "link",
+        "links": [
+            "83c96b9bb45316e9"
+        ],
+        "x": 1280,
+        "y": 240,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "4f8a77e8b898a9bc",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Open Gate",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nflow.set(`${prefix}initialized`, true);\nflow.set(`${prefix}degraded`, false);\nflow.set(`${prefix}check_running`, false);\n\nconst buffer = flow.get(`${prefix}state_buffer`) || [];\nflow.set(`${prefix}state_buffer`, []);\n\nfor (const bufferedMsg of buffer) {\n    node.send([bufferedMsg, null]);\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 710,
+        "y": 120,
+        "wires": [
+            [
+                "0d9caff7a4aadff8"
+            ]
+        ]
+    },
+    {
+        "id": "716d39543f5312f7",
+        "type": "function",
+        "z": "subflow-initializer-latch",
+        "name": "Handle Timeout",
+        "func": "const prefix = env.get('CONTEXT_PREFIX') || '';\nflow.set(`${prefix}degraded`, true);\nflow.set(`${prefix}initialized`, false);\nflow.set(`${prefix}check_running`, false);\nflow.set(`${prefix}state_buffer`, []);\n\nmsg.timedOut = true;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 880,
+        "y": 180,
+        "wires": [
+            [
+                "5306e1168dacc5bf"
+            ]
+        ]
+    },
+    {
+        "id": "204c782fa7f1e192",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "links": [
+            "18fe80e042b3e229",
+            "0d9caff7a4aadff8"
+        ],
+        "x": 160,
+        "y": 300,
+        "wires": [
+            []
+        ],
+        "l": true
+    },
+    {
+        "id": "18fe80e042b3e229",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "mode": "link",
+        "links": [
+            "204c782fa7f1e192"
+        ],
+        "x": 500,
+        "y": 60,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0d9caff7a4aadff8",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Emit Message Stream",
+        "mode": "link",
+        "links": [
+            "204c782fa7f1e192"
+        ],
+        "x": 940,
+        "y": 120,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "5306e1168dacc5bf",
+        "type": "link out",
+        "z": "subflow-initializer-latch",
+        "name": "Discard Message Stream",
+        "mode": "link",
+        "links": [
+            "0a98747907675ad9"
+        ],
+        "x": 1130,
+        "y": 180,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0a98747907675ad9",
+        "type": "link in",
+        "z": "subflow-initializer-latch",
+        "name": "Discard Message Stream",
+        "links": [
+            "5306e1168dacc5bf"
+        ],
+        "x": 170,
+        "y": 360,
+        "wires": [
+            []
+        ],
+        "l": true
+    },
+    {
+        "id": "utility-weather-radar",
+        "type": "tab",
+        "label": "Utility: Weather Radar",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "wr-grp-trigger",
+        "type": "group",
+        "z": "utility-weather-radar",
+        "name": "Sinks",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "e362462e4761f1c4",
+            "4bbf10e1e8342d64",
+            "bdcbfcf2ee8b7b28",
+            "8280cd0c781f2b73",
+            "ecdd40c6a053c2dd",
+            "c56fd93467759d4b"
+        ],
+        "x": 54,
+        "y": 279,
+        "w": 612,
+        "h": 142
+    },
+    {
+        "id": "wr-grp-error",
+        "type": "group",
+        "z": "utility-weather-radar",
+        "name": "Error Handling",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "wr-catch-all",
+            "wr-debug-error"
+        ],
+        "x": 54,
+        "y": 999,
+        "w": 352,
+        "h": 82
+    },
+    {
+        "id": "f1cea66d9434272d",
+        "type": "group",
+        "z": "utility-weather-radar",
+        "name": "Product Control",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "47867b2495c79fc9",
+            "b87a6c156f33e51b",
+            "9fce644ccb24a4a2",
+            "5acfeea302f7d55c",
+            "708004e3561175fc",
+            "68577263f84d0222",
+            "2b97c2d4cd94c5e8"
+        ],
+        "x": 54,
+        "y": 39,
+        "w": 652,
+        "h": 202
+    },
+    {
+        "id": "47ba118428e5ba52",
+        "type": "group",
+        "z": "utility-weather-radar",
+        "name": "Event Listeners",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "39564cdffbf1302c",
+            "ec0f23d9aae83b2e",
+            "009c88579b168e34",
+            "ec2ab6c1d67ce81f",
+            "2342381db561cf6d",
+            "71c5b59e88c81392",
+            "bf39acc67b8fcb05",
+            "142a61493e9bc15e",
+            "55105a787ae9d809"
+        ],
+        "x": 54,
+        "y": 459,
+        "w": 652,
+        "h": 262
+    },
+    {
+        "id": "dc5a91b55a70386e",
+        "type": "group",
+        "z": "utility-weather-radar",
+        "name": "Test Cases",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "ea0143c9881b4305",
+            "e9a6ac72f474133b"
+        ],
+        "x": 54,
+        "y": 879,
+        "w": 382,
+        "h": 82
+    },
+    {
+        "id": "b1e713d4d6f28855",
+        "type": "group",
+        "z": "utility-weather-radar",
+        "name": "Home Assistant Discovery",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "0f742b923bd9dc7f",
+            "f70629ca0126ebb0",
+            "924faf6c29702d1e"
+        ],
+        "x": 54,
+        "y": 759,
+        "w": 732,
+        "h": 82
+    },
+    {
+        "id": "wr-catch-all",
+        "type": "catch",
+        "z": "utility-weather-radar",
+        "g": "wr-grp-error",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 140,
+        "y": 1040,
+        "wires": [
+            [
+                "wr-debug-error"
+            ]
+        ]
+    },
+    {
+        "id": "wr-debug-error",
+        "type": "debug",
+        "z": "utility-weather-radar",
+        "g": "wr-grp-error",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 310,
+        "y": 1040,
+        "wires": []
+    },
+    {
+        "id": "e362462e4761f1c4",
+        "type": "function",
+        "z": "utility-weather-radar",
+        "g": "wr-grp-trigger",
+        "name": "Build Configuration",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nconst config = global.get('config');\nconst location = config?.location;\nconst secrets = config?.secrets;\nconst weather = config?.weather;\n\nconst payload = {\n    location: {\n        latitude: location.latitude,\n        longitude: location.longitude,\n        timezone: location.timezone ?? 'America/New_York'\n    },\n    stadia: {\n        api_key: secrets.stadia_maps.api_key,\n        style: weather.radar.base_map?.tile_style ?? 'alidade_smooth_dark',\n        zoom: weather.radar.base_map?.zoom ?? 8,\n        grid_size: weather.radar.base_map?.grid_size ?? 5,\n        crop_size: weather.radar.base_map?.crop_size ?? 1280\n    },\n    haos: {\n        host: secrets.home_assistant.host,\n        port: secrets.home_assistant.ssh_port ?? 22,\n        username: secrets.home_assistant.ssh_username,\n        ssh_key_path: secrets.home_assistant.ssh_key_path,\n        www_path: secrets.home_assistant.www_path\n    },\n    mqtt: {\n        host: secrets.mqtt.host ?? 'hub.local',\n        port: secrets.mqtt.port ?? 1883,\n        username: secrets.mqtt.username,\n        password: secrets.mqtt.password,\n        client_id: 'highland-weather-daemon'\n    },\n    radar: {\n        base_map_refresh_days: weather.radar.base_map?.refresh_days ?? 7,\n        products: (weather.radar.loops ?? []).map(loop => ({\n            id: loop.product,\n            enabled: loop.enabled ?? true,\n            cadence_minutes: loop.cadence_minutes ?? 1,\n            frame_count: loop.frame_count,\n            frame_delay_ms: loop.frame_delay_ms,\n            loop_delay_ms: loop.loop_delay_ms,\n            interpolated_frames: loop.interpolated_frames ?? 1,\n            output_filename: `${loop.product}.gif`,\n            color_scheme: loop.color_scheme ?? 2,\n            layers: loop.layers?.filter(l => l.type === 'radar') ?? [{ type: 'radar', opacity: 0.75 }]\n        }))\n    }\n};\n\nmsg.payload = JSON.stringify(payload);\nmsg.retain = true;\nnode.status({ fill: 'green', shape: 'dot', text: formatStatus('RECONFIGURED')});\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 380,
+        "wires": [
+            [
+                "8280cd0c781f2b73"
+            ]
+        ]
+    },
+    {
+        "id": "4bbf10e1e8342d64",
+        "type": "inject",
+        "z": "utility-weather-radar",
+        "g": "wr-grp-trigger",
+        "name": "On Startup",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 320,
+        "wires": [
+            [
+                "bdcbfcf2ee8b7b28"
+            ]
+        ]
+    },
+    {
+        "id": "bdcbfcf2ee8b7b28",
+        "type": "subflow:subflow-initializer-latch",
+        "z": "utility-weather-radar",
+        "g": "wr-grp-trigger",
+        "name": "Latch",
+        "env": [
+            {
+                "name": "CONTEXT_PREFIX",
+                "value": "startup-",
+                "type": "str"
+            }
+        ],
+        "x": 350,
+        "y": 320,
+        "wires": [
+            [
+                "c56fd93467759d4b"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "8280cd0c781f2b73",
+        "type": "mqtt out",
+        "z": "utility-weather-radar",
+        "g": "wr-grp-trigger",
+        "name": "Configure",
+        "topic": "highland/command/weather/config",
+        "qos": "",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 580,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "47867b2495c79fc9",
+        "type": "inject",
+        "z": "utility-weather-radar",
+        "g": "f1cea66d9434272d",
+        "name": "Enable Reflectivity",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            },
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "reflectivity",
+        "payload": "true",
+        "payloadType": "bool",
+        "x": 190,
+        "y": 80,
+        "wires": [
+            [
+                "68577263f84d0222"
+            ]
+        ]
+    },
+    {
+        "id": "b87a6c156f33e51b",
+        "type": "mqtt out",
+        "z": "utility-weather-radar",
+        "g": "f1cea66d9434272d",
+        "name": "Set State",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 620,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "39564cdffbf1302c",
+        "type": "mqtt in",
+        "z": "utility-weather-radar",
+        "g": "47ba118428e5ba52",
+        "name": "Radar Rendered",
+        "topic": "highland/event/weather/radar/+/rendered",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 160,
+        "y": 500,
+        "wires": [
+            [
+                "009c88579b168e34"
+            ]
+        ]
+    },
+    {
+        "id": "ec0f23d9aae83b2e",
+        "type": "mqtt in",
+        "z": "utility-weather-radar",
+        "g": "47ba118428e5ba52",
+        "name": "Radar Error",
+        "topic": "highland/event/weather/radar/+/error",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 560,
+        "wires": [
+            [
+                "009c88579b168e34"
+            ]
+        ]
+    },
+    {
+        "id": "009c88579b168e34",
+        "type": "function",
+        "z": "utility-weather-radar",
+        "g": "47ba118428e5ba52",
+        "name": "Format Log Message",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\n// Extract product from topic: highland/event/weather/radar/{product}/rendered|error\nconst parts = msg.topic.split('/');\nconst product = parts[4];\nconst eventType = parts[5]; // \"rendered\" or \"error\"\n\nconst payload = typeof msg.payload === 'string'\n    ? JSON.parse(msg.payload)\n    : msg.payload;\n\nlet level, message, logContext;\n\nif (eventType === 'rendered') {\n    level = 'INFO';\n    message = `Radar loop rendered: ${product}`;\n    logContext = {\n        product,\n        output_path: payload.output_path\n    };\n    node.status({ fill: 'green', shape: 'dot', text: formatStatus(`${product.toUpperCase()} RENDERED`) });\n} else {\n    level = 'ERROR';\n    message = `Radar product failed: ${product}`;\n    logContext = {\n        product,\n        error: payload.error\n    };\n    node.status({ fill: 'red', shape: 'dot', text: formatStatus(`${product.toUpperCase()} ERROR`) });\n}\n\nmsg.payload = {\n    timestamp: new Date().toISOString(),\n    system: 'hub_daemon',\n    source: `weather.radar.${product}`,\n    level,\n    message,\n    context: logContext\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 500,
+        "wires": [
+            [
+                "71c5b59e88c81392"
+            ]
+        ]
+    },
+    {
+        "id": "ec2ab6c1d67ce81f",
+        "type": "mqtt in",
+        "z": "utility-weather-radar",
+        "g": "47ba118428e5ba52",
+        "name": "Radar Status",
+        "topic": "highland/status/weather/radar/+",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 620,
+        "wires": [
+            [
+                "bf39acc67b8fcb05"
+            ]
+        ]
+    },
+    {
+        "id": "2342381db561cf6d",
+        "type": "mqtt in",
+        "z": "utility-weather-radar",
+        "g": "47ba118428e5ba52",
+        "name": "Radar Updated",
+        "topic": "highland/state/weather/radar/+/last_updated",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 160,
+        "y": 680,
+        "wires": [
+            [
+                "55105a787ae9d809"
+            ]
+        ]
+    },
+    {
+        "id": "9fce644ccb24a4a2",
+        "type": "function",
+        "z": "utility-weather-radar",
+        "g": "f1cea66d9434272d",
+        "name": "Build Payload",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nconst target = msg.topic;\n\n// msg.topic should be set to the product id by the inject node\n// msg.payload should be true or false\nmsg.topic = `highland/command/weather/radar/${msg.topic}/enable`;\nmsg.payload = msg.payload ? 'true' : 'false';\n\nnode.status({\n    fill: 'green',\n    shape: 'dot',\n    text: formatStatus(`${target.toUpperCase()} (${msg.payload})`)\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 200,
+        "wires": [
+            [
+                "b87a6c156f33e51b"
+            ]
+        ]
+    },
+    {
+        "id": "5acfeea302f7d55c",
+        "type": "inject",
+        "z": "utility-weather-radar",
+        "g": "f1cea66d9434272d",
+        "name": "Disable Reflectivity",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            },
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "reflectivity",
+        "payload": "false",
+        "payloadType": "bool",
+        "x": 190,
+        "y": 140,
+        "wires": [
+            [
+                "2b97c2d4cd94c5e8"
+            ]
+        ]
+    },
+    {
+        "id": "708004e3561175fc",
+        "type": "link in",
+        "z": "utility-weather-radar",
+        "g": "f1cea66d9434272d",
+        "name": "Set Enabled State",
+        "links": [
+            "68577263f84d0222",
+            "2b97c2d4cd94c5e8"
+        ],
+        "x": 180,
+        "y": 200,
+        "wires": [
+            [
+                "9fce644ccb24a4a2"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "68577263f84d0222",
+        "type": "link out",
+        "z": "utility-weather-radar",
+        "g": "f1cea66d9434272d",
+        "name": "Set Enabled State",
+        "mode": "link",
+        "links": [
+            "708004e3561175fc"
+        ],
+        "x": 430,
+        "y": 80,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "2b97c2d4cd94c5e8",
+        "type": "link out",
+        "z": "utility-weather-radar",
+        "g": "f1cea66d9434272d",
+        "name": "Set Enabled State",
+        "mode": "link",
+        "links": [
+            "708004e3561175fc"
+        ],
+        "x": 430,
+        "y": 140,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "ecdd40c6a053c2dd",
+        "type": "link in",
+        "z": "utility-weather-radar",
+        "g": "wr-grp-trigger",
+        "name": "Reconfigure",
+        "links": [
+            "e9a6ac72f474133b",
+            "c56fd93467759d4b"
+        ],
+        "x": 150,
+        "y": 380,
+        "wires": [
+            [
+                "e362462e4761f1c4"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "ea0143c9881b4305",
+        "type": "inject",
+        "z": "utility-weather-radar",
+        "g": "dc5a91b55a70386e",
+        "name": "Manual",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 920,
+        "wires": [
+            [
+                "e9a6ac72f474133b"
+            ]
+        ]
+    },
+    {
+        "id": "e9a6ac72f474133b",
+        "type": "link out",
+        "z": "utility-weather-radar",
+        "g": "dc5a91b55a70386e",
+        "name": "Reconfigure",
+        "mode": "link",
+        "links": [
+            "ecdd40c6a053c2dd"
+        ],
+        "x": 340,
+        "y": 920,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "c56fd93467759d4b",
+        "type": "link out",
+        "z": "utility-weather-radar",
+        "g": "wr-grp-trigger",
+        "name": "Reconfigure",
+        "mode": "link",
+        "links": [
+            "ecdd40c6a053c2dd"
+        ],
+        "x": 540,
+        "y": 320,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "71c5b59e88c81392",
+        "type": "mqtt out",
+        "z": "utility-weather-radar",
+        "g": "47ba118428e5ba52",
+        "name": "Log Event",
+        "topic": "highland/event/log",
+        "qos": "2",
+        "retain": "false",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 620,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "bf39acc67b8fcb05",
+        "type": "function",
+        "z": "utility-weather-radar",
+        "g": "47ba118428e5ba52",
+        "name": "Current Status",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst parts = msg.topic.split('/');\nconst product = parts[4];\nconst status = msg.payload;\n\nconst colorMap = { idle: 'green', running: 'blue', error: 'red' };\nconst fill = colorMap[status] || 'grey';\n\nnode.status({ fill, shape: 'dot', text: formatStatus(`${product.toUpperCase()} (${status.toUpperCase()})`) });\nreturn null;",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "142a61493e9bc15e",
+        "type": "mqtt out",
+        "z": "utility-weather-radar",
+        "g": "47ba118428e5ba52",
+        "name": "Log Event",
+        "topic": "highland/event/log",
+        "qos": "2",
+        "retain": "false",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 620,
+        "y": 680,
+        "wires": []
+    },
+    {
+        "id": "55105a787ae9d809",
+        "type": "function",
+        "z": "utility-weather-radar",
+        "g": "47ba118428e5ba52",
+        "name": "Format Log Message",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst parts = msg.topic.split('/');\nconst product = parts[4];\n\nconst ts = parseInt(msg.payload);\nconst formatted = isNaN(ts) ? msg.payload : new Date(ts * 1000).toISOString();\n\nnode.status({ fill: 'green', shape: 'dot', text: formatStatus(`${product.toUpperCase()}`)});\n\nmsg.payload = {\n    timestamp: new Date().toISOString(),\n    system: 'hub_daemon',\n    source: `weather.radar.${product}`,\n    level: 'INFO',\n    message: `Radar loop last updated: ${product}`,\n    context: { product, last_updated: formatted }\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 680,
+        "wires": [
+            [
+                "142a61493e9bc15e"
+            ]
+        ]
+    },
+    {
+        "id": "0f742b923bd9dc7f",
+        "type": "inject",
+        "z": "utility-weather-radar",
+        "g": "b1e713d4d6f28855",
+        "name": "On Startup",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 800,
+        "wires": [
+            [
+                "f70629ca0126ebb0"
+            ]
+        ]
+    },
+    {
+        "id": "f70629ca0126ebb0",
+        "type": "function",
+        "z": "utility-weather-radar",
+        "g": "b1e713d4d6f28855",
+        "name": "Build Reflectivity Updated Sensor",
+        "func": "msg.payload = JSON.stringify({\n    name: \"Reflectivity Last Updated\",\n    unique_id: \"highland_radar_reflectivity_last_updated\",\n    state_topic: \"highland/state/weather/radar/reflectivity/last_updated\",\n    device_class: \"timestamp\",\n    value_template: \"{{ value | int | timestamp_utc }}\",\n    device: {\n        identifiers: [\"highland_weather_radar\"],\n        name: \"Highland Weather Radar\",\n        model: \"RainViewer Pipeline\",\n        manufacturer: \"Highland\"\n    }\n});\nmsg.retain = true;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 800,
+        "wires": [
+            [
+                "924faf6c29702d1e"
+            ]
+        ]
+    },
+    {
+        "id": "924faf6c29702d1e",
+        "type": "mqtt out",
+        "z": "utility-weather-radar",
+        "g": "b1e713d4d6f28855",
+        "name": "Publish",
+        "topic": "homeassistant/sensor/highland_weather_radar/reflectivity_last_updated/config",
+        "qos": "",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 700,
+        "y": 800,
+        "wires": []
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]

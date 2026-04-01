@@ -1,0 +1,23 @@
+[Unit]
+Description=Highland Weather Daemon
+Documentation=https://github.com/Highland-SmartHome/129-highland
+After=network-online.target mosquitto.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hub-daemon
+Group=hub-daemon
+ExecStart=/opt/highland/venv/bin/python /opt/highland/weather/daemon.py
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=highland-weather-daemon
+
+# Environment — MQTT credentials loaded from config file, not env vars
+# Add override file at /etc/systemd/system/highland-weather-daemon.service.d/override.conf
+# if you need to pass additional environment variables
+
+[Install]
+WantedBy=multi-user.target

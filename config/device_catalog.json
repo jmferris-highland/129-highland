@@ -1,0 +1,18 @@
+{
+  "models": {
+    "DJT11LM": {
+      "battery": { "type": "CR2032", "quantity": 1 }
+    },
+    "PS-S04D": {
+      "battery": { "type": "CR2450", "quantity": 2 }
+    }
+  },
+  "overrides": {
+    "kitchen_dishwasher_vibration": {
+      "friendly_name": "Dishwasher Vibration"
+    },
+    "office_desk_presence": {
+      "friendly_name": "Joseph's Desk Presence"
+    }
+  }
+}

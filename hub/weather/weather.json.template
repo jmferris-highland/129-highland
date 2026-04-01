@@ -1,0 +1,49 @@
+{
+  "location": {
+    "latitude": "YOUR_LATITUDE",
+    "longitude": "YOUR_LONGITUDE"
+  },
+  "stadia": {
+    "api_key": "YOUR_STADIA_API_KEY",
+    "style": "alidade_smooth_dark",
+    "zoom": 8,
+    "grid_size": 5,
+    "crop_size": 1280
+  },
+  "haos": {
+    "host": "home.local",
+    "port": 22,
+    "username": "YOUR_HA_SSH_USERNAME",
+    "ssh_key_path": "/home/hub-daemon/.ssh/id_ed25519",
+    "www_path": "/config/www/hub.local"
+  },
+  "mqtt": {
+    "host": "hub.local",
+    "port": 1883,
+    "username": "svc_scripts",
+    "password": "YOUR_SVC_SCRIPTS_PASSWORD",
+    "client_id": "highland-weather-daemon"
+  },
+  "radar": {
+    "base_map_refresh_days": 7,
+    "products": [
+      {
+        "id": "reflectivity",
+        "enabled": true,
+        "cadence_minutes": 1,
+        "frame_count": 10,
+        "frame_delay_ms": 500,
+        "loop_delay_ms": 2000,
+        "interpolated_frames": 1,
+        "output_filename": "reflectivity.gif",
+        "color_scheme": 2,
+        "layers": [
+          {
+            "type": "radar",
+            "opacity": 0.75
+          }
+        ]
+      }
+    ]
+  }
+}

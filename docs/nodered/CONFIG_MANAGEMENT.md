@@ -16,6 +16,7 @@ Centralized configuration using external JSON files. Config is separated from co
 ├── notifications.json          ← git: yes (recipient mappings, channels)
 ├── system.json                 ← git: yes (system identity, HTTP defaults)
 ├── thresholds.json             ← git: yes (battery, health, etc.)
+├── weather.json                ← git: yes (radar loop profiles, layer definitions, Tier 2 config)
 ├── healthchecks.json           ← git: yes (service config)
 ├── secrets.json                ← git: NO (.gitignore)
 └── README.md                   ← git: yes (documents config structure)
@@ -213,6 +214,7 @@ Loads all config files into global context on startup, deploy, or MQTT reload co
    - `global.config.notifications`
    - `global.config.system`
    - `global.config.thresholds`
+   - `global.config.weather`
    - `global.config.healthchecks`
    - `global.config.secrets`
 

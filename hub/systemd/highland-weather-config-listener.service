@@ -1,0 +1,36 @@
+[Unit]
+Description=Highland Weather Config Listener
+Documentation=https://github.com/Highland-SmartHome/129-highland
+After=network-online.target mosquitto.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hub-daemon
+Group=hub-daemon
+ExecStart=/opt/highland/venv/bin/python /opt/highland/weather/config_listener.py
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=highland-weather-config-listener
+
+# MQTT credentials for the config listener
+# These are passed as environment variables since the config file
+# may not exist yet when the listener first starts.
+# Set actual values in an override file:
+# /etc/systemd/system/highland-weather-config-listener.service.d/override.conf
+#
+# [Service]
+# Environment="MQTT_HOST=hub.local"
+# Environment="MQTT_PORT=1883"
+# Environment="MQTT_USERNAME=svc_scripts"
+# Environment="MQTT_PASSWORD=your_password_here"
+
+Environment="MQTT_HOST=hub.local"
+Environment="MQTT_PORT=1883"
+Environment="MQTT_USERNAME=svc_scripts"
+Environment="MQTT_PASSWORD=CHANGEME"
+
+[Install]
+WantedBy=multi-user.target

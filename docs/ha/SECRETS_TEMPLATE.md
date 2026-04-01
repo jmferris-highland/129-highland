@@ -209,7 +209,26 @@ Hosted at `highland@your-domain.example`.
 | Plan | `FILL_IN` |
 | Endpoint | `https://api.pirateweather.net/forecast` |
 
-### 11.2 Google Calendar
+### 11.2 Stadia Maps
+
+Used by `Utility: Weather Radar` for base map tile fetching.
+
+| Field | Value |
+|-------|-------|
+| API key | `FILL_IN` |
+| Plan | Free tier |
+| Endpoint | `https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/` |
+
+**secrets.json structure:**
+```json
+"stadia_maps": {
+  "api_key": "FILL_IN"
+}
+```
+
+---
+
+### 11.3 Google Calendar
 
 Used for the Daily Digest and camera suppression integration (each camera has a dedicated calendar guest address).
 
@@ -229,4 +248,4 @@ Used for the Daily Digest and camera suppression integration (each camera has a 
 
 ---
 
-*Template version: 2026-03-26 — Add new sections here as infrastructure grows.*
+*Template version: 2026-03-30 — Add new sections here as infrastructure grows.*

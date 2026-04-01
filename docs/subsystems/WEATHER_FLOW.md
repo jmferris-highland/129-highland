@@ -6,8 +6,10 @@
 
 Two separate Node-RED flows, both built and publishing:
 
-- **`Utility: Weather Forecasts`** — Resolves NWS grid coordinates daily (cronplus 11:55 PM), fetches normalized 7-day forecast hourly. Publishes `highland/state/weather/forecast` with a date-keyed period map including NWS condition codes, temperature, precip chance, and wind.
-- **`Utility: Weather Alerts`** — Polls NWS active alerts endpoint every 30 seconds. Tracks alert lifecycle (new/updated/expired). Publishes `highland/state/weather/alerts` retained snapshot and fires three lifecycle event topics.
+- **`Utility: Weather Forecasts`** — Resolves NWS grid coordinates on startup and daily at 23:55 (cronplus), storing the forecast URL in flow context. Fetches normalized 7-day forecast hourly and on startup. Publishes `highland/state/weather/forecast` with a date-keyed period map including NWS condition codes, temperature, precip chance, and wind.
+- **`Utility: Weather Alerts`** — Polls NWS active alerts endpoint every 30 seconds. Tracks alert lifecycle (new/updated/expired) in flow context. Publishes `highland/state/weather/alerts` retained snapshot and fires three lifecycle event topics.
+
+**Primary consumer:** Both Tier 1 flows feed the `Utility: Daily Digest` — the forecast and any active alerts are included in the nightly digest email sent to household residents.
 
 **Tier 2 — Synthesis (Future)**
 
@@ -147,25 +149,117 @@ NWS condition codes are extracted from the NWS icon URL path. Priority hierarchy
 
 ---
 
-## Configuration (thresholds.json)
+## Configuration
 
-```json
-{
-  "weather": {
-    "poll_dormant_to_monitor_probability": 0.40,
-    "poll_monitor_to_active_probability": 0.70,
-    "poll_monitor_to_active_intensity": 0.01,
-    "poll_active_to_monitor_intensity_clear": 0.005,
-    "poll_active_to_monitor_sustained_minutes": 30,
-    "poll_lightning_cape": 2500,
-    "heavy_rain_intensity": 0.30,
-    "snow_notification_accumulation_inches": 2.0,
-    "ensemble_spread_confidence_ratio": 0.75
-  }
-}
+All weather configuration lives in `weather.json`, loaded into `global.config.weather` by the Config Loader. This includes radar loop profiles, layer definitions, and Tier 2 polling thresholds. See `config/weather.json` in the repo for the current schema.
+
+Tier 2 threshold values are initial estimates — calibrate against observed events.
+
+---
+
+## Radar Pipeline
+
+### Architecture
+
+Base reflectivity radar is implemented as a **standalone Python daemon on the hub** — entirely outside Node-RED and Docker. The daemon owns scheduling, fetching, compositing, and delivery. Node-RED's role is limited to:
+
+- Pushing configuration to the daemon via MQTT on startup and on demand
+- Subscribing to rendered/error/status events for logging and automation
+- Enabling or disabling individual products via MQTT
+
+This architecture eliminates the fragility of long-running exec nodes — Node-RED deploys no longer interrupt the radar pipeline.
+
+### Components
+
+```
+/opt/highland/weather/
+├── daemon.py                  — minute-tick scheduler, spawns products
+├── config_listener.py         — MQTT config subscriber
+├── lib/
+│   ├── config.py              — config loading and dataclasses
+│   ├── mqtt.py                — MQTT publish helpers
+│   ├── tiles.py               — Web Mercator tile math
+│   ├── rainviewer.py          — RainViewer API client
+│   ├── cache.py               — frame and interp cache management
+│   ├── imaging.py             — ImageMagick subprocess wrappers
+│   ├── sftp.py                — HAOS file delivery via paramiko
+│   └── logging_config.py      — JSONL dual-output logging
+└── products/
+    └── reflectivity.py        — base reflectivity product
+
+/var/lib/highland/weather/
+├── config/weather.json        — daemon's working config (written by config_listener)
+├── assets/
+│   ├── base_map.png           — Stadia Maps base map (shared, product-agnostic)
+│   ├── overlays/
+│   │   └── reflectivity.png   — per-product static overlay (legend, crosshair)
+│   ├── cache/
+│   │   └── reflectivity/      — per-product frame cache
+│   │       ├── {hash}.png     — composited radar+basemap frame
+│   │       └── interp_*.png   — interpolated blend frames
+│   ├── loops/
+│   │   └── reflectivity.gif   — final animated output
+│   └── tmp/
+│       └── reflectivity/      — per-product temp workspace
+├── locks/                     — per-product lockfiles (PID-based)
+├── state/                     — last-run timestamps per product
+└── logs/weather.log           — JSONL log
 ```
 
-All threshold values are initial estimates — calibrate against observed events.
+### Systemd Services
+
+Two services run on the hub as `hub-daemon`:
+
+- **`highland-weather-daemon`** — wakes every 60 seconds, checks each enabled product's cadence, spawns product scripts in the background
+- **`highland-weather-config-listener`** — persistent MQTT subscriber, writes config to disk on receipt
+
+### Per-Product Pipeline (Reflectivity)
+
+1. Fetch RainViewer API frame list
+2. Short-circuit if frame hashes unchanged since last run
+3. Evict stale cache entries
+4. Fetch and composite any uncached frames (radar tiles over base map)
+5. Apply static overlay + per-frame timestamp to all frames
+6. Generate interpolated blend frames between consecutive real frames
+7. Assemble animated GIF with per-frame delays
+8. SFTP deliver to HAOS `/config/www/hub.local/weather/radar/`
+9. Publish MQTT events
+
+### Frame Caching
+
+RainViewer frame paths are hash-based and immutable — content at a given hash never changes. The pipeline caches:
+
+- **Real frames:** `/assets/cache/{hash}.png` — composited radar+basemap, cached indefinitely until hash leaves the active frame list
+- **Interpolated frames:** `/assets/cache/interp_{hash_a}_{hash_b}_{n}.png` — morph blends between adjacent overlaid frames, cached until either parent hash is evicted
+
+With 1-minute cadence and hash-based short-circuit, most runs cost only one RainViewer API call.
+
+### HAOS Delivery
+
+Completed GIFs are delivered via SFTP to `/config/www/hub.local/weather/radar/` on HAOS. Files are served at:
+
+```
+http://home.local:8123/local/hub.local/weather/radar/reflectivity.gif
+```
+
+This URL works both inside and outside the local network (via Nabu Casa or reverse proxy).
+
+### Node-RED Flow — `Utility: Weather Radar`
+
+The flow contains four groups:
+
+| Group | Purpose |
+|-------|--------|
+| **Sinks** | On Startup → Latch → Build Configuration → MQTT Out (retained config push) |
+| **Product Control** | Enable/Disable inject nodes → MQTT Out per product |
+| **Event Listeners** | MQTT In nodes for rendered/error/status/last_updated |
+| **Test Cases** | Manual inject for forcing config re-push |
+
+All exec nodes, HTTP request nodes, and script invocation are removed. The flow is purely MQTT publish/subscribe.
+
+### Configuration Flow
+
+`Build Configuration` assembles the daemon config from Node-RED's global config (`config.location`, `config.secrets`, `config.weather`) and publishes it as a retained JSON message to `highland/command/weather/config`. The config listener on the hub receives it and writes `/var/lib/highland/weather/config/weather.json`. The daemon reads this file fresh on every tick.
 
 ---
 
@@ -188,7 +282,9 @@ All threshold values are initial estimates — calibrate against observed events
 
 See `standards/MQTT_TOPICS.md` for authoritative payload definitions.
 
-**State (retained):** `highland/state/weather/conditions` | `forecast` | `precipitation` | `alerts`
+**State (retained):** `highland/state/weather/conditions` | `forecast` | `alerts` | `precipitation`
+
+> **Note:** `highland/state/weather/alerts` is published by `Utility: Weather Alerts` (Tier 1, live). The remaining state topics are Tier 2 targets.
 
 **Events (not retained):** `highland/event/weather/precipitation_start` | `precipitation_end` | `precipitation_type_change` | `lightning_detected` | `wind_gust` | `alert/new` | `alert/updated` | `alert/expired`
 
@@ -199,7 +295,7 @@ See `standards/MQTT_TOPICS.md` for authoritative payload definitions.
 - [ ] Ultrasonic snow depth sensor hardware selection and mounting
 - [ ] Optimal `precipIntensityError` confidence gate threshold — calibrate from observed events
 - [ ] Whether `nearestStormDistance` / `nearestStormBearing` useful for lightning threat lead time
-- [ ] Alert polling cadence — likely DORMANT-equivalent (15 min)
+- [ ] Stadia Maps plan upgrade required before go-live — see Licensing section below
 
 ---
 
@@ -212,4 +308,18 @@ See `standards/MQTT_TOPICS.md` for authoritative payload definitions.
 
 ---
 
-*Last Updated: 2026-03-26*
+## Licensing — Stadia Maps
+
+**Current status:** Free tier (development only)
+
+The radar base map pipeline fetches 25 raster tiles and assembles them server-side. This constitutes bulk downloading and server-side caching, which is **prohibited on the Stadia Maps free tier** except via their dedicated `static_cacheable` endpoint.
+
+The free tier is acceptable during development. Before go-live, upgrade to the **Starter plan ($20/month)**, which grants rights to cache and store map images digitally for as long as the subscription is active.
+
+**Base map refresh cadence at go-live:** Weekly rebuild (daemon checks age on each tick), plus manual force-rebuild by deleting `base_map.png`. At 25 tile fetches per rebuild, this is negligible against the Starter credit allowance.
+
+**Alternative worth evaluating:** The Stadia Maps `static_cacheable` endpoint returns a pre-rendered map image in a single API call rather than requiring tile assembly. This would simplify the pipeline further, though with less control over exact output dimensions and crop. Evaluate when upgrading.
+
+---
+
+*Last Updated: 2026-04-01*

@@ -373,6 +373,124 @@ Current precipitation event state. Distinct from conditions — this is the acti
 
 ---
 
+---
+
+#### Radar Topics
+
+**`highland/status/weather/radar/{product}`** ← RETAINED
+
+Current execution status of a radar product. Updated by the hub daemon at the start and end of each product run.
+
+| | |
+|--|--|
+| **Publisher** | Hub weather daemon (`highland-weather-daemon`) |
+| **Consumers** | `Utility: Weather Radar` (Event Listeners group) |
+| **Retained** | Yes |
+
+`{product}` values: `reflectivity` (additional products as added)
+
+`payload` values: `"idle"` | `"running"` | `"error"`
+
+---
+
+**`highland/state/weather/radar/{product}/last_updated`** ← RETAINED
+
+Unix timestamp of the most recent successful GIF render for a product.
+
+| | |
+|--|--|
+| **Publisher** | Hub weather daemon |
+| **Consumers** | `Utility: Weather Radar`, dashboards |
+| **Retained** | Yes |
+
+`payload`: Unix timestamp as string (e.g. `"1775040000"`)
+
+---
+
+**`highland/event/weather/radar/{product}/rendered`**
+
+Fires on successful GIF assembly and HAOS delivery.
+
+| | |
+|--|--|
+| **Publisher** | Hub weather daemon |
+| **Consumers** | `Utility: Weather Radar`, logging pipeline |
+| **Retained** | No |
+
+```json
+{
+  "product": "reflectivity",
+  "output_path": "/var/lib/highland/weather/assets/loops/reflectivity.gif",
+  "timestamp": 1775040000
+}
+```
+
+---
+
+**`highland/event/weather/radar/{product}/error`**
+
+Fires when a product run fails.
+
+| | |
+|--|--|
+| **Publisher** | Hub weather daemon |
+| **Consumers** | `Utility: Weather Radar`, logging pipeline |
+| **Retained** | No |
+
+```json
+{
+  "product": "reflectivity",
+  "error": "RainViewer API timeout",
+  "timestamp": 1775040000
+}
+```
+
+---
+
+**`highland/event/weather/radar/base_map/rendered`**
+
+Fires when the Stadia Maps base map is rebuilt.
+
+| | |
+|--|--|
+| **Publisher** | Hub weather daemon |
+| **Consumers** | Logging pipeline |
+| **Retained** | No |
+
+```json
+{ "timestamp": 1775040000 }
+```
+
+---
+
+**`highland/command/weather/config`** ← RETAINED
+
+Full weather daemon config payload. Published by `Utility: Weather Radar` on startup and on demand. The config listener on the hub receives this and writes it to disk.
+
+| | |
+|--|--|
+| **Publisher** | `Utility: Weather Radar` (Node-RED) |
+| **Consumer** | Hub `highland-weather-config-listener` |
+| **Retained** | Yes |
+
+Payload is the full `weather.json` structure — see `hub/weather/weather.json.template` for schema.
+
+---
+
+**`highland/command/weather/radar/{product}/enable`**
+
+Runtime enable/disable of a specific radar product. The config listener patches the on-disk config; the daemon picks up the change on its next tick.
+
+| | |
+|--|--|
+| **Publisher** | `Utility: Weather Radar` (Product Control group) |
+| **Consumer** | Hub `highland-weather-config-listener` |
+| **Retained** | No |
+
+`payload` values: `"true"` | `"false"`
+
+---
+
 #### Event Topics (Not Retained)
 
 **`highland/event/weather/precipitation_start`**
@@ -926,6 +1044,12 @@ HA audit payload (last backup older than 26 hours):
 | `highland/state/driveway/#` | Both bin states |
 | `highland/state/garage/#` | All garage state |
 | `highland/state/appliance/#` | All appliance cycle state |
+| `highland/event/weather/radar/#` | All radar events |
+| `highland/event/weather/radar/+/rendered` | Any product rendered |
+| `highland/event/weather/radar/+/error` | Any product error |
+| `highland/status/weather/radar/+` | All radar product status |
+| `highland/state/weather/radar/+/last_updated` | All radar last-updated state |
+| `highland/command/weather/radar/+/enable` | All radar enable/disable commands |
 | `highland/event/scheduler/#` | All scheduler events |
 | `highland/event/driveway/#` | All bin events |
 | `highland/event/mailbox/#` | All mailbox events |
@@ -955,4 +1079,4 @@ HA audit payload (last backup older than 26 hours):
 
 ---
 
-*Last Updated: 2026-03-27*
+*Last Updated: 2026-04-01*

@@ -75,7 +75,7 @@ Download these in advance to save time:
 - `eclipse-mosquitto:latest`
 - `koenkk/zigbee2mqtt:latest`
 - `zwavejs/zwave-js-ui:latest`
-- `nodered/node-red:latest`
+- `highland/nodered:local` (custom build — see Phase 3, section 3.5)
 - `codercom/code-server:latest` (optional)
 
 ---
@@ -544,7 +544,20 @@ sudo chown -R $USER:$USER /var/backups/highland
 sudo chown -R $USER:$USER /var/log/highland
 ```
 
-### 3.5 Docker Compose
+### 3.5 Node-RED Dockerfile
+
+Highland uses a custom Node-RED image that extends the official base with system tools required by automation flows. The Dockerfile is tracked in the repo at `workflow/Dockerfile.nodered`.
+
+```bash
+# Copy Dockerfile from the repo into the nodered build context directory
+cp ~/129-highland/workflow/Dockerfile.nodered /opt/highland/nodered/Dockerfile
+```
+
+> **USER in the Dockerfile:** `USER root` and `USER node-red` refer to users *inside the container* — not your host login account. The official Node-RED image creates an internal `node-red` user to run the process unprivileged. The Dockerfile temporarily switches to `root` to install packages, then switches back before the container starts.
+
+> **Adding packages later:** When new flows require additional system tools (e.g., `ffmpeg` for the video pipeline), add them to the `RUN apk add` line in the Dockerfile, commit the change to the repo, rebuild, and force-recreate. Keep a comment noting which flow requires each package. Note: the Node-RED base image is Alpine Linux — use `apk`, not `apt-get`.
+
+### 3.6 Docker Compose
 
 **Create `/opt/highland/docker-compose.yml`:**
 ```yaml
@@ -566,7 +579,10 @@ services:
       - TZ=America/New_York
 
   nodered:
-    image: nodered/node-red:latest
+    build:
+      context: ./nodered
+      dockerfile: Dockerfile
+    image: highland/nodered:local
     container_name: nodered
     restart: unless-stopped
     ports:
@@ -600,10 +616,15 @@ services:
 
 > **Password quoting in docker-compose:** If your Postgres password contains special characters (e.g. `!`, `#`, `:`), wrap the entire environment entry in single quotes as shown above for `POSTGRES_PASSWORD`. Single quotes in YAML mean completely literal — no escape processing. Avoid single quotes within the password itself; if your password contains one, use double quotes instead.
 
-### 3.6 Launch Node-RED
+### 3.7 Launch Node-RED
 
 ```bash
 cd /opt/highland
+
+# Build the custom Node-RED image first (required on first run and after Dockerfile changes)
+docker compose build nodered
+
+# Start all services
 docker compose up -d
 
 # Verify
@@ -613,7 +634,9 @@ docker compose logs nodered
 
 Access Node-RED at `http://workflow.local:1880`
 
-### 3.7 Node-RED Palette Installation
+> **Rebuilding after Dockerfile changes:** Run `docker compose build nodered && docker compose up -d --force-recreate nodered`. A plain restart will not pick up image changes.
+
+### 3.8 Node-RED Palette Installation
 
 Install via Node-RED UI (Menu → Manage Palette → Install):
 
@@ -624,7 +647,7 @@ Install via Node-RED UI (Menu → Manage Palette → Install):
 | `schedex` | Sunrise/sunset scheduling |
 | `node-red-contrib-moment` | Date/time handling (optional) |
 
-### 3.8 Settings.js Configuration
+### 3.9 Settings.js Configuration
 
 Edit `/opt/highland/nodered/data/settings.js`. See `nodered/ENVIRONMENT.md` for the full context storage config.
 
@@ -672,7 +695,7 @@ docker compose up -d --force-recreate nodered
 
 > **Docker environment variable gotcha:** `docker compose restart` does NOT pick up environment variable changes in docker-compose.yml. Always use `docker compose up -d --force-recreate {service}` when adding or changing environment variables.
 
-### 3.9 Home Assistant Configuration Node
+### 3.10 Home Assistant Configuration Node
 
 In Node-RED:
 1. Add any HA node to a flow
@@ -685,7 +708,7 @@ In Node-RED:
 
 > **mDNS inside Docker:** Docker containers cannot resolve `.local` hostnames via mDNS — Avahi runs on the host, not inside containers. If the server node stays stuck on "connecting", this is the cause. Fix: add `extra_hosts` to the Node-RED service in `docker-compose.yml` (see section 3.5) mapping `home.local` and `hub.local` to their actual IP addresses, then `docker compose up -d --force-recreate nodered`. Alternatively, use IP addresses directly in the Base URL during initial setup.
 
-### 3.10 Config Directory Setup
+### 3.11 Config Directory Setup
 
 **Create initial config files in `/home/nodered/config/`:**
 
@@ -921,6 +944,18 @@ else
 fi
 ```
 
+### Stadia Maps Plan Upgrade
+
+Before going live, upgrade the Stadia Maps account from the free tier to the **Starter plan ($20/month)**. The free tier prohibits server-side tile caching, which is required by `Utility: Weather Radar`. The Starter plan grants rights to cache and store map images digitally for as long as the subscription is active.
+
+1. Log in to stadiamaps.com
+2. Upgrade to Starter plan
+3. No code changes required — the existing API key continues to work
+
+See `subsystems/WEATHER_FLOW.md` Licensing section for full details and the `static_cacheable` endpoint alternative worth evaluating at upgrade time.
+
+---
+
 ### Healthchecks.io Setup
 
 1. Create account at healthchecks.io
@@ -1012,4 +1047,4 @@ Create these flows in Node-RED to establish baseline functionality:
 
 ---
 
-*Last Updated: 2026-03-27*
+*Last Updated: 2026-03-30*

@@ -1,0 +1,1358 @@
+[
+    {
+        "id": "area-kitchen",
+        "type": "tab",
+        "label": "Area: Kitchen",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "d33060772b6abe19",
+        "type": "group",
+        "z": "area-kitchen",
+        "name": "Dishwasher Operational States",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "1445e0c98124a26c",
+            "f6e3b70dce34c323",
+            "983691feada0d913",
+            "5795570bb3cb7f48",
+            "7954c97252562103",
+            "a676a150c126b614",
+            "a0a10082d1bfc19d",
+            "a5719a25e2e7bd25",
+            "4f0187eb7101132f",
+            "714cf02d957892f6",
+            "83184ff00457fe9c",
+            "2a0c809aee031a2d",
+            "a523abac32c33ead",
+            "803dbcfa3448f9c6",
+            "cfb639cdceca21de"
+        ],
+        "x": 54,
+        "y": 39,
+        "w": 772,
+        "h": 442
+    },
+    {
+        "id": "6486d4d854f31f6b",
+        "type": "group",
+        "z": "area-kitchen",
+        "name": "Sinks",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "dc368b35776314bc",
+            "c2a0dce6cb9fd174",
+            "388983f3946c1dd8",
+            "bed65d286d9aafbd",
+            "d25807cb4364bab2",
+            "0b48de3177a35ef7",
+            "a77d70bbdd7dadc2",
+            "f69c8e1dd0a7d508",
+            "33d0758017fd26e5",
+            "47586283e3832533",
+            "bc8df9f09065e6c2",
+            "79b8c658a21db03a",
+            "80afe7d8dd9ab1db",
+            "68f0c50c8811b523",
+            "f1b261600a9c59b7",
+            "26d095e499f257c0",
+            "cc28a8271cd2ac07",
+            "e1b95dee9d5b93e5",
+            "34c0ec303fc5d46a",
+            "813f814a580748a4"
+        ],
+        "x": 54,
+        "y": 879,
+        "w": 852,
+        "h": 382
+    },
+    {
+        "id": "6d32ba4481a09031",
+        "type": "group",
+        "z": "area-kitchen",
+        "name": "HA Discovery",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "49b99cb441f1a980",
+            "88c3a245f5b1954f",
+            "61d6b978bdb82441"
+        ],
+        "x": 54,
+        "y": 1299,
+        "w": 692,
+        "h": 82
+    },
+    {
+        "id": "68e4266ec885d5a1",
+        "type": "group",
+        "z": "area-kitchen",
+        "name": "Error Handling",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "c5c5d6d9a140d402",
+            "160eb05ff08b69ce"
+        ],
+        "x": 54,
+        "y": 1419,
+        "w": 362,
+        "h": 82
+    },
+    {
+        "id": "d6b4c76f5ea39aa1",
+        "type": "group",
+        "z": "area-kitchen",
+        "name": "Dishwasher Power States",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "d7aac0dd0b0e7fd6",
+            "151d927c9dfb68a5",
+            "5d73991af79593e8",
+            "bc5c338a6c392685",
+            "fa641b5872347796",
+            "5b3f471a8141a0e0",
+            "53bd2f548d6d6624",
+            "9fff302c27bc9a74",
+            "1258daab4f8727cd",
+            "200b34b3f85c8dba",
+            "257d255ce4e3f6f1"
+        ],
+        "x": 54,
+        "y": 519,
+        "w": 692,
+        "h": 322
+    },
+    {
+        "id": "a42904c353e86974",
+        "type": "group",
+        "z": "area-kitchen",
+        "name": "Test Cases",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "4a57a4afd6be7cc1",
+            "1c796d9dcc881a73",
+            "ec48e5100969c5e3",
+            "880518a4a50a7939",
+            "5c53daedc4b31a06",
+            "60547addfa1eca2f"
+        ],
+        "x": 54,
+        "y": 1539,
+        "w": 672,
+        "h": 142
+    },
+    {
+        "id": "1445e0c98124a26c",
+        "type": "link in",
+        "z": "area-kitchen",
+        "g": "d33060772b6abe19",
+        "name": "Update Operational States",
+        "links": [
+            "0b48de3177a35ef7",
+            "60547addfa1eca2f",
+            "79b8c658a21db03a",
+            "80afe7d8dd9ab1db",
+            "cc28a8271cd2ac07",
+            "d25807cb4364bab2",
+            "ec48e5100969c5e3"
+        ],
+        "x": 190,
+        "y": 80,
+        "wires": [
+            [
+                "f6e3b70dce34c323"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "f6e3b70dce34c323",
+        "type": "function",
+        "z": "area-kitchen",
+        "g": "d33060772b6abe19",
+        "name": "State Machine",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst now = Date.now();\nconst nowISO = new Date(now).toISOString();\n\nconst cfg = global.get('config.device_monitoring')?.appliances?.dishwasher?.attention || {\n    vent_zone_threshold: -5,\n    unload_zone_threshold: -80,\n    venting_timeout_s: 900,\n    guest_duration_s: 360,\n    likely_empty_timeout_h: 2,\n    nag_first_h: 1,\n    nag_repeat_h: 2,\n    notify_on_likely_empty_timeout: false\n};\n\nlet opState        = flow.get('operational_state') || 'IDLE';\nlet contentState   = flow.get('content_state')     || 'DIRTY';\nlet attentionState = flow.get('attention_state')   || 'NONE';\n\nconst prevContent   = contentState;\nconst prevAttention = attentionState;\n\nlet attentionTrigger    = null;\nlet contentTrigger      = null;\nlet notificationPayload = null;\nconst type = msg.event_type;\n\nif (type === 'cycle_started') {\n    opState        = 'RUNNING';\n    contentState   = 'DIRTY';\n    attentionState = 'NONE';\n    flow.set('unload_zone_entry_time', null);\n    flow.set('vent_zone_entry_time', null);\n    flow.set('likely_empty_entry_time', null);\n\n} else if (type === 'cycle_finished') {\n    opState = 'IDLE';\n    if (contentState === 'DIRTY') {\n        contentState     = 'CLEAN';\n        attentionState   = 'UNATTENDED';\n        attentionTrigger = 'cycle_finished';\n        flow.set('cycle_finished_at', nowISO);\n        flow.set('cycle_finished_ms', now);\n        flow.set('vented', false);\n        flow.set('vented_at', null);\n        flow.set('nag_count', 0);\n        flow.set('last_nag_at', null);\n        flow.set('likely_empty_entry_time', null);\n        notificationPayload = { type: 'cycle_finished' };\n    }\n\n} else if (opState === 'IDLE') {\n\n    if (type === 'button') {\n        if (['UNATTENDED', 'VENTING', 'LIKELY_EMPTY'].includes(attentionState)) {\n            attentionState   = 'NONE';\n            attentionTrigger = 'button';\n            notificationPayload = { type: 'button_confirmed' };\n            flow.set('vent_zone_entry_time', null);\n            flow.set('unload_zone_entry_time', null);\n            flow.set('likely_empty_entry_time', null);\n        }\n\n    } else if (type === 'tilt' && attentionState !== 'NONE') {\n        const { angle_x, zone } = msg.tilt;\n        flow.set('last_angle_x', angle_x);\n        flow.set('last_door_event_at', nowISO);\n\n        if (attentionState === 'UNATTENDED') {\n            if (zone === 'closed_vent') {\n                attentionState   = 'VENTING';\n                attentionTrigger = 'vent_opened';\n                flow.set('vent_zone_entry_time', now);\n                flow.set('vented', true);\n                flow.set('vented_at', nowISO);\n                flow.set('unload_zone_entry_time', null);\n            } else if (zone === 'unload') {\n                if (!flow.get('unload_zone_entry_time')) {\n                    flow.set('unload_zone_entry_time', now);\n                }\n            } else {\n                flow.set('unload_zone_entry_time', null);\n            }\n        } else if (attentionState === 'VENTING') {\n            if (zone !== 'closed_vent') {\n                attentionState   = 'UNATTENDED';\n                attentionTrigger = 'vent_closed';\n                flow.set('vent_zone_entry_time', null);\n                notificationPayload = { type: 'venting_to_unattended' };\n            }\n        }\n\n    } else if (type === 'tick') {\n\n        if (attentionState === 'VENTING') {\n            const ventEntry = flow.get('vent_zone_entry_time');\n            if (ventEntry && (now - ventEntry) >= cfg.venting_timeout_s * 1000) {\n                attentionState   = 'UNATTENDED';\n                attentionTrigger = 'vent_timeout';\n                flow.set('vent_zone_entry_time', null);\n                notificationPayload = { type: 'venting_to_unattended' };\n            }\n\n        } else if (attentionState === 'UNATTENDED' || attentionState === 'LIKELY_EMPTY') {\n            const unloadEntry = flow.get('unload_zone_entry_time');\n            if (unloadEntry && (now - unloadEntry) >= cfg.guest_duration_s * 1000) {\n                attentionState   = 'LIKELY_EMPTY';\n                attentionTrigger = 'guest_heuristic';\n                flow.set('unload_zone_entry_time', null);\n                flow.set('likely_empty_entry_time', now);\n                notificationPayload = { type: 'likely_empty' };\n            } else {\n                const cycleMs     = flow.get('cycle_finished_ms') || now;\n                const lastNag     = flow.get('last_nag_at');\n                const nagCount    = flow.get('nag_count') || 0;\n                const firstNagMs  = cfg.nag_first_h  * 3600000;\n                const repeatNagMs = cfg.nag_repeat_h * 3600000;\n                const nagDue = nagCount === 0\n                    ? (now - cycleMs) >= firstNagMs\n                    : (lastNag && (now - lastNag) >= repeatNagMs);\n                if (nagDue) {\n                    flow.set('nag_count', nagCount + 1);\n                    flow.set('last_nag_at', now);\n                    const elapsedH    = Math.round((now - cycleMs) / 3600000);\n                    notificationPayload = {\n                        type: 'nag',\n                        elapsed_h: elapsedH,\n                    };\n                }\n            }\n\n        } else if (attentionState === 'LIKELY_EMPTY') {\n            const likelyEntry = flow.get('likely_empty_entry_time');\n            if (likelyEntry && (now - likelyEntry) >= cfg.likely_empty_timeout_h * 3600000) {\n                attentionState   = 'NONE';\n                attentionTrigger = 'likely_empty_timeout';\n                if (cfg.notify_on_likely_empty_timeout) {\n                    notificationPayload = { type: 'likely_empty_timeout' };\n                }\n            }\n        }\n    }\n}\n\nif (attentionState === 'NONE' && contentState === 'CLEAN') {\n    contentState   = 'DIRTY';\n    contentTrigger = attentionTrigger || 'attention_none';\n}\n\nflow.set('operational_state', opState);\nflow.set('content_state',     contentState);\nflow.set('attention_state',   attentionState);\n\nconst statusColors = {\n    NONE: 'grey', UNATTENDED: 'yellow', VENTING: 'blue', LIKELY_EMPTY: 'orange'\n};\n\nnode.status({\n    fill:  contentState === 'DIRTY' ? 'grey' : (statusColors[attentionState] || 'yellow'),\n    shape: 'dot',\n    text:  formatStatus(`${contentState} | ${attentionState}`)\n});\n\nconst stateSnapshot = {\n    contentState,\n    attentionState,\n    opState,\n    cycleFinishedAt: flow.get('cycle_finished_at'),\n    lastDoorEventAt: flow.get('last_door_event_at'),\n    lastAngleX:      flow.get('last_angle_x')\n};\n\nnode.send({ target: 'Publish Operational States', payload: stateSnapshot });\n\nif (attentionTrigger || contentTrigger) {\n    node.send({\n        target: 'Publish Operational Events',\n        ts: nowISO,\n        attentionChanged: attentionTrigger ? {\n            previous_state: prevAttention,\n            new_state:      attentionState,\n            trigger:        attentionTrigger\n        } : null,\n        contentChanged: contentTrigger ? {\n            previous_state: prevContent,\n            new_state:      contentState,\n            trigger:        contentTrigger\n        } : null\n    });\n}\n\nif (notificationPayload) {\n    node.send({\n        target: 'Publish Operational Notifications',\n        ts: nowISO,\n        notification: notificationPayload\n    });\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 80,
+        "wires": [
+            [
+                "983691feada0d913"
+            ]
+        ]
+    },
+    {
+        "id": "983691feada0d913",
+        "type": "link call",
+        "z": "area-kitchen",
+        "g": "d33060772b6abe19",
+        "name": "Dispatch",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "30",
+        "x": 640,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "5795570bb3cb7f48",
+        "type": "mqtt out",
+        "z": "area-kitchen",
+        "g": "d33060772b6abe19",
+        "name": "Publish",
+        "topic": "",
+        "qos": "0",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 660,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "7954c97252562103",
+        "type": "link in",
+        "z": "area-kitchen",
+        "g": "d33060772b6abe19",
+        "name": "Publish Operational States",
+        "links": [],
+        "x": 210,
+        "y": 140,
+        "wires": [
+            [
+                "a676a150c126b614"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "a676a150c126b614",
+        "type": "function",
+        "z": "area-kitchen",
+        "g": "d33060772b6abe19",
+        "name": "Generate States",
+        "func": "const sm = msg.payload;\nconst ts = new Date().toISOString();\n\nnode.send([{\n    topic:   'highland/state/appliance/dishwasher/content',\n    payload: JSON.stringify({\n        timestamp: ts,\n        source:    'dishwasher_attention',\n        state:     sm.contentState\n    }),\n    retain: true\n}, null]);\n\nnode.send([{\n    topic:   'highland/state/appliance/dishwasher/attention',\n    payload: JSON.stringify({\n        timestamp:          ts,\n        source:             'dishwasher_attention',\n        state:              sm.attentionState,\n        cycle_finished_at:  sm.cycleFinishedAt,\n        last_door_event_at: sm.lastDoorEventAt,\n        last_angle_x:       sm.lastAngleX\n    }),\n    retain: true\n}, null]);\n\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 460,
+        "y": 140,
+        "wires": [
+            [
+                "5795570bb3cb7f48"
+            ],
+            [
+                "a0a10082d1bfc19d"
+            ]
+        ]
+    },
+    {
+        "id": "a0a10082d1bfc19d",
+        "type": "link out",
+        "z": "area-kitchen",
+        "g": "d33060772b6abe19",
+        "name": "Return",
+        "mode": "return",
+        "links": [],
+        "x": 615,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "a5719a25e2e7bd25",
+        "type": "link in",
+        "z": "area-kitchen",
+        "g": "d33060772b6abe19",
+        "name": "Publish Operational Events",
+        "links": [],
+        "x": 210,
+        "y": 260,
+        "wires": [
+            [
+                "4f0187eb7101132f"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "4f0187eb7101132f",
+        "type": "function",
+        "z": "area-kitchen",
+        "g": "d33060772b6abe19",
+        "name": "Generate Events",
+        "func": "const ts = msg.ts;\n\nif (msg.attentionChanged) {\n    node.send([{\n        topic:   'highland/event/appliance/dishwasher/attention_changed',\n        payload: JSON.stringify({\n            timestamp:      ts,\n            source:         'dishwasher_attention',\n            previous_state: msg.attentionChanged.previous_state,\n            new_state:      msg.attentionChanged.new_state,\n            trigger:        msg.attentionChanged.trigger\n        }),\n        retain: false\n    }, null]);\n}\n\nif (msg.contentChanged) {\n    node.send([{\n        topic:   'highland/event/appliance/dishwasher/content_changed',\n        payload: JSON.stringify({\n            timestamp:      ts,\n            source:         'dishwasher_attention',\n            previous_state: msg.contentChanged.previous_state,\n            new_state:      msg.contentChanged.new_state,\n            trigger:        msg.contentChanged.trigger\n        }),\n        retain: false\n    }, null]);\n}\n\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 260,
+        "wires": [
+            [
+                "cfb639cdceca21de"
+            ],
+            [
+                "714cf02d957892f6"
+            ]
+        ]
+    },
+    {
+        "id": "714cf02d957892f6",
+        "type": "link out",
+        "z": "area-kitchen",
+        "g": "d33060772b6abe19",
+        "name": "Return",
+        "mode": "return",
+        "links": [],
+        "x": 635,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "83184ff00457fe9c",
+        "type": "link in",
+        "z": "area-kitchen",
+        "g": "d33060772b6abe19",
+        "name": "Publish Operational Notifications",
+        "links": [],
+        "x": 230,
+        "y": 380,
+        "wires": [
+            [
+                "2a0c809aee031a2d"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "2a0c809aee031a2d",
+        "type": "function",
+        "z": "area-kitchen",
+        "g": "d33060772b6abe19",
+        "name": "Generate Notifications",
+        "func": "const n   = msg.notification;\nconst ts  = msg.ts;\nconst targets = ['people.*.ha_companion'];\nconst severity = 'low';\nlet title, message;\n\nswitch (n.type) {\n    case 'cycle_finished':\n        title   = 'Dishwasher finished';\n        message = 'Dishes are clean.';\n        break;\n    case 'nag':\n        title   = 'Dishwasher reminder';\n        message = `Dishwasher has been done for ${n.elapsed_h} hour${n.elapsed_h !== 1 ? 's' : ''}.`;\n        break;\n}\n\nif (!title) {\n    return [null, msg];\n}\n\nreturn [{\n    topic:   'highland/event/notify',\n    payload: JSON.stringify({\n        timestamp: ts,\n        source:    'dishwasher_attention',\n        severity,\n        title,\n        message,\n        targets,\n        icon: 'mdi:dishwasher'\n    }),\n    retain: false\n}, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 520,
+        "y": 380,
+        "wires": [
+            [
+                "803dbcfa3448f9c6"
+            ],
+            [
+                "a523abac32c33ead"
+            ]
+        ]
+    },
+    {
+        "id": "a523abac32c33ead",
+        "type": "link out",
+        "z": "area-kitchen",
+        "g": "d33060772b6abe19",
+        "name": "Return",
+        "mode": "return",
+        "links": [],
+        "x": 695,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "803dbcfa3448f9c6",
+        "type": "mqtt out",
+        "z": "area-kitchen",
+        "g": "d33060772b6abe19",
+        "name": "Publish",
+        "topic": "",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 740,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "cfb639cdceca21de",
+        "type": "mqtt out",
+        "z": "area-kitchen",
+        "g": "d33060772b6abe19",
+        "name": "Publish",
+        "topic": "",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 680,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "dc368b35776314bc",
+        "type": "mqtt in",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Cycle Finished",
+        "topic": "highland/event/appliance/dishwasher/cycle_finished",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 160,
+        "y": 920,
+        "wires": [
+            [
+                "a77d70bbdd7dadc2"
+            ]
+        ]
+    },
+    {
+        "id": "c2a0dce6cb9fd174",
+        "type": "mqtt in",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Cycle Started",
+        "topic": "highland/event/appliance/dishwasher/cycle_started",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 980,
+        "wires": [
+            [
+                "f69c8e1dd0a7d508"
+            ]
+        ]
+    },
+    {
+        "id": "388983f3946c1dd8",
+        "type": "mqtt in",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Tilt Sensor",
+        "topic": "zigbee2mqtt/kitchen_dishwasher_vibration",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 1040,
+        "wires": [
+            [
+                "33d0758017fd26e5"
+            ]
+        ]
+    },
+    {
+        "id": "bed65d286d9aafbd",
+        "type": "mqtt in",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Button",
+        "topic": "zigbee2mqtt/kitchen_dishwasher_button",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 130,
+        "y": 1100,
+        "wires": [
+            [
+                "68f0c50c8811b523"
+            ]
+        ]
+    },
+    {
+        "id": "d25807cb4364bab2",
+        "type": "link out",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Update Operational States",
+        "mode": "link",
+        "links": [
+            "1445e0c98124a26c"
+        ],
+        "x": 600,
+        "y": 920,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0b48de3177a35ef7",
+        "type": "link out",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Update Operational States",
+        "mode": "link",
+        "links": [
+            "1445e0c98124a26c"
+        ],
+        "x": 580,
+        "y": 980,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "a77d70bbdd7dadc2",
+        "type": "change",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Tag Event",
+        "rules": [
+            {
+                "t": "set",
+                "p": "event_type",
+                "pt": "msg",
+                "to": "cycle_finished",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 360,
+        "y": 920,
+        "wires": [
+            [
+                "d25807cb4364bab2"
+            ]
+        ]
+    },
+    {
+        "id": "f69c8e1dd0a7d508",
+        "type": "change",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Tag Event",
+        "rules": [
+            {
+                "t": "set",
+                "p": "event_type",
+                "pt": "msg",
+                "to": "cycle_started",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 340,
+        "y": 980,
+        "wires": [
+            [
+                "0b48de3177a35ef7"
+            ]
+        ]
+    },
+    {
+        "id": "33d0758017fd26e5",
+        "type": "change",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Tag Event",
+        "rules": [
+            {
+                "t": "set",
+                "p": "event_type",
+                "pt": "msg",
+                "to": "tilt",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 320,
+        "y": 1040,
+        "wires": [
+            [
+                "bc8df9f09065e6c2"
+            ]
+        ]
+    },
+    {
+        "id": "47586283e3832533",
+        "type": "change",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Tag Event",
+        "rules": [
+            {
+                "t": "set",
+                "p": "event_type",
+                "pt": "msg",
+                "to": "button",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 500,
+        "y": 1100,
+        "wires": [
+            [
+                "80afe7d8dd9ab1db"
+            ]
+        ]
+    },
+    {
+        "id": "bc8df9f09065e6c2",
+        "type": "function",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Extract Angle",
+        "func": "const angle_x = msg.payload.angle_x;\nif (angle_x === undefined || angle_x === null) return null;\n\nconst cfg = global.get('config.device_monitoring')?.appliances?.dishwasher?.attention || {};\nconst ventThreshold   = cfg.vent_zone_threshold  ?? -5;\nconst unloadThreshold = cfg.unload_zone_threshold ?? -80;\n\nlet zone;\nif (angle_x > ventThreshold) {\n    zone = 'closed_vent';\n} else if (angle_x <= unloadThreshold) {\n    zone = 'unload';\n} else {\n    zone = 'middle';\n}\n\nmsg.tilt = { angle_x, zone };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 510,
+        "y": 1040,
+        "wires": [
+            [
+                "79b8c658a21db03a"
+            ]
+        ]
+    },
+    {
+        "id": "79b8c658a21db03a",
+        "type": "link out",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Update Operational States",
+        "mode": "link",
+        "links": [
+            "1445e0c98124a26c"
+        ],
+        "x": 760,
+        "y": 1040,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "80afe7d8dd9ab1db",
+        "type": "link out",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Update Operational States",
+        "mode": "link",
+        "links": [
+            "1445e0c98124a26c"
+        ],
+        "x": 740,
+        "y": 1100,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "68f0c50c8811b523",
+        "type": "debounce",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Debounce",
+        "property": "payload.action",
+        "propertyType": "msg",
+        "time": "100",
+        "timeUnit": "msecs",
+        "block": false,
+        "filter": true,
+        "restart": false,
+        "bytopic": false,
+        "showState": false,
+        "x": 310,
+        "y": 1100,
+        "wires": [
+            [
+                "47586283e3832533"
+            ]
+        ]
+    },
+    {
+        "id": "f1b261600a9c59b7",
+        "type": "inject",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Tick",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 1220,
+        "wires": [
+            [
+                "26d095e499f257c0"
+            ]
+        ]
+    },
+    {
+        "id": "26d095e499f257c0",
+        "type": "change",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Tag Event",
+        "rules": [
+            {
+                "t": "set",
+                "p": "event_type",
+                "pt": "msg",
+                "to": "tick",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 300,
+        "y": 1220,
+        "wires": [
+            [
+                "cc28a8271cd2ac07"
+            ]
+        ]
+    },
+    {
+        "id": "cc28a8271cd2ac07",
+        "type": "link out",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Update Operational States",
+        "mode": "link",
+        "links": [
+            "1445e0c98124a26c",
+            "d7aac0dd0b0e7fd6"
+        ],
+        "x": 540,
+        "y": 1220,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "49b99cb441f1a980",
+        "type": "inject",
+        "z": "area-kitchen",
+        "g": "6d32ba4481a09031",
+        "name": "On Startup",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.5,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 1340,
+        "wires": [
+            [
+                "88c3a245f5b1954f"
+            ]
+        ]
+    },
+    {
+        "id": "88c3a245f5b1954f",
+        "type": "function",
+        "z": "area-kitchen",
+        "g": "6d32ba4481a09031",
+        "name": "Build Dishwasher Discovery",
+        "func": "const device = {\n    identifiers: ['highland_dishwasher_attention'],\n    name: 'Dishwasher Attention',\n    model: 'Attention State Machine',\n    manufacturer: 'Highland'\n};\n\nnode.send({\n    topic: 'homeassistant/sensor/highland_dishwasher_attention/content/config',\n    payload: JSON.stringify({\n        name: 'Dishwasher Content',\n        unique_id: 'highland_dishwasher_content',\n        state_topic: 'highland/state/appliance/dishwasher/content',\n        value_template: '{{ value_json.state }}',\n        device\n    }),\n    retain: true\n});\n\nnode.send({\n    topic: 'homeassistant/sensor/highland_dishwasher_attention/attention/config',\n    payload: JSON.stringify({\n        name: 'Dishwasher Attention',\n        unique_id: 'highland_dishwasher_attention_state',\n        state_topic: 'highland/state/appliance/dishwasher/attention',\n        value_template: '{{ value_json.state }}',\n        device\n    }),\n    retain: true\n});\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 1340,
+        "wires": [
+            [
+                "61d6b978bdb82441"
+            ]
+        ]
+    },
+    {
+        "id": "61d6b978bdb82441",
+        "type": "mqtt out",
+        "z": "area-kitchen",
+        "g": "6d32ba4481a09031",
+        "name": "Publish",
+        "topic": "",
+        "qos": "0",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 660,
+        "y": 1340,
+        "wires": []
+    },
+    {
+        "id": "c5c5d6d9a140d402",
+        "type": "catch",
+        "z": "area-kitchen",
+        "g": "68e4266ec885d5a1",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 140,
+        "y": 1460,
+        "wires": [
+            [
+                "160eb05ff08b69ce"
+            ]
+        ]
+    },
+    {
+        "id": "160eb05ff08b69ce",
+        "type": "debug",
+        "z": "area-kitchen",
+        "g": "68e4266ec885d5a1",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 320,
+        "y": 1460,
+        "wires": []
+    },
+    {
+        "id": "d7aac0dd0b0e7fd6",
+        "type": "link in",
+        "z": "area-kitchen",
+        "g": "d6b4c76f5ea39aa1",
+        "name": "Update Power States",
+        "links": [
+            "813f814a580748a4",
+            "cc28a8271cd2ac07"
+        ],
+        "x": 180,
+        "y": 560,
+        "wires": [
+            [
+                "151d927c9dfb68a5"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "151d927c9dfb68a5",
+        "type": "function",
+        "z": "area-kitchen",
+        "g": "d6b4c76f5ea39aa1",
+        "name": "State Machine",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst now = Date.now();\nconst nowISO = new Date(now).toISOString();\n\nconst cfg = global.get('config.device_monitoring')?.appliances?.dishwasher?.cycle || {\n    start_threshold_w: 2.0,\n    idle_baseline_w: 1.0,\n    start_duration_s: 5,\n    pause_threshold_w: 2.0,\n    pause_delay_s: 60,\n    expecting_completion_threshold_w: 5.0,\n    expecting_completion_delay_s: 300,\n    alarm_signal_min_w: 8.0,\n    alarm_signal_max_w: 50.0,\n    off_delay_s: 1800,\n    completion_min_s: 900,\n    watchdog_timeout_s: 600\n};\n\nlet cycleState    = flow.get('cycle_state')       || 'off';\nlet cycleId       = flow.get('cycle_id')          || null;\nlet cycleStartMs  = flow.get('cycle_start_ms')    || null;\nlet energyWh      = flow.get('cycle_energy_wh')   || 0;\nlet maxPowerW     = flow.get('cycle_max_power_w') || 0;\nlet lastPowerW    = flow.get('last_power_w')      || 0;\nlet lastReadingMs = flow.get('last_reading_ms')   || null;\nlet stateEnterMs  = flow.get('state_enter_ms')    || now;\n\nconst type    = msg.event_type;\nconst power_w = (type === 'power') ? msg.power_w : null;\nlet cycleEvent = null;\n\n// ─── Energy integration ───────────────────────────────────────────────────\nif (type === 'power' && lastReadingMs !== null &&\n    !['off', 'finished', 'interrupted', 'force_stopped'].includes(cycleState)) {\n    const dt_h = (now - lastReadingMs) / 3_600_000;\n    if (dt_h > 0 && dt_h < 0.5) {\n        energyWh += (lastPowerW + power_w) / 2 * dt_h;\n    }\n    if (power_w > maxPowerW) maxPowerW = power_w;\n}\n\n// ─── Watchdog (on tick) ───────────────────────────────────────────────────\nif (type === 'tick' &&\n    ['running', 'between_phases', 'expecting_completion', 'ending'].includes(cycleState)) {\n    const lastPowerReadingMs = flow.get('last_power_reading_ms');\n    if (lastPowerReadingMs && (now - lastPowerReadingMs) >= cfg.watchdog_timeout_s * 1000) {\n        cycleState   = 'force_stopped';\n        stateEnterMs = now;\n        cycleEvent   = 'force_stopped';\n        flow.set('low_power_since_ms', null);\n        node.warn('Dishwasher watchdog: sensor silent, forcing stop');\n    }\n}\n\n// ─── Auto-expire terminal states (on tick) ────────────────────────────────\nif (type === 'tick' &&\n    ['finished', 'interrupted', 'force_stopped'].includes(cycleState) &&\n    cycleEvent === null) {\n    if ((now - stateEnterMs) >= cfg.off_delay_s * 1000) {\n        cycleState   = 'off';\n        stateEnterMs = now;\n        cycleId      = null;\n        cycleStartMs = null;\n        energyWh     = 0;\n        maxPowerW    = 0;\n    }\n}\n\nif (type === 'power' && msg.cold_start &&\n    ['running', 'between_phases', 'expecting_completion', 'ending'].includes(cycleState) &&\n    power_w <= cfg.idle_baseline_w) {\n    // Dishwasher reset during NR downtime — treat as interrupted\n    cycleState   = 'interrupted';\n    stateEnterMs = now;\n    cycleEvent   = 'cycle_interrupted';\n}\n\n// ─── Power-driven transitions ─────────────────────────────────────────────\nif (type === 'power' && cycleEvent === null) {\n\n    if (cycleState === 'off') {\n        if (power_w >= cfg.start_threshold_w) {\n            cycleState   = 'starting';\n            stateEnterMs = now;\n            energyWh     = 0;\n            maxPowerW    = power_w;\n            const d = new Date(now);\n            cycleId = `dw_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}${String(d.getSeconds()).padStart(2,'0')}`;\n            cycleStartMs = now;\n        }\n\n    } else if (cycleState === 'starting') {\n        if (power_w < cfg.start_threshold_w) {\n            // False start\n            cycleState   = 'off';\n            stateEnterMs = now;\n            cycleId      = null;\n            cycleStartMs = null;\n            energyWh     = 0;\n            maxPowerW    = 0;\n        } else if ((now - stateEnterMs) >= cfg.start_duration_s * 1000) {\n            cycleState   = 'running';\n            stateEnterMs = now;\n            cycleEvent   = 'cycle_started';\n            flow.set('low_power_since_ms', null);\n        }\n\n    } else if (cycleState === 'running') {\n        if (power_w === 0) {\n            // True power-off — board completely dark, not a phase gap\n            flow.set('low_power_since_ms', null);\n            const zeroSince = flow.get('true_zero_since_ms');\n            if (!zeroSince) {\n                flow.set('true_zero_since_ms', now);\n            } else if ((now - zeroSince) >= cfg.pause_delay_s * 1000) {\n                cycleState   = 'interrupted';\n                stateEnterMs = now;\n                cycleEvent   = 'cycle_interrupted';\n                flow.set('true_zero_since_ms', null);\n            }\n        } else if (power_w < cfg.pause_threshold_w) {\n            // Phase gap — control board still alive at 1W\n            flow.set('true_zero_since_ms', null);\n            const lowSince = flow.get('low_power_since_ms');\n            if (!lowSince) {\n                flow.set('low_power_since_ms', now);\n            } else if ((now - lowSince) >= cfg.pause_delay_s * 1000) {\n                cycleState   = 'between_phases';\n                stateEnterMs = now;\n                flow.set('low_power_since_ms', null);\n            }\n        } else {\n            flow.set('true_zero_since_ms', null);\n            flow.set('low_power_since_ms', null);\n        }\n\n    } else if (cycleState === 'between_phases') {\n        if (power_w >= cfg.pause_threshold_w) {\n            cycleState   = 'running';\n            stateEnterMs = now;\n            flow.set('low_power_since_ms', null);\n        }\n\n    } else if (cycleState === 'expecting_completion') {\n        if (power_w >= cfg.alarm_signal_min_w && power_w <= cfg.alarm_signal_max_w) {\n            // Alarm signal — cycle finished\n            cycleState   = 'finished';\n            stateEnterMs = now;\n            cycleEvent   = 'cycle_finished';\n        } else if (power_w > cfg.alarm_signal_max_w) {\n            // Another heat cycle resumed\n            cycleState   = 'running';\n            stateEnterMs = now;\n            flow.set('low_power_since_ms', null);\n        }\n\n    } else if (cycleState === 'ending') {\n        if (power_w >= cfg.start_threshold_w) {\n            cycleState   = 'running';\n            stateEnterMs = now;\n            flow.set('low_power_since_ms', null);\n        }\n    }\n\n// ─── Tick-driven transitions ──────────────────────────────────────────────\n} else if (type === 'tick' && cycleEvent === null) {\n\n    if (cycleState === 'running') {\n        // Also check pause via tick in case ZEN15 stopped reporting during low-power period\n        const lowSince = flow.get('low_power_since_ms');\n        if (lowSince && (now - lowSince) >= cfg.pause_delay_s * 1000) {\n            cycleState   = 'between_phases';\n            stateEnterMs = now;\n            flow.set('low_power_since_ms', null);\n        }\n\n    } else if (cycleState === 'between_phases') {\n        if ((now - stateEnterMs) >= cfg.expecting_completion_delay_s * 1000) {\n            cycleState   = 'expecting_completion';\n            stateEnterMs = now;\n        }\n\n    } else if (cycleState === 'expecting_completion') {\n        if ((now - stateEnterMs) >= cfg.off_delay_s * 1000) {\n            // Fallback: alarm never came — use energy gate\n            cycleState   = 'ending';\n            stateEnterMs = now;\n        }\n\n    } else if (cycleState === 'ending') {\n        if ((now - stateEnterMs) >= cfg.off_delay_s * 1000) {\n            const duration_s = cycleStartMs ? Math.round((now - cycleStartMs) / 1000) : 0;\n            if (duration_s >= cfg.completion_min_s) {\n                cycleState   = 'finished';\n                stateEnterMs = now;\n                cycleEvent   = 'cycle_finished';\n            } else {\n                cycleState   = 'interrupted';\n                stateEnterMs = now;\n                cycleEvent   = 'cycle_interrupted';\n            }\n        }\n    }\n}\n\n// ─── Persist ──────────────────────────────────────────────────────────────\nflow.set('cycle_state',       cycleState);\nflow.set('cycle_id',          cycleId);\nflow.set('cycle_start_ms',    cycleStartMs);\nflow.set('cycle_energy_wh',   energyWh);\nflow.set('cycle_max_power_w', maxPowerW);\nflow.set('state_enter_ms',    stateEnterMs);\nif (type === 'power') {\n    flow.set('last_power_w',    power_w);\n    flow.set('last_reading_ms', now);\n}\n\n// ─── Node status ──────────────────────────────────────────────────────────\nconst statusFill = {\n    off: 'grey', starting: 'yellow', running: 'green',\n    between_phases: 'yellow', expecting_completion: 'blue',\n    ending: 'yellow', finished: 'green',\n    interrupted: 'red', force_stopped: 'red'\n};\nconst duration_s = cycleStartMs ? Math.round((now - cycleStartMs) / 1000) : 0;\nnode.status({\n    fill:  statusFill[cycleState] || 'grey',\n    shape: 'dot',\n    text:  formatStatus(`${cycleState.toUpperCase()} | ${duration_s}s | ${energyWh.toFixed(1)}Wh`)\n});\n\n// ─── Dispatch ─────────────────────────────────────────────────────────────\nconst cycleSnapshot = {\n    state:                 cycleState,\n    cycle_id:              cycleId,\n    cycle_start:           cycleStartMs ? new Date(cycleStartMs).toISOString() : null,\n    duration_s:            duration_s,\n    energy_wh:             Math.round(energyWh * 100) / 100,\n    power_w:               type === 'power' ? power_w : lastPowerW,\n    max_power_w:           Math.round(maxPowerW * 100) / 100,\n    matched_profile:       null,\n    estimated_remaining_s: null\n};\n\nnode.send({ target: 'Publish Power States', payload: cycleSnapshot });\n\nif (cycleEvent) {\n    node.send({\n        target:      'Publish Power Events',\n        ts:          nowISO,\n        cycleEvent:  cycleEvent,\n        cycleId:     cycleId,\n        cycleStart:  cycleSnapshot.cycle_start,\n        duration_s:  duration_s,\n        energy_wh:   cycleSnapshot.energy_wh,\n        max_power_w: cycleSnapshot.max_power_w\n    });\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 560,
+        "wires": [
+            [
+                "5d73991af79593e8"
+            ]
+        ]
+    },
+    {
+        "id": "5d73991af79593e8",
+        "type": "link call",
+        "z": "area-kitchen",
+        "g": "d6b4c76f5ea39aa1",
+        "name": "Dispatch",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "30",
+        "x": 660,
+        "y": 560,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "4a57a4afd6be7cc1",
+        "type": "inject",
+        "z": "area-kitchen",
+        "g": "a42904c353e86974",
+        "name": "Manual",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            },
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "highland/event/appliance/dishwasher/cycle_started",
+        "payload": "{}",
+        "payloadType": "json",
+        "x": 150,
+        "y": 1580,
+        "wires": [
+            [
+                "1c796d9dcc881a73"
+            ]
+        ]
+    },
+    {
+        "id": "1c796d9dcc881a73",
+        "type": "change",
+        "z": "area-kitchen",
+        "g": "a42904c353e86974",
+        "name": "Cycle Start",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "{\"timestamp\":\"2026-04-04T12:00:00Z\",\"source\":\"appliance_monitor\",\"appliance\":\"dishwasher\",\"cycle_id\":\"dw_20260404_120000\"}",
+                "tot": "json"
+            },
+            {
+                "t": "set",
+                "p": "event_type",
+                "pt": "msg",
+                "to": "cycle_started",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 330,
+        "y": 1580,
+        "wires": [
+            [
+                "ec48e5100969c5e3"
+            ]
+        ]
+    },
+    {
+        "id": "ec48e5100969c5e3",
+        "type": "link out",
+        "z": "area-kitchen",
+        "g": "a42904c353e86974",
+        "name": "Update Operational State",
+        "mode": "link",
+        "links": [
+            "1445e0c98124a26c"
+        ],
+        "x": 570,
+        "y": 1580,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "880518a4a50a7939",
+        "type": "inject",
+        "z": "area-kitchen",
+        "g": "a42904c353e86974",
+        "name": "Manual",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            },
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "highland/event/appliance/dishwasher/cycle_finished",
+        "payload": "{}",
+        "payloadType": "json",
+        "x": 150,
+        "y": 1640,
+        "wires": [
+            [
+                "5c53daedc4b31a06"
+            ]
+        ]
+    },
+    {
+        "id": "5c53daedc4b31a06",
+        "type": "change",
+        "z": "area-kitchen",
+        "g": "a42904c353e86974",
+        "name": "Cycle Finished",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "{\"timestamp\":\"2026-04-04T13:23:00Z\",\"source\":\"appliance_monitor\",\"appliance\":\"dishwasher\",\"cycle_id\":\"dw_20260404_120000\",\"status\":\"completed\",\"duration_s\":4980,\"energy_wh\":312.4,\"max_power_w\":1820,\"matched_profile\":null}",
+                "tot": "json"
+            },
+            {
+                "t": "set",
+                "p": "event_type",
+                "pt": "msg",
+                "to": "cycle_finished",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 340,
+        "y": 1640,
+        "wires": [
+            [
+                "60547addfa1eca2f"
+            ]
+        ]
+    },
+    {
+        "id": "60547addfa1eca2f",
+        "type": "link out",
+        "z": "area-kitchen",
+        "g": "a42904c353e86974",
+        "name": "Update Operational State",
+        "mode": "link",
+        "links": [
+            "1445e0c98124a26c"
+        ],
+        "x": 590,
+        "y": 1640,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "bc5c338a6c392685",
+        "type": "link in",
+        "z": "area-kitchen",
+        "g": "d6b4c76f5ea39aa1",
+        "name": "Publish Power States",
+        "links": [],
+        "x": 200,
+        "y": 620,
+        "wires": [
+            [
+                "fa641b5872347796"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "fa641b5872347796",
+        "type": "function",
+        "z": "area-kitchen",
+        "g": "d6b4c76f5ea39aa1",
+        "name": "Generate States",
+        "func": "const snapshot = msg.payload;\nconst ts = new Date().toISOString();\n\nnode.send([{\n    topic:   'highland/state/appliance/dishwasher/cycle',\n    payload: JSON.stringify({\n        timestamp:             ts,\n        source:                'dishwasher_cycle',\n        appliance:             'dishwasher',\n        state:                 snapshot.state,\n        cycle_id:              snapshot.cycle_id,\n        cycle_start:           snapshot.cycle_start,\n        duration_s:            snapshot.duration_s,\n        energy_wh:             snapshot.energy_wh,\n        power_w:               snapshot.power_w,\n        max_power_w:           snapshot.max_power_w,\n        matched_profile:       snapshot.matched_profile,\n        estimated_remaining_s: snapshot.estimated_remaining_s\n    }),\n    retain: true\n}, null]);\n\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 620,
+        "wires": [
+            [
+                "5b3f471a8141a0e0"
+            ],
+            [
+                "53bd2f548d6d6624"
+            ]
+        ]
+    },
+    {
+        "id": "5b3f471a8141a0e0",
+        "type": "mqtt out",
+        "z": "area-kitchen",
+        "g": "d6b4c76f5ea39aa1",
+        "name": "Publish",
+        "topic": "",
+        "qos": "0",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 620,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "53bd2f548d6d6624",
+        "type": "link out",
+        "z": "area-kitchen",
+        "g": "d6b4c76f5ea39aa1",
+        "name": "Return",
+        "mode": "return",
+        "links": [],
+        "x": 575,
+        "y": 680,
+        "wires": []
+    },
+    {
+        "id": "9fff302c27bc9a74",
+        "type": "link in",
+        "z": "area-kitchen",
+        "g": "d6b4c76f5ea39aa1",
+        "name": "Publish Power Events",
+        "links": [],
+        "x": 200,
+        "y": 740,
+        "wires": [
+            [
+                "1258daab4f8727cd"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "1258daab4f8727cd",
+        "type": "function",
+        "z": "area-kitchen",
+        "g": "d6b4c76f5ea39aa1",
+        "name": "Generate Events",
+        "func": "const ev  = msg.cycleEvent;\nconst ts  = msg.ts;\n\n// Map force_stopped to cycle_interrupted for downstream consumers\nconst topic = `highland/event/appliance/dishwasher/${\n    ev === 'force_stopped' ? 'cycle_interrupted' : ev\n}`;\n\nconst payload = {\n    timestamp:   ts,\n    source:      'dishwasher_cycle',\n    appliance:   'dishwasher',\n    cycle_id:    msg.cycleId,\n    cycle_start: msg.cycleStart,\n    duration_s:  msg.duration_s,\n    energy_wh:   msg.energy_wh,\n    max_power_w: msg.max_power_w,\n    status:      ev === 'cycle_finished'   ? 'completed'\n               : ev === 'force_stopped'   ? 'force_stopped'\n               : ev === 'cycle_interrupted' ? 'interrupted'\n               : ev,\n    matched_profile: null\n};\n\nif (ev === 'force_stopped') {\n    payload.termination_reason = 'watchdog';\n}\n\nnode.send([{\n    topic,\n    payload: JSON.stringify(payload),\n    retain: false\n}, null]);\n\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 740,
+        "wires": [
+            [
+                "200b34b3f85c8dba"
+            ],
+            [
+                "257d255ce4e3f6f1"
+            ]
+        ]
+    },
+    {
+        "id": "200b34b3f85c8dba",
+        "type": "mqtt out",
+        "z": "area-kitchen",
+        "g": "d6b4c76f5ea39aa1",
+        "name": "Publish",
+        "topic": "",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 640,
+        "y": 740,
+        "wires": []
+    },
+    {
+        "id": "257d255ce4e3f6f1",
+        "type": "link out",
+        "z": "area-kitchen",
+        "g": "d6b4c76f5ea39aa1",
+        "name": "Return",
+        "mode": "return",
+        "links": [],
+        "x": 595,
+        "y": 800,
+        "wires": []
+    },
+    {
+        "id": "e1b95dee9d5b93e5",
+        "type": "mqtt in",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Dishwasher Power [W]",
+        "topic": "zwave/kitchen/kitchen_dishwasher/meter/endpoint_0/value/66049",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 180,
+        "y": 1160,
+        "wires": [
+            [
+                "34c0ec303fc5d46a"
+            ]
+        ]
+    },
+    {
+        "id": "34c0ec303fc5d46a",
+        "type": "function",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Extract Power",
+        "func": "const p = msg.payload;\nif (typeof p !== 'object' || p === null) return null;\n\nconst power_w = p.value;\nif (typeof power_w !== 'number') return null;\n\nif (!flow.get('cold_start_done', 'volatile')) {\n    flow.set('cold_start_done', true, 'volatile');\n    msg.cold_start = true;\n}\n\n// Update watchdog timestamp on every received reading\nflow.set('last_power_reading_ms', Date.now());\n\nmsg.event_type = 'power';\nmsg.power_w    = power_w;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 1160,
+        "wires": [
+            [
+                "813f814a580748a4"
+            ]
+        ]
+    },
+    {
+        "id": "813f814a580748a4",
+        "type": "link out",
+        "z": "area-kitchen",
+        "g": "6486d4d854f31f6b",
+        "name": "Update Power States",
+        "mode": "link",
+        "links": [
+            "d7aac0dd0b0e7fd6"
+        ],
+        "x": 660,
+        "y": 1160,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "31d8747fc6d81ee6",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "@mschaeffler/node-red-debounce": "1.1.1"
+        }
+    }
+]

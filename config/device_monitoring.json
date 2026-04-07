@@ -1,0 +1,30 @@
+{
+  "appliances": {
+    "dishwasher": {
+      "attention": {
+        "vent_zone_threshold": -5,
+        "unload_zone_threshold": -80,
+        "venting_timeout_s": 900,
+        "guest_duration_s": 360,
+        "likely_empty_timeout_h": 2,
+        "nag_first_h": 1,
+        "nag_repeat_h": 2,
+        "notify_on_likely_empty_timeout": false
+      },
+      "cycle": {
+        "start_threshold_w": 2.0,
+        "idle_baseline_w": 1.0,
+        "start_duration_s": 5,
+        "pause_threshold_w": 2.0,
+        "pause_delay_s": 60,
+        "expecting_completion_threshold_w": 5.0,
+        "expecting_completion_delay_s": 300,
+        "alarm_signal_min_w": 8.0,
+        "alarm_signal_max_w": 50.0,
+        "off_delay_s": 1800,
+        "completion_min_s": 900,
+        "watchdog_timeout_s": 600
+      }
+    }
+  }
+}

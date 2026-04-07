@@ -18,9 +18,9 @@ Each appliance has a specific failure mode that ruins naive "power below X for Y
 
 **Dryer** — The heating element is thermostat-controlled and cycles on/off throughout the entire run. Near the end, there's a cool-down phase: element off, drum motor still running (~200–300W). You're stuck choosing between "fires too early on every cool-down" or "waits several minutes past actual completion."
 
-**Dishwasher** — The worst case. Has genuine zero-power gaps between wash/rinse/heated-dry phases. Air-dry mode is literally zero watts for 20+ minutes at the end. You cannot distinguish "between phases" from "done" with a power threshold alone.
+**Dishwasher** — Has genuine zero-power gaps between wash/rinse/heated-dry phases. Initial design assumed air-dry was the hard problem (20+ minutes of zero watts at the end). First real cycle trace revealed a better approach — see **Observed Power Signatures** below.
 
-**The solution:** Instead of asking "is power below threshold?", ask "has effectively zero *energy* flowed in the last N seconds?" Combined with per-appliance off-delays calibrated to each device's behavior, this collapses all three failure modes.
+**The solution:** Instead of asking "is power below threshold?", ask "has effectively zero *energy* flowed in the last N seconds?" Combined with per-appliance off-delays calibrated to each device's behavior, this collapses all three failure modes. For the dishwasher specifically, the energy gate approach is supplemented by positive confirmation of the end-of-cycle alarm signal.
 
 ---
 
@@ -47,6 +47,8 @@ ZEN15 (Z-Wave) → Z-Wave JS UI → MQTT → Node-RED
 
 ## State Machine
 
+### Standard (Washing Machine, Dryer)
+
 ```
 OFF ──────────────────────► STARTING ──► RUNNING ◄──► PAUSED
  ▲                              │             │
@@ -57,12 +59,31 @@ OFF ──────────────────────► STARTI
        FORCE_STOPPED
 ```
 
+### Dishwasher (refined — EXPECTING_COMPLETION)
+
+```
+OFF ──► STARTING ──► RUNNING ◄────────────────────────────────────► BETWEEN_PHASES
+  ▲         │            │                                                  │
+  │      (abort)   (power < 2W for 60s)                    (power ≥ 2W)    │
+  │                                                                         │
+  │                                            (elapsed ≥ 300s)            │
+  │                                   EXPECTING_COMPLETION ◄────────────────┘
+  │                                      │                │
+  │                          (alarm: 8–50W)     (heat resumes: >50W)
+  │                                      │                │
+  │                                      ▼                ▼
+  └──────────── FINISHED              RUNNING
+                INTERRUPTED    (fallback: off_delay_s energy gate)
+                FORCE_STOPPED
+```
+
 | State | Meaning |
 |-------|---------|
 | `off` | No cycle in progress |
 | `starting` | Power above threshold; accumulating energy to confirm real start |
 | `running` | Cycle confirmed and actively running |
-| `paused` | Power dropped during cycle; waiting to see if it resumes |
+| `between_phases` | *(Dishwasher only)* Power dropped during cycle; waiting for resumption or transition to expecting_completion |
+| `expecting_completion` | *(Dishwasher only)* Heated dry ended; waiting for end-of-cycle alarm spike |
 | `ending` | Power low long enough to start considering cycle complete; energy gate applied |
 | `finished` | Cycle completed normally; auto-expires to `off` after 30 minutes |
 | `interrupted` | Cycle ended too short to be a valid run |
@@ -114,14 +135,19 @@ end_candidate_delay_s = max(pause_delay_s + 15s, configured_min_end)
 
 | Parameter | Value | Rationale |
 |-----------|-------|-----------|
-| `start_threshold_w` | 2.0 W | Pump/heater |
+| `start_threshold_w` | 2.0 W | Above 1W idle baseline |
+| `idle_baseline_w` | 1.0 W | Observed standby draw — board alive, no active cycle |
 | `pause_delay_s` | 300 s (min) | Phase gaps can be long |
-| `end_candidate_delay_s` | 600 s (min) | Air-dry is 20+ min of zero |
-| `off_delay_s` | 1800 s | 30 min — handles air-dry |
-| `min_off_gap_s` | 2000 s | ~33 min — drying pauses |
-| `completion_min_s` | 900 s | 15 min |
+| `end_candidate_delay_s` | 600 s (min) | Heated dry phase gap tolerance |
+| `expecting_completion_delay_s` | 300 s | 5 min below 5W to enter EXPECTING_COMPLETION |
+| `expecting_completion_threshold_w` | 5.0 W | Upper bound of idle/standby; heating cycles are 400W+ |
+| `alarm_signal_min_w` | 8.0 W | Minimum power for alarm spike (observed ~21W; conservative lower bound) |
+| `alarm_signal_max_w` | 50.0 W | Upper bound — if power exceeds this, it's another heat cycle not the alarm |
+| `off_delay_s` | 1800 s | Fallback only — if alarm signal never detected, fall back to 30-min energy gate |
+| `post_cycle_tail_s` | 1200 s | Observed ~20 min 1W draw after mechanical completion; informational only |
+| `completion_min_s` | 900 s | 15 min minimum to be a valid cycle |
 
-**Note:** The `off_delay_s` of 30 minutes is not a bug — it's the only way to reliably handle air-dry mode without profile matching.
+**Note:** The `expecting_completion` state replaces the crude 30-minute `off_delay_s` approach as the primary completion detection path. The alarm signal provides positive confirmation rather than waiting for absence of activity. The `off_delay_s` fallback remains for edge cases where the alarm signal is missed or absent (e.g. some programs, manual cancellation). All threshold values are based on a single observed cycle and should be validated across multiple cycles and programs before hardening.
 
 ---
 
@@ -143,6 +169,47 @@ function integrateWh(samples) {
 ```
 
 At the ENDING transition check, compute energy over the window covering the last `off_delay_s` seconds. If ≤ `end_energy_wh_gate`, the cycle is done. If it exceeds the gate (real power drew in that window), hold in ENDING.
+
+---
+
+## Observed Power Signatures
+
+### Dishwasher (2026-04-04, full cycle)
+
+Observed on a single full cycle run. All thresholds derived from this trace are provisional pending validation across multiple cycles and programs.
+
+**Baseline:**
+- `0W` — true off; dishwasher fully idle between cycles
+- `1W` — control board standby; present at cycle startup and for ~20 minutes after mechanical completion
+
+**Cycle timeline:**
+
+| Time | Event | Power |
+|------|-------|-------|
+| 12:54:57 | Cycle start — 0W → 1W → 15W | 0 → 1 → 15W |
+| ~12:55–1:30 | Main wash phase (heating elements + pump) | ~800–1000W |
+| ~1:30–1:45 | Zero-power gap between wash phases | ~0–1W |
+| ~1:45–2:00 | Second wash phase | ~750–850W |
+| ~2:00–2:15 | Transition / drain | low |
+| ~2:15–2:56 | Heated dry — thermostat-cycling element | ~400–500W oscillating |
+| 2:56:18 | Last heat cycle ends | drops to ~1W |
+| ~2:56–3:08 | Post-heat lull — 12 minute window | ~1W |
+| 3:08:13 | End-of-cycle alarm spike begins | 1W → ~21W |
+| 3:08:53 | Alarm ends — mechanical cycle complete (audible signal) | → 1W |
+| 3:08:53–3:28:57 | Post-cycle control board tail | 1W |
+| 3:28:57 | True idle — board powers down | → 0W |
+
+**Key observations:**
+- Inter-heat-cycle gap during heated dry: ~2 minutes. Five minutes of sustained low power reliably indicates heated dry has ended.
+- Alarm signal: ~21W, duration ~40 seconds. Well above 1W idle, well below 400W+ heating. Clean discrimination window (8–50W).
+- Post-cycle 1W tail: almost exactly 20 minutes. Not a phase gap — true idle period before full shutdown.
+- Total cycle duration: ~2h14m (start threshold to alarm signal).
+
+**EXPECTING_COMPLETION transition logic:**
+- Enter from `between_phases` when: elapsed in `between_phases` ≥ `expecting_completion_delay_s` (5 min)
+- Exit to `finished` when: power rises above `alarm_signal_min_w` (8W) AND below `alarm_signal_max_w` (50W) — that's the alarm
+- Exit back to `running` when: power rises above `alarm_signal_max_w` (50W) — another heat cycle, not the alarm
+- Fallback: if neither condition fires within `off_delay_s` (30 min), fall through to standard energy gate → `ending`
 
 ---
 
@@ -227,10 +294,12 @@ See `AUTOMATION_BACKLOG.md` for status.
 
 ## Open Questions
 
+- [ ] Dishwasher alarm signal validation — observed ~21W on one cycle. Confirm amplitude and duration are consistent across different programs (quick wash, heavy duty, eco). Adjust `alarm_signal_min_w` / `alarm_signal_max_w` if needed.
+- [ ] Dishwasher BETWEEN_PHASES / EXPECTING_COMPLETION thresholds — 5W threshold and 5-minute delay derived from single trace. Validate that inter-heat-cycle gaps during normal heated dry operation never exceed 5 minutes.
 - [ ] ZEN15 MQTT topic paths — exact paths from Z-Wave JS UI to be confirmed at bring-up. Update `config.zwave_topic` per appliance once verified.
 - [ ] ZEN15 report parameters — configure per-node: 5W threshold, 10s min interval, 60s periodic (initial recommendation; tune per appliance).
 - [ ] Power trace storage — decide whether to store from day one or enable later. ~2KB per cycle at 30s intervals for 60 minutes. Probably worth enabling from the start.
 
 ---
 
-*Last Updated: 2026-03-26*
+*Last Updated: 2026-04-07*

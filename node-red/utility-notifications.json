@@ -549,11 +549,12 @@
             "un-fan-out",
             "b4f6622faadd431d",
             "8e898d17ccb5818a",
-            "1bec6aa6e36936dd"
+            "1bec6aa6e36936dd",
+            "8d12224a4dc2cb9e"
         ],
         "x": 54,
         "y": 59,
-        "w": 1152,
+        "w": 1412,
         "h": 82
     },
     {
@@ -589,11 +590,12 @@
             "un-build-clear-call",
             "un-clear-log-link-out",
             "ba8d52d55dfaee02",
-            "672b192343a5466f"
+            "672b192343a5466f",
+            "2b9fa0e22161bf0c"
         ],
         "x": 54,
         "y": 179,
-        "w": 952,
+        "w": 1212,
         "h": 82
     },
     {
@@ -741,7 +743,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 530,
+        "x": 790,
         "y": 100,
         "wires": [
             [
@@ -762,7 +764,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 750,
+        "x": 1010,
         "y": 100,
         "wires": [
             [
@@ -787,7 +789,7 @@
         "y": 100,
         "wires": [
             [
-                "un-validate-payload"
+                "8d12224a4dc2cb9e"
             ],
             []
         ]
@@ -927,7 +929,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 540,
+        "x": 800,
         "y": 220,
         "wires": [
             [
@@ -945,7 +947,7 @@
         "links": [
             "un-log-link-in"
         ],
-        "x": 920,
+        "x": 1180,
         "y": 220,
         "wires": [],
         "l": true
@@ -967,7 +969,7 @@
         "y": 220,
         "wires": [
             [
-                "un-build-clear-call"
+                "2b9fa0e22161bf0c"
             ],
             []
         ]
@@ -1250,7 +1252,7 @@
         "links": [],
         "linkType": "dynamic",
         "timeout": "30",
-        "x": 940,
+        "x": 1200,
         "y": 100,
         "wires": [
             [
@@ -1268,7 +1270,7 @@
         "links": [
             "un-log-link-in"
         ],
-        "x": 1120,
+        "x": 1380,
         "y": 100,
         "wires": [],
         "l": true
@@ -1294,7 +1296,7 @@
         "links": [],
         "linkType": "dynamic",
         "timeout": "30",
-        "x": 740,
+        "x": 1000,
         "y": 220,
         "wires": [
             [
@@ -1784,6 +1786,48 @@
         "wires": []
     },
     {
+        "id": "8d12224a4dc2cb9e",
+        "type": "function",
+        "z": "utility-notifications",
+        "g": "un-receive-group",
+        "name": "Resolve Notification ID",
+        "func": "const notifId = msg.payload.notification_id;\nif (!notifId) return msg;\n\nconst subscriptions = global.get('config')?.notifications?.subscriptions;\nif (!subscriptions) {\n    node.warn('notifications.subscriptions not found in global config');\n    return null;\n}\n\nconst sub = subscriptions[notifId];\nif (!sub) {\n    node.warn(`notification_id '${notifId}' not found in subscriptions — dropped`);\n    return null;\n}\n\nmsg.payload = {\n    ...msg.payload,\n    targets:  sub.targets,\n    severity: sub.severity\n};\ndelete msg.payload.notification_id;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 540,
+        "y": 100,
+        "wires": [
+            [
+                "un-validate-payload"
+            ]
+        ]
+    },
+    {
+        "id": "2b9fa0e22161bf0c",
+        "type": "function",
+        "z": "utility-notifications",
+        "g": "un-clear-group",
+        "name": "Resolve Clear Targets",
+        "func": "const notifId = msg.payload.notification_id;\nif (!notifId) return msg; // no ID — pass through unchanged\n\nconst subscriptions = global.get('config')?.notifications?.subscriptions;\nif (!subscriptions) {\n    node.warn('notifications.subscriptions not found in global config');\n    return null;\n}\n\nconst sub = subscriptions[notifId];\nif (!sub) {\n    node.warn(`notification_id '${notifId}' not found in subscriptions — dropped`);\n    return null;\n}\n\n// Inject targets from subscription, remove notification_id\nmsg.payload = {\n    ...msg.payload,\n    targets: sub.targets\n};\ndelete msg.payload.notification_id;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 220,
+        "wires": [
+            [
+                "un-build-clear-call"
+            ]
+        ]
+    },
+    {
         "id": "4cefa2ad2d8b462e",
         "type": "mqtt-broker",
         "name": "Hub",
@@ -1845,7 +1889,7 @@
         "enableGlobalContextStore": false
     },
     {
-        "id": "0c21828944298aff",
+        "id": "1dc15a3811c12b7e",
         "type": "global-config",
         "env": [],
         "modules": {

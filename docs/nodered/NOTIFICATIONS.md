@@ -35,20 +35,45 @@ See `standards/MQTT_TOPICS.md` for full payload schema.
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `targets` | **Yes** | Namespaced target array: `["people.joseph.ha_companion"]` |
-| `severity` | Yes | `low`, `medium`, `high`, `critical` |
+| `notification_id` | Opt-in | Subscription ID from `notifications.json` — resolves `targets` and `severity` automatically. Preferred for new producers. |
+| `targets` | Required if no `notification_id` | Namespaced target array: `["people.joseph.ha_companion"]` |
+| `severity` | Required if no `notification_id` | `low`, `medium`, `high`, `critical` |
 | `title` | Yes | Short summary |
 | `message` | Yes | Full detail |
-| `dnd_override` | No | Derived from severity if not specified |
 | `icon` | No | MDI icon string for TV/rich delivery channels (e.g. `mdi:motion-sensor`) |
 | `media` | No | Image and/or video URLs |
 | `actionable` | No | Can recipient respond? Default = false |
 | `actions` | No | Available response actions |
 | `sticky` | No | Notification persists until dismissed; default = false |
 | `group` | No | Group related notifications together |
-| `correlation_id` | No | For linking response back to originating event; also used as notification tag |
+| `correlation_id` | No | For linking response back to originating event; also used as notification tag for clearing |
 
-**Both `targets` and `severity` are required** — every notification represents a deliberate design-time decision about who receives it and how. No implicit defaulting.
+**Two patterns for specifying delivery:**
+
+1. **`notification_id` (preferred for new producers)** — specify a subscription key from `notifications.json`. The `Resolve Notification ID` node expands it to `targets` and `severity` before validation. `title` and `message` remain in the payload since they are typically dynamic.
+
+2. **Explicit `targets` + `severity` (backward compatible)** — hardcode delivery details directly in the payload. All existing producers use this pattern and continue to work unchanged.
+
+```json
+// Pattern 1 — notification_id
+{
+  "notification_id": "dishwasher.cycle_finished",
+  "timestamp": "...",
+  "source": "dishwasher_attention",
+  "title": "Dishwasher finished",
+  "message": "Dishes are clean.",
+  "correlation_id": "dishwasher_unload_pending",
+  "icon": "mdi:dishwasher"
+}
+
+// Pattern 2 — explicit targets
+{
+  "targets": ["people.joseph.ha_companion"],
+  "severity": "low",
+  "title": "Dishwasher finished",
+  "message": "Dishes are clean."
+}
+```
 
 ---
 
@@ -142,15 +167,46 @@ Centralized delivery flow. All notification traffic enters via MQTT and is dispa
 
 ### Groups
 
-**Receive Notification** — MQTT in → Initializer Latch → Validate Payload → Build Targets → `link call` (Deliver, dynamic) → Log Event link out
+**Receive Notification** — MQTT in → Resolve Notification ID → Initializer Latch → Validate Payload → Build Targets → `link call` (Deliver, dynamic) → Log Event link out
 
 **HA Companion Delivery** — Link In → Connection Gate → Build Service Call → HA service call node → `link out` (return mode)
 
-**Clear Notification** — MQTT in (`highland/command/notify/clear`) → Initializer Latch → Build Clear Call → `link call` (Deliver, dynamic) → Log Event link out
+**Clear Notification** — MQTT in (`highland/command/notify/clear`) → Resolve Clear Targets → Initializer Latch → Build Clear Call → `link call` (Deliver, dynamic) → Log Event link out
 
 **State Change Logging** — Log Event link in → MQTT Available? switch → Format Log Message → MQTT out / Log to Console
 
 **Test Cases** — Persistent sanity tests; intentionally preserved.
+
+### Resolve Notification ID
+
+Optional pre-processing node inserted before the Initializer Latch in the Receive Notification group. Supports the `notification_id` pattern:
+
+- `notification_id` present → look up in `notifications.json` `subscriptions` section, merge `targets` and `severity` into payload, remove `notification_id`, pass through
+- `notification_id` absent → pass through unchanged (full backward compatibility)
+- `notification_id` present but not found → `node.warn()` and drop
+
+### Resolve Clear Targets
+
+Parallel node in the Clear Notification group. Same lookup logic as Resolve Notification ID but merges only `targets` (severity is irrelevant for clears). Allows clear payloads to reference a `notification_id` instead of hardcoding target arrays.
+
+### Subscriptions (`notifications.json`)
+
+The `subscriptions` section maps notification IDs to delivery config:
+
+```json
+"subscriptions": {
+  "dishwasher.cycle_finished": {
+    "targets": ["people.joseph.ha_companion", "areas.*.tv"],
+    "severity": "low"
+  },
+  "dishwasher.cycle_finished_reminder": {
+    "targets": ["people.joseph.ha_companion", "areas.*.tv"],
+    "severity": "low"
+  }
+}
+```
+
+Naming convention: `{device}.{event}` for primary notifications, `{device}.{event}_reminder` for follow-up nags.
 
 ### Build Targets (Fan Out)
 
@@ -300,4 +356,4 @@ Adding a new channel: add a case to `resolveLinkTarget()`, build a new delivery 
 
 ---
 
-*Last Updated: 2026-03-27*
+*Last Updated: 2026-04-07*

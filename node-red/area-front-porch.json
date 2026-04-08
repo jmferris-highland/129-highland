@@ -1,29 +1,29 @@
 [
     {
-        "id": "area-rear-patio",
+        "id": "area-front-porch",
         "type": "tab",
-        "label": "Area: Rear Patio",
+        "label": "Area: Front Porch",
         "disabled": false,
         "info": "",
         "env": []
     },
     {
-        "id": "e1dc6c2918c84e62",
+        "id": "0d8dbb8e17b23773",
         "type": "group",
-        "z": "area-rear-patio",
+        "z": "area-front-porch",
         "name": "Sinks",
         "style": {
             "label": true
         },
         "nodes": [
-            "a669685bc48716b6",
-            "c1627c741998a849",
-            "d2cbf19dd1e6509f",
-            "af617fc6845a72fb",
-            "f4e59c04c5df0492",
-            "bd5e3f220dbb7402",
-            "0f4b941ee5629e2e",
-            "37a3239ac4715817"
+            "b7149eed95195d2f",
+            "9eb4201e122ab96f",
+            "46fc5027d6ee42b5",
+            "f5cf73dd1c106408",
+            "018cbe5e1936ab92",
+            "b66c120353dcdcb4",
+            "50976bf9c63eb6bb",
+            "287e529a6d58976c"
         ],
         "x": 54,
         "y": 159,
@@ -31,17 +31,17 @@
         "h": 262
     },
     {
-        "id": "95fb11541a703d69",
+        "id": "1997e43d900ad133",
         "type": "group",
-        "z": "area-rear-patio",
+        "z": "area-front-porch",
         "name": "Lighting",
         "style": {
             "label": true
         },
         "nodes": [
-            "8a9ea5a6fc65e981",
-            "d60ef7e4870ee53b",
-            "34f131338bb6803d"
+            "8dedfa4f81255d72",
+            "c8f02f69402d2392",
+            "ab7206cc96104604"
         ],
         "x": 54,
         "y": 39,
@@ -49,16 +49,16 @@
         "h": 82
     },
     {
-        "id": "1049c923d47a25c2",
+        "id": "fd755e995badce8f",
         "type": "group",
-        "z": "area-rear-patio",
+        "z": "area-front-porch",
         "name": "Error Handling",
         "style": {
             "label": true
         },
         "nodes": [
-            "c4d21625e1659898",
-            "9a4ed99eefbdbe9b"
+            "347f6f63dade8434",
+            "38510cbb124dbbf0"
         ],
         "x": 54,
         "y": 459,
@@ -66,23 +66,23 @@
         "h": 82
     },
     {
-        "id": "caf9552c0bdcba69",
+        "id": "4d2ec27eeb0ada8f",
         "type": "group",
-        "z": "area-rear-patio",
+        "z": "area-front-porch",
         "name": "Test Cases",
         "style": {
             "label": true
         },
         "nodes": [
-            "a582bf37dd33c432",
-            "a3d711753b7e7122",
-            "d7e7a760c17d8734",
-            "57ddb76f778cb5b6",
-            "4ea948a845a45f47",
-            "95d5ed7f14bae847",
-            "2e191edd47f1f969",
-            "0f15e9350684ae55",
-            "9b6a7c0bf2f2775d"
+            "a5dec322cacc3855",
+            "54e828594fb2fba1",
+            "3949628144edae47",
+            "ded0618a16da5d16",
+            "6d63863639c5b709",
+            "0cbe57b6066c5208",
+            "08342ad812806f7e",
+            "31148450560e07f2",
+            "e3b4c2eec55340e6"
         ],
         "x": 54,
         "y": 579,
@@ -90,34 +90,10 @@
         "h": 202
     },
     {
-        "id": "8a9ea5a6fc65e981",
-        "type": "link in",
-        "z": "area-rear-patio",
-        "g": "95fb11541a703d69",
-        "name": "Control Exterior Light",
-        "links": [
-            "37a3239ac4715817",
-            "95d5ed7f14bae847",
-            "9b6a7c0bf2f2775d",
-            "af617fc6845a72fb",
-            "bd5e3f220dbb7402",
-            "c1627c741998a849",
-            "d7e7a760c17d8734"
-        ],
-        "x": 180,
-        "y": 80,
-        "wires": [
-            [
-                "d60ef7e4870ee53b"
-            ]
-        ],
-        "l": true
-    },
-    {
-        "id": "a669685bc48716b6",
+        "id": "b7149eed95195d2f",
         "type": "mqtt in",
-        "z": "area-rear-patio",
-        "g": "e1dc6c2918c84e62",
+        "z": "area-front-porch",
+        "g": "0d8dbb8e17b23773",
         "name": "Period",
         "topic": "highland/state/scheduler/period",
         "qos": "1",
@@ -131,40 +107,19 @@
         "y": 200,
         "wires": [
             [
-                "c1627c741998a849"
+                "9eb4201e122ab96f"
             ]
         ]
     },
     {
-        "id": "d60ef7e4870ee53b",
-        "type": "function",
-        "z": "area-rear-patio",
-        "g": "95fb11541a703d69",
-        "name": "Set State",
-        "func": "const payload = typeof msg.payload === 'string'\n    ? JSON.parse(msg.payload)\n    : msg.payload;\nconst period = payload.period;\n\nlet lightPayload = {};\nlet percentage = 0;\n\nswitch (period) {\n    case 'evening':\n        lightPayload = { state: 'ON', brightness: 254 };\n        percentage = 100;\n        break;\n    default:\n        lightPayload = { state: 'OFF' };\n}\n\nmsg.topic = 'zigbee2mqtt/rear_patio_entry_light/set';\nmsg.payload = JSON.stringify(lightPayload);\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nlet color = (lightPayload.state === 'ON' ? 'green' : 'yellow');\n\nlet addendum = '';\n\nif (percentage > 0) {\n    addendum = ` | ${percentage}%`;\n}\n\nnode.status({ fill: color, shape: 'dot', text: formatStatus(`${lightPayload.state}${addendum}`) });\n\nreturn msg;",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 400,
-        "y": 80,
-        "wires": [
-            [
-                "34f131338bb6803d"
-            ]
-        ]
-    },
-    {
-        "id": "c1627c741998a849",
+        "id": "9eb4201e122ab96f",
         "type": "link out",
-        "z": "area-rear-patio",
-        "g": "e1dc6c2918c84e62",
+        "z": "area-front-porch",
+        "g": "0d8dbb8e17b23773",
         "name": "Control Exterior Light",
         "mode": "link",
         "links": [
-            "8a9ea5a6fc65e981"
+            "8dedfa4f81255d72"
         ],
         "x": 340,
         "y": 200,
@@ -172,10 +127,10 @@
         "l": true
     },
     {
-        "id": "d2cbf19dd1e6509f",
+        "id": "46fc5027d6ee42b5",
         "type": "mqtt in",
-        "z": "area-rear-patio",
-        "g": "e1dc6c2918c84e62",
+        "z": "area-front-porch",
+        "g": "0d8dbb8e17b23773",
         "name": "Daytime",
         "topic": "highland/event/scheduler/day",
         "qos": "0",
@@ -189,19 +144,19 @@
         "y": 260,
         "wires": [
             [
-                "af617fc6845a72fb"
+                "f5cf73dd1c106408"
             ]
         ]
     },
     {
-        "id": "af617fc6845a72fb",
+        "id": "f5cf73dd1c106408",
         "type": "link out",
-        "z": "area-rear-patio",
-        "g": "e1dc6c2918c84e62",
+        "z": "area-front-porch",
+        "g": "0d8dbb8e17b23773",
         "name": "Control Exterior Light",
         "mode": "link",
         "links": [
-            "8a9ea5a6fc65e981"
+            "8dedfa4f81255d72"
         ],
         "x": 360,
         "y": 260,
@@ -209,10 +164,10 @@
         "l": true
     },
     {
-        "id": "f4e59c04c5df0492",
+        "id": "018cbe5e1936ab92",
         "type": "mqtt in",
-        "z": "area-rear-patio",
-        "g": "e1dc6c2918c84e62",
+        "z": "area-front-porch",
+        "g": "0d8dbb8e17b23773",
         "name": "Evening",
         "topic": "highland/event/scheduler/evening",
         "qos": "0",
@@ -226,19 +181,19 @@
         "y": 320,
         "wires": [
             [
-                "bd5e3f220dbb7402"
+                "b66c120353dcdcb4"
             ]
         ]
     },
     {
-        "id": "bd5e3f220dbb7402",
+        "id": "b66c120353dcdcb4",
         "type": "link out",
-        "z": "area-rear-patio",
-        "g": "e1dc6c2918c84e62",
+        "z": "area-front-porch",
+        "g": "0d8dbb8e17b23773",
         "name": "Control Exterior Light",
         "mode": "link",
         "links": [
-            "8a9ea5a6fc65e981"
+            "8dedfa4f81255d72"
         ],
         "x": 360,
         "y": 320,
@@ -246,10 +201,10 @@
         "l": true
     },
     {
-        "id": "0f4b941ee5629e2e",
+        "id": "50976bf9c63eb6bb",
         "type": "mqtt in",
-        "z": "area-rear-patio",
-        "g": "e1dc6c2918c84e62",
+        "z": "area-front-porch",
+        "g": "0d8dbb8e17b23773",
         "name": "Overnight",
         "topic": "highland/event/scheduler/overnight",
         "qos": "0",
@@ -263,19 +218,19 @@
         "y": 380,
         "wires": [
             [
-                "37a3239ac4715817"
+                "287e529a6d58976c"
             ]
         ]
     },
     {
-        "id": "37a3239ac4715817",
+        "id": "287e529a6d58976c",
         "type": "link out",
-        "z": "area-rear-patio",
-        "g": "e1dc6c2918c84e62",
+        "z": "area-front-porch",
+        "g": "0d8dbb8e17b23773",
         "name": "Control Exterior Light",
         "mode": "link",
         "links": [
-            "8a9ea5a6fc65e981"
+            "8dedfa4f81255d72"
         ],
         "x": 360,
         "y": 380,
@@ -283,10 +238,55 @@
         "l": true
     },
     {
-        "id": "34f131338bb6803d",
+        "id": "8dedfa4f81255d72",
+        "type": "link in",
+        "z": "area-front-porch",
+        "g": "1997e43d900ad133",
+        "name": "Control Exterior Light",
+        "links": [
+            "287e529a6d58976c",
+            "0cbe57b6066c5208",
+            "e3b4c2eec55340e6",
+            "f5cf73dd1c106408",
+            "b66c120353dcdcb4",
+            "9eb4201e122ab96f",
+            "3949628144edae47"
+        ],
+        "x": 180,
+        "y": 80,
+        "wires": [
+            [
+                "c8f02f69402d2392"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "c8f02f69402d2392",
+        "type": "function",
+        "z": "area-front-porch",
+        "g": "1997e43d900ad133",
+        "name": "Set State",
+        "func": "const payload = typeof msg.payload === 'string'\n    ? JSON.parse(msg.payload)\n    : msg.payload;\nconst period = payload.period;\n\nlet lightPayload = {};\nlet percentage = 0;\n\nswitch (period) {\n    case 'daytime':\n        lightPayload = { state: 'OFF' };\n        break;\n    case 'evening':\n        lightPayload = { state: 'ON', brightness: 254 };\n        percentage = 100;\n        break;\n    case 'overnight':\n        lightPayload = { state: 'ON', brightness: 64 };\n        percentage = 25;\n        break;\n}\n\nmsg.topic = 'zigbee2mqtt/front_porch_entry_light/set';\nmsg.payload = JSON.stringify(lightPayload);\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nlet color = (lightPayload.state === 'ON' ? 'green' : 'yellow');\nlet addendum = '';\n\nif (percentage > 0) {\n    addendum = ` | ${percentage}%`;\n}\n\nnode.status({ fill: color, shape: 'dot', text: formatStatus(`${lightPayload.state}${addendum}`) });\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 80,
+        "wires": [
+            [
+                "ab7206cc96104604"
+            ]
+        ]
+    },
+    {
+        "id": "ab7206cc96104604",
         "type": "mqtt out",
-        "z": "area-rear-patio",
-        "g": "95fb11541a703d69",
+        "z": "area-front-porch",
+        "g": "1997e43d900ad133",
         "name": "Publish",
         "topic": "",
         "qos": "1",
@@ -302,10 +302,10 @@
         "wires": []
     },
     {
-        "id": "c4d21625e1659898",
+        "id": "347f6f63dade8434",
         "type": "catch",
-        "z": "area-rear-patio",
-        "g": "1049c923d47a25c2",
+        "z": "area-front-porch",
+        "g": "fd755e995badce8f",
         "name": "Catch All",
         "scope": null,
         "uncaught": false,
@@ -313,15 +313,15 @@
         "y": 500,
         "wires": [
             [
-                "9a4ed99eefbdbe9b"
+                "38510cbb124dbbf0"
             ]
         ]
     },
     {
-        "id": "9a4ed99eefbdbe9b",
+        "id": "38510cbb124dbbf0",
         "type": "debug",
-        "z": "area-rear-patio",
-        "g": "1049c923d47a25c2",
+        "z": "area-front-porch",
+        "g": "fd755e995badce8f",
         "name": "Output",
         "active": true,
         "tosidebar": true,
@@ -336,10 +336,10 @@
         "wires": []
     },
     {
-        "id": "a582bf37dd33c432",
+        "id": "a5dec322cacc3855",
         "type": "inject",
-        "z": "area-rear-patio",
-        "g": "caf9552c0bdcba69",
+        "z": "area-front-porch",
+        "g": "4d2ec27eeb0ada8f",
         "name": "Manual",
         "props": [
             {
@@ -361,15 +361,15 @@
         "y": 620,
         "wires": [
             [
-                "a3d711753b7e7122"
+                "54e828594fb2fba1"
             ]
         ]
     },
     {
-        "id": "a3d711753b7e7122",
+        "id": "54e828594fb2fba1",
         "type": "change",
-        "z": "area-rear-patio",
-        "g": "caf9552c0bdcba69",
+        "z": "area-front-porch",
+        "g": "4d2ec27eeb0ada8f",
         "name": "Daytime",
         "rules": [
             {
@@ -389,19 +389,19 @@
         "y": 620,
         "wires": [
             [
-                "d7e7a760c17d8734"
+                "3949628144edae47"
             ]
         ]
     },
     {
-        "id": "d7e7a760c17d8734",
+        "id": "3949628144edae47",
         "type": "link out",
-        "z": "area-rear-patio",
-        "g": "caf9552c0bdcba69",
+        "z": "area-front-porch",
+        "g": "4d2ec27eeb0ada8f",
         "name": "Control Exterior Light",
         "mode": "link",
         "links": [
-            "8a9ea5a6fc65e981"
+            "8dedfa4f81255d72"
         ],
         "x": 540,
         "y": 620,
@@ -409,10 +409,10 @@
         "l": true
     },
     {
-        "id": "57ddb76f778cb5b6",
+        "id": "ded0618a16da5d16",
         "type": "inject",
-        "z": "area-rear-patio",
-        "g": "caf9552c0bdcba69",
+        "z": "area-front-porch",
+        "g": "4d2ec27eeb0ada8f",
         "name": "Manual",
         "props": [
             {
@@ -434,15 +434,15 @@
         "y": 680,
         "wires": [
             [
-                "4ea948a845a45f47"
+                "6d63863639c5b709"
             ]
         ]
     },
     {
-        "id": "4ea948a845a45f47",
+        "id": "6d63863639c5b709",
         "type": "change",
-        "z": "area-rear-patio",
-        "g": "caf9552c0bdcba69",
+        "z": "area-front-porch",
+        "g": "4d2ec27eeb0ada8f",
         "name": "Evening",
         "rules": [
             {
@@ -462,19 +462,19 @@
         "y": 680,
         "wires": [
             [
-                "95d5ed7f14bae847"
+                "0cbe57b6066c5208"
             ]
         ]
     },
     {
-        "id": "95d5ed7f14bae847",
+        "id": "0cbe57b6066c5208",
         "type": "link out",
-        "z": "area-rear-patio",
-        "g": "caf9552c0bdcba69",
+        "z": "area-front-porch",
+        "g": "4d2ec27eeb0ada8f",
         "name": "Control Exterior Light",
         "mode": "link",
         "links": [
-            "8a9ea5a6fc65e981"
+            "8dedfa4f81255d72"
         ],
         "x": 540,
         "y": 680,
@@ -482,10 +482,10 @@
         "l": true
     },
     {
-        "id": "2e191edd47f1f969",
+        "id": "08342ad812806f7e",
         "type": "inject",
-        "z": "area-rear-patio",
-        "g": "caf9552c0bdcba69",
+        "z": "area-front-porch",
+        "g": "4d2ec27eeb0ada8f",
         "name": "Manual",
         "props": [
             {
@@ -507,15 +507,15 @@
         "y": 740,
         "wires": [
             [
-                "0f15e9350684ae55"
+                "31148450560e07f2"
             ]
         ]
     },
     {
-        "id": "0f15e9350684ae55",
+        "id": "31148450560e07f2",
         "type": "change",
-        "z": "area-rear-patio",
-        "g": "caf9552c0bdcba69",
+        "z": "area-front-porch",
+        "g": "4d2ec27eeb0ada8f",
         "name": "Overnight",
         "rules": [
             {
@@ -535,19 +535,19 @@
         "y": 740,
         "wires": [
             [
-                "9b6a7c0bf2f2775d"
+                "e3b4c2eec55340e6"
             ]
         ]
     },
     {
-        "id": "9b6a7c0bf2f2775d",
+        "id": "e3b4c2eec55340e6",
         "type": "link out",
-        "z": "area-rear-patio",
-        "g": "caf9552c0bdcba69",
+        "z": "area-front-porch",
+        "g": "4d2ec27eeb0ada8f",
         "name": "Control Exterior Light",
         "mode": "link",
         "links": [
-            "8a9ea5a6fc65e981"
+            "8dedfa4f81255d72"
         ],
         "x": 540,
         "y": 740,

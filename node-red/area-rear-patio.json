@@ -1,0 +1,588 @@
+[
+    {
+        "id": "area-rear-patio",
+        "type": "tab",
+        "label": "Area: Rear Patio",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "e1dc6c2918c84e62",
+        "type": "group",
+        "z": "area-rear-patio",
+        "name": "Sinks",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "a669685bc48716b6",
+            "c1627c741998a849",
+            "d2cbf19dd1e6509f",
+            "af617fc6845a72fb",
+            "f4e59c04c5df0492",
+            "bd5e3f220dbb7402",
+            "0f4b941ee5629e2e",
+            "37a3239ac4715817"
+        ],
+        "x": 54,
+        "y": 159,
+        "w": 432,
+        "h": 262
+    },
+    {
+        "id": "95fb11541a703d69",
+        "type": "group",
+        "z": "area-rear-patio",
+        "name": "Lighting",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "8a9ea5a6fc65e981",
+            "d60ef7e4870ee53b",
+            "34f131338bb6803d"
+        ],
+        "x": 54,
+        "y": 39,
+        "w": 612,
+        "h": 82
+    },
+    {
+        "id": "1049c923d47a25c2",
+        "type": "group",
+        "z": "area-rear-patio",
+        "name": "Error Handling",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "c4d21625e1659898",
+            "9a4ed99eefbdbe9b"
+        ],
+        "x": 54,
+        "y": 459,
+        "w": 352,
+        "h": 82
+    },
+    {
+        "id": "caf9552c0bdcba69",
+        "type": "group",
+        "z": "area-rear-patio",
+        "name": "Test Cases",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "a582bf37dd33c432",
+            "a3d711753b7e7122",
+            "d7e7a760c17d8734",
+            "57ddb76f778cb5b6",
+            "4ea948a845a45f47",
+            "95d5ed7f14bae847",
+            "2e191edd47f1f969",
+            "0f15e9350684ae55",
+            "9b6a7c0bf2f2775d"
+        ],
+        "x": 54,
+        "y": 579,
+        "w": 612,
+        "h": 202
+    },
+    {
+        "id": "8a9ea5a6fc65e981",
+        "type": "link in",
+        "z": "area-rear-patio",
+        "g": "95fb11541a703d69",
+        "name": "Control Exterior Light",
+        "links": [
+            "37a3239ac4715817",
+            "95d5ed7f14bae847",
+            "9b6a7c0bf2f2775d",
+            "af617fc6845a72fb",
+            "bd5e3f220dbb7402",
+            "c1627c741998a849",
+            "d7e7a760c17d8734"
+        ],
+        "x": 180,
+        "y": 80,
+        "wires": [
+            [
+                "d60ef7e4870ee53b"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "a669685bc48716b6",
+        "type": "mqtt in",
+        "z": "area-rear-patio",
+        "g": "e1dc6c2918c84e62",
+        "name": "Period",
+        "topic": "highland/state/scheduler/period",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 130,
+        "y": 200,
+        "wires": [
+            [
+                "c1627c741998a849"
+            ]
+        ]
+    },
+    {
+        "id": "d60ef7e4870ee53b",
+        "type": "function",
+        "z": "area-rear-patio",
+        "g": "95fb11541a703d69",
+        "name": "Set State",
+        "func": "const payload = typeof msg.payload === 'string'\n    ? JSON.parse(msg.payload)\n    : msg.payload;\nconst period = payload.period;\n\nconst lightPayload = period === 'evening'\n    ? { state: 'ON', brightness: 254 }\n    : { state: 'OFF' };\n\nmsg.topic = 'zigbee2mqtt/rear_patio_entry_light/set';\nmsg.payload = JSON.stringify(lightPayload);\n\nconst formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nlet color = (lightPayload.state === 'ON' ? 'green' : 'yellow');\nnode.status({ fill: color, shape: 'dot', text: formatStatus(lightPayload.state) });\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 80,
+        "wires": [
+            [
+                "34f131338bb6803d"
+            ]
+        ]
+    },
+    {
+        "id": "c1627c741998a849",
+        "type": "link out",
+        "z": "area-rear-patio",
+        "g": "e1dc6c2918c84e62",
+        "name": "Control Exterior Light",
+        "mode": "link",
+        "links": [
+            "8a9ea5a6fc65e981"
+        ],
+        "x": 340,
+        "y": 200,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "d2cbf19dd1e6509f",
+        "type": "mqtt in",
+        "z": "area-rear-patio",
+        "g": "e1dc6c2918c84e62",
+        "name": "Daytime",
+        "topic": "highland/event/scheduler/day",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 260,
+        "wires": [
+            [
+                "af617fc6845a72fb"
+            ]
+        ]
+    },
+    {
+        "id": "af617fc6845a72fb",
+        "type": "link out",
+        "z": "area-rear-patio",
+        "g": "e1dc6c2918c84e62",
+        "name": "Control Exterior Light",
+        "mode": "link",
+        "links": [
+            "8a9ea5a6fc65e981"
+        ],
+        "x": 360,
+        "y": 260,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "f4e59c04c5df0492",
+        "type": "mqtt in",
+        "z": "area-rear-patio",
+        "g": "e1dc6c2918c84e62",
+        "name": "Evening",
+        "topic": "highland/event/scheduler/evening",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 320,
+        "wires": [
+            [
+                "bd5e3f220dbb7402"
+            ]
+        ]
+    },
+    {
+        "id": "bd5e3f220dbb7402",
+        "type": "link out",
+        "z": "area-rear-patio",
+        "g": "e1dc6c2918c84e62",
+        "name": "Control Exterior Light",
+        "mode": "link",
+        "links": [
+            "8a9ea5a6fc65e981"
+        ],
+        "x": 360,
+        "y": 320,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0f4b941ee5629e2e",
+        "type": "mqtt in",
+        "z": "area-rear-patio",
+        "g": "e1dc6c2918c84e62",
+        "name": "Overnight",
+        "topic": "highland/event/scheduler/overnight",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 380,
+        "wires": [
+            [
+                "37a3239ac4715817"
+            ]
+        ]
+    },
+    {
+        "id": "37a3239ac4715817",
+        "type": "link out",
+        "z": "area-rear-patio",
+        "g": "e1dc6c2918c84e62",
+        "name": "Control Exterior Light",
+        "mode": "link",
+        "links": [
+            "8a9ea5a6fc65e981"
+        ],
+        "x": 360,
+        "y": 380,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "34f131338bb6803d",
+        "type": "mqtt out",
+        "z": "area-rear-patio",
+        "g": "95fb11541a703d69",
+        "name": "Publish",
+        "topic": "",
+        "qos": "1",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 580,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "c4d21625e1659898",
+        "type": "catch",
+        "z": "area-rear-patio",
+        "g": "1049c923d47a25c2",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 140,
+        "y": 500,
+        "wires": [
+            [
+                "9a4ed99eefbdbe9b"
+            ]
+        ]
+    },
+    {
+        "id": "9a4ed99eefbdbe9b",
+        "type": "debug",
+        "z": "area-rear-patio",
+        "g": "1049c923d47a25c2",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 310,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "a582bf37dd33c432",
+        "type": "inject",
+        "z": "area-rear-patio",
+        "g": "caf9552c0bdcba69",
+        "name": "Manual",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            },
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{}",
+        "payloadType": "json",
+        "x": 150,
+        "y": 620,
+        "wires": [
+            [
+                "a3d711753b7e7122"
+            ]
+        ]
+    },
+    {
+        "id": "a3d711753b7e7122",
+        "type": "change",
+        "z": "area-rear-patio",
+        "g": "caf9552c0bdcba69",
+        "name": "Daytime",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "{\"period\":\"daytime\",\"timestamp\":\"...\",\"source\":\"scheduler\"}",
+                "tot": "json"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 320,
+        "y": 620,
+        "wires": [
+            [
+                "d7e7a760c17d8734"
+            ]
+        ]
+    },
+    {
+        "id": "d7e7a760c17d8734",
+        "type": "link out",
+        "z": "area-rear-patio",
+        "g": "caf9552c0bdcba69",
+        "name": "Control Exterior Light",
+        "mode": "link",
+        "links": [
+            "8a9ea5a6fc65e981"
+        ],
+        "x": 540,
+        "y": 620,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "57ddb76f778cb5b6",
+        "type": "inject",
+        "z": "area-rear-patio",
+        "g": "caf9552c0bdcba69",
+        "name": "Manual",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            },
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{}",
+        "payloadType": "json",
+        "x": 150,
+        "y": 680,
+        "wires": [
+            [
+                "4ea948a845a45f47"
+            ]
+        ]
+    },
+    {
+        "id": "4ea948a845a45f47",
+        "type": "change",
+        "z": "area-rear-patio",
+        "g": "caf9552c0bdcba69",
+        "name": "Evening",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "{\"period\":\"evening\",\"timestamp\":\"...\",\"source\":\"scheduler\"}",
+                "tot": "json"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 320,
+        "y": 680,
+        "wires": [
+            [
+                "95d5ed7f14bae847"
+            ]
+        ]
+    },
+    {
+        "id": "95d5ed7f14bae847",
+        "type": "link out",
+        "z": "area-rear-patio",
+        "g": "caf9552c0bdcba69",
+        "name": "Control Exterior Light",
+        "mode": "link",
+        "links": [
+            "8a9ea5a6fc65e981"
+        ],
+        "x": 540,
+        "y": 680,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "2e191edd47f1f969",
+        "type": "inject",
+        "z": "area-rear-patio",
+        "g": "caf9552c0bdcba69",
+        "name": "Manual",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            },
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{}",
+        "payloadType": "json",
+        "x": 150,
+        "y": 740,
+        "wires": [
+            [
+                "0f15e9350684ae55"
+            ]
+        ]
+    },
+    {
+        "id": "0f15e9350684ae55",
+        "type": "change",
+        "z": "area-rear-patio",
+        "g": "caf9552c0bdcba69",
+        "name": "Overnight",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "{\"period\":\"overnight\",\"timestamp\":\"...\",\"source\":\"scheduler\"}",
+                "tot": "json"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 320,
+        "y": 740,
+        "wires": [
+            [
+                "9b6a7c0bf2f2775d"
+            ]
+        ]
+    },
+    {
+        "id": "9b6a7c0bf2f2775d",
+        "type": "link out",
+        "z": "area-rear-patio",
+        "g": "caf9552c0bdcba69",
+        "name": "Control Exterior Light",
+        "mode": "link",
+        "links": [
+            "8a9ea5a6fc65e981"
+        ],
+        "x": 540,
+        "y": 740,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    }
+]

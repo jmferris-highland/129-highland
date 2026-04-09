@@ -46,6 +46,13 @@ Captured ideas for future automations. Not requirements — just things worth ex
 | Idea | Notes | Added |
 |------|-------|-------|
 
+### Outdoor & Grounds
+
+| Idea | Notes | Added |
+|------|-------|-------|
+| Landroid calendar suppression | When a calendar suppression event is active (guests, party, etc.), send a pause command to the mower via `highland/command/landroid/control` and resume when suppression clears. Low priority — mower's own schedule handles most cases. Depends on Mosquitto bridge being live first. See `subsystems/LANDROID.md`. | 2026-04-09 |
+| Landroid rain delay + NWS coordination | Mower has its own rain delay, but consider whether to supplement with NWS/Tempest forecast data — e.g., skip a scheduled mow if rain is likely within N hours even if the mower's sensor hasn't triggered yet. Defer until a full mow season of observations are in hand. | 2026-04-09 |
+
 ### Maintenance & System Health
 
 | Idea | Notes | Added |
@@ -143,4 +150,4 @@ Description:
 
 ---
 
-*Last Updated: 2026-03-26*
+*Last Updated: 2026-04-09*

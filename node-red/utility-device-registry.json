@@ -236,12 +236,11 @@
             "542f17b90dc55fdd",
             "df4d35dab5afc630",
             "75fc52f54190d568",
-            "2d782853df4a0824",
-            "5777bdfb5a3c3761"
+            "2d782853df4a0824"
         ],
         "x": 54,
         "y": 59,
-        "w": 1232,
+        "w": 992,
         "h": 322
     },
     {
@@ -284,7 +283,7 @@
                 "valueType": "results"
             }
         ],
-        "x": 700,
+        "x": 460,
         "y": 220,
         "wires": [
             [
@@ -315,7 +314,7 @@
                 "valueType": "results"
             }
         ],
-        "x": 890,
+        "x": 650,
         "y": 220,
         "wires": [
             [
@@ -346,7 +345,7 @@
                 "valueType": "results"
             }
         ],
-        "x": 1090,
+        "x": 850,
         "y": 220,
         "wires": [
             [
@@ -436,7 +435,7 @@
         "repeat": "",
         "crontab": "",
         "once": true,
-        "onceDelay": 0.1,
+        "onceDelay": "5",
         "topic": "",
         "payload": "",
         "payloadType": "date",
@@ -496,7 +495,7 @@
         "y": 220,
         "wires": [
             [
-                "5777bdfb5a3c3761"
+                "db12a574139aba31"
             ]
         ],
         "l": true
@@ -509,7 +508,7 @@
         "name": "Fetch From Home Assistant Return",
         "mode": "return",
         "links": [],
-        "x": 1245,
+        "x": 1005,
         "y": 220,
         "wires": []
     },
@@ -806,38 +805,6 @@
         ]
     },
     {
-        "id": "5777bdfb5a3c3761",
-        "type": "subflow:subflow-connection-gate",
-        "z": "utility-device-registry",
-        "g": "dc5aa602fab26888",
-        "name": "Home Assistant Gate",
-        "env": [
-            {
-                "name": "CONNECTION_TYPE",
-                "value": "home_assistant",
-                "type": "str"
-            },
-            {
-                "name": "RETENTION_MS",
-                "value": "5000",
-                "type": "num"
-            },
-            {
-                "name": "CONTEXT_PREFIX",
-                "value": "ha-",
-                "type": "str"
-            }
-        ],
-        "x": 480,
-        "y": 220,
-        "wires": [
-            [
-                "db12a574139aba31"
-            ],
-            []
-        ]
-    },
-    {
         "id": "aa5463113481df19",
         "type": "server",
         "name": "Home Assistant",
@@ -899,7 +866,7 @@
         "sessionExpiry": ""
     },
     {
-        "id": "9f6035c1e196a993",
+        "id": "7a72a521f77584e9",
         "type": "global-config",
         "env": [],
         "modules": {

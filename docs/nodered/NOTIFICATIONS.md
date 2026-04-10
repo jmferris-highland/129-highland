@@ -46,6 +46,7 @@ What each delivery channel currently supports. Reflects the current implementati
 | `smallIconColor` (hex tint) | — | ✅ | — |
 | `media.image` (URL) | ✅ | ✅ | — |
 | `media.video` (URL) | — | ✅ | — |
+| `url` / `clickAction` (tap navigation) | ✅ (Android: `clickAction`, iOS: `url`) | — | — |
 | `sticky` / persistent | ✅ | — | — |
 | `group` | ✅ | — | — |
 | `correlation_id` / tag | ✅ | — | — |
@@ -79,6 +80,7 @@ What each delivery channel currently supports. Reflects the current implementati
 | `sticky` | No | Notification persists until dismissed; default = false |
 | `group` | No | Group related notifications together |
 | `correlation_id` | No | For linking response back to originating event; also used as notification tag for clearing |
+| `url` | No | URL to open when notification is tapped. Relative HA paths (e.g. `/dashboard-weather/0`) or `homeassistant://navigate/` deep links. On Android, emitted as `clickAction`; on iOS as `url`. |
 
 **Two patterns for specifying delivery:**
 
@@ -138,6 +140,16 @@ Pre-configured in HA Companion App for user control over sound/vibration/DND:
 | `highland_default` | Standard alerts | No |
 | `highland_high` | Urgent alerts | Yes |
 | `highland_critical` | Emergency | Yes |
+
+### Tap Navigation
+
+To open a specific HA dashboard or URL when a notification is tapped, include `url` in the notification payload:
+
+```json
+"url": "/dashboard-weather/0"
+```
+
+`Build Service Call` in `Utility: Notifications` emits this as both `clickAction` (Android) and `url` (iOS) in the notification data block, covering both platforms. Use relative HA paths or `homeassistant://navigate/` deep links for in-app navigation.
 
 ### Severity → HA Companion Mapping
 
@@ -388,4 +400,4 @@ Adding a new channel: add a case to `resolveLinkTarget()`, build a new delivery 
 
 ---
 
-*Last Updated: 2026-04-08*
+*Last Updated: 2026-04-10*

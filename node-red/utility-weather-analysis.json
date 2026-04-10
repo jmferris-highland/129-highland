@@ -1,0 +1,1036 @@
+[
+    {
+        "id": "utility-weather-analysis",
+        "type": "tab",
+        "label": "Utility: Weather Analysis",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "013581a0b497e4ea",
+        "type": "group",
+        "z": "utility-weather-analysis",
+        "name": "Test Cases",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "8003ac69c8d35237",
+            "bdfa30e7a35512b9",
+            "23e2d270a0bfe6e8",
+            "07fc1f0dda9ef7f3",
+            "96e978ef91a4f41e",
+            "59c1611af669c0d0",
+            "56495481d2c52143",
+            "f21df83cbd2746d5",
+            "cafa85c36fdde511",
+            "f81f6598d2085d1c",
+            "fedffdfcd28454f3",
+            "0f61d9bb96867f60"
+        ],
+        "x": 54,
+        "y": 1059,
+        "w": 592,
+        "h": 322
+    },
+    {
+        "id": "2b942717691a3747",
+        "type": "group",
+        "z": "utility-weather-analysis",
+        "name": "Sinks",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "3e6e7ace6608b2e8",
+            "47491515952ebb9d",
+            "aed0dc355f209edb"
+        ],
+        "x": 54,
+        "y": 819,
+        "w": 632,
+        "h": 82
+    },
+    {
+        "id": "012af42498dc4e20",
+        "type": "group",
+        "z": "utility-weather-analysis",
+        "name": "Forecast Acquisition",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "f8a8e0b8a100cb7e",
+            "81149009653c2223",
+            "4b69444fd6a0c7a2",
+            "49bb193e49b04e43",
+            "429211988679bf98"
+        ],
+        "x": 54,
+        "y": 219,
+        "w": 982,
+        "h": 82
+    },
+    {
+        "id": "3116b8c4a3283098",
+        "type": "group",
+        "z": "utility-weather-analysis",
+        "name": "Error Handling",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "efaf0be553be4192",
+            "3673c43bc907dd08"
+        ],
+        "x": 54,
+        "y": 939,
+        "w": 352,
+        "h": 82
+    },
+    {
+        "id": "ac55391a60d3f886",
+        "type": "group",
+        "z": "utility-weather-analysis",
+        "name": "Local Observations",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "aa8d63bbcf325f70",
+            "d439869719211469"
+        ],
+        "x": 54,
+        "y": 699,
+        "w": 432,
+        "h": 82
+    },
+    {
+        "id": "5f529a0d539eb8fa",
+        "type": "group",
+        "z": "utility-weather-analysis",
+        "name": "Analysis Pipeline",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "7d1f424943b9c604",
+            "69ac8a0d4a60c962",
+            "abc389a194cfacd3",
+            "255b2b0506704589",
+            "c4f38459811596e8",
+            "695fb76960558df6"
+        ],
+        "x": 54,
+        "y": 39,
+        "w": 1172,
+        "h": 142
+    },
+    {
+        "id": "108ad1173576784c",
+        "type": "group",
+        "z": "utility-weather-analysis",
+        "name": "Forecast Analysis",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "ce70860d2bb077bd",
+            "d971476b6469760c",
+            "23996aa3f18d0f44",
+            "4767ebb49ad4d536",
+            "e2e12416b89d0aa0",
+            "85d46f7bfeb17a42"
+        ],
+        "x": 54,
+        "y": 339,
+        "w": 1032,
+        "h": 142
+    },
+    {
+        "id": "b8c179eea15090be",
+        "type": "group",
+        "z": "utility-weather-analysis",
+        "name": "MinuteCast Notifications",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "9a5f18f2cd0be6db",
+            "0d152e042260eb10",
+            "886b911f966b4661",
+            "13cbcf12551c0669"
+        ],
+        "x": 54,
+        "y": 519,
+        "w": 712,
+        "h": 142
+    },
+    {
+        "id": "f8a8e0b8a100cb7e",
+        "type": "function",
+        "z": "utility-weather-analysis",
+        "g": "012af42498dc4e20",
+        "name": "Build Request",
+        "func": "const config = global.get('config');\nconst key = config.secrets.pirate_weather.api_key;\nconst lat = config.location.latitude;\nconst lon = config.location.longitude;\n\n// Full payload — no excludes so you can see everything\nmsg.url = `https://api.pirateweather.net/forecast/${key}/${lat},${lon}?units=us&version=2`;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 260,
+        "wires": [
+            [
+                "81149009653c2223"
+            ]
+        ]
+    },
+    {
+        "id": "81149009653c2223",
+        "type": "http request",
+        "z": "utility-weather-analysis",
+        "g": "012af42498dc4e20",
+        "name": "Fetch Forecast",
+        "method": "GET",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 640,
+        "y": 260,
+        "wires": [
+            [
+                "4b69444fd6a0c7a2"
+            ]
+        ]
+    },
+    {
+        "id": "4b69444fd6a0c7a2",
+        "type": "function",
+        "z": "utility-weather-analysis",
+        "g": "012af42498dc4e20",
+        "name": "Extract Data",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\nconst d = msg.payload;\n\n// Calculate HRRR subhourly data age\nconst hrrr_subh_str = d.flags?.sourceTimes?.hrrr_subh;\nlet hrrr_age_minutes = null;\nif (hrrr_subh_str) {\n    // Format is \"2026-04-10 09Z\" — convert to valid ISO\n    const iso = hrrr_subh_str.replace(' ', 'T').replace('Z', ':00:00Z');\n    const hrrr_time = new Date(iso);\n    if (!isNaN(hrrr_time.getTime())) {\n        hrrr_age_minutes = Math.round((Date.now() - hrrr_time.getTime()) / 60000);\n    }\n}\n\nconst minutely = (d.minutely?.data ?? []).map(m => ({\n    time:               m.time,\n    precip_intensity:   m.precipIntensity,\n    precip_probability: m.precipProbability,\n    precip_error:       m.precipIntensityError,\n    precip_type:        m.precipType,\n    rain_intensity:     m.rainIntensity,\n    snow_intensity:     m.snowIntensity,\n    sleet_intensity:    m.sleetIntensity ?? null\n}));\n\nmsg.payload = {\n    fetched_at:               new Date().toISOString(),\n    hrrr_subh_age_minutes:    hrrr_age_minutes,\n    nearest_storm_distance:   d.currently?.nearestStormDistance ?? null,\n    nearest_storm_bearing:    d.currently?.nearestStormBearing ?? null,\n    cape:                     d.currently?.cape ?? 0,\n    precip_type_model:        d.currently?.precipType ?? 'none',\n    minutely\n};\n\nnode.status({ fill: 'green', shape: 'dot',\n    text: formatStatus(`${minutely.length} min | HRRR ${hrrr_age_minutes}m old`)\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 850,
+        "y": 260,
+        "wires": [
+            [
+                "429211988679bf98"
+            ]
+        ]
+    },
+    {
+        "id": "3e6e7ace6608b2e8",
+        "type": "cronplus",
+        "z": "utility-weather-analysis",
+        "g": "2b942717691a3747",
+        "name": "Poll",
+        "outputField": "payload",
+        "timeZone": "",
+        "storeName": "",
+        "commandResponseMsgOutput": "output1",
+        "defaultLocation": "",
+        "defaultLocationType": "default",
+        "outputs": 1,
+        "options": [
+            {
+                "name": "Every Minute",
+                "topic": "every-minute",
+                "payloadType": "default",
+                "payload": "",
+                "expressionType": "cron",
+                "expression": "0 * * * * * *",
+                "location": "",
+                "offset": "0",
+                "solarType": "all",
+                "solarEvents": "sunrise,sunset"
+            }
+        ],
+        "x": 150,
+        "y": 860,
+        "wires": [
+            [
+                "47491515952ebb9d"
+            ]
+        ]
+    },
+    {
+        "id": "47491515952ebb9d",
+        "type": "function",
+        "z": "utility-weather-analysis",
+        "g": "2b942717691a3747",
+        "name": "Rate Limiter",
+        "func": "let current_tick = flow.get('current_tick') || 1;\nlet gate_tick = flow.get('gate_tick') || 5;\n\ncurrent_tick++;\n\nif (current_tick > gate_tick) {\n    flow.set('current_tick', 1);\n    return msg;\n} else {\n    flow.set('current_tick', current_tick);\n    return null;\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 860,
+        "wires": [
+            [
+                "aed0dc355f209edb"
+            ]
+        ]
+    },
+    {
+        "id": "49bb193e49b04e43",
+        "type": "link in",
+        "z": "utility-weather-analysis",
+        "g": "012af42498dc4e20",
+        "name": "Aquire Current Forecast",
+        "links": [
+            "523101d843cab49c"
+        ],
+        "x": 180,
+        "y": 260,
+        "wires": [
+            [
+                "f8a8e0b8a100cb7e"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "aed0dc355f209edb",
+        "type": "link out",
+        "z": "utility-weather-analysis",
+        "g": "2b942717691a3747",
+        "name": "Begin Analysis Cycle",
+        "mode": "link",
+        "links": [
+            "7d1f424943b9c604"
+        ],
+        "x": 560,
+        "y": 860,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "8003ac69c8d35237",
+        "type": "inject",
+        "z": "utility-weather-analysis",
+        "g": "013581a0b497e4ea",
+        "name": "Manual",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 1100,
+        "wires": [
+            [
+                "23e2d270a0bfe6e8"
+            ]
+        ]
+    },
+    {
+        "id": "bdfa30e7a35512b9",
+        "type": "inject",
+        "z": "utility-weather-analysis",
+        "g": "013581a0b497e4ea",
+        "name": "Manual",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 1160,
+        "wires": [
+            [
+                "07fc1f0dda9ef7f3"
+            ]
+        ]
+    },
+    {
+        "id": "23e2d270a0bfe6e8",
+        "type": "change",
+        "z": "utility-weather-analysis",
+        "g": "013581a0b497e4ea",
+        "name": "One Minute Polling",
+        "rules": [
+            {
+                "t": "set",
+                "p": "gate_tick",
+                "pt": "flow",
+                "to": "1",
+                "tot": "num"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 350,
+        "y": 1100,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "07fc1f0dda9ef7f3",
+        "type": "change",
+        "z": "utility-weather-analysis",
+        "g": "013581a0b497e4ea",
+        "name": "Five Minute Polling",
+        "rules": [
+            {
+                "t": "set",
+                "p": "gate_tick",
+                "pt": "flow",
+                "to": "5",
+                "tot": "num"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 350,
+        "y": 1160,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "efaf0be553be4192",
+        "type": "catch",
+        "z": "utility-weather-analysis",
+        "g": "3116b8c4a3283098",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 140,
+        "y": 980,
+        "wires": [
+            [
+                "3673c43bc907dd08"
+            ]
+        ]
+    },
+    {
+        "id": "3673c43bc907dd08",
+        "type": "debug",
+        "z": "utility-weather-analysis",
+        "g": "3116b8c4a3283098",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 310,
+        "y": 980,
+        "wires": []
+    },
+    {
+        "id": "96e978ef91a4f41e",
+        "type": "inject",
+        "z": "utility-weather-analysis",
+        "g": "013581a0b497e4ea",
+        "name": "Manual",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 1220,
+        "wires": [
+            [
+                "0f61d9bb96867f60"
+            ]
+        ]
+    },
+    {
+        "id": "aa8d63bbcf325f70",
+        "type": "mqtt in",
+        "z": "utility-weather-analysis",
+        "g": "ac55391a60d3f886",
+        "name": "Tempest",
+        "topic": "highland/state/weather/station",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 740,
+        "wires": [
+            [
+                "d439869719211469"
+            ]
+        ]
+    },
+    {
+        "id": "d439869719211469",
+        "type": "function",
+        "z": "utility-weather-analysis",
+        "g": "ac55391a60d3f886",
+        "name": "Extract Station Data",
+        "func": "const payload = typeof msg.payload === 'string' \n    ? JSON.parse(msg.payload) \n    : msg.payload;\n\nflow.set('station_precip_type', payload.precipitation_type ?? 'None');\nflow.set('station_rain_accumulated', payload.rain_accumulated ?? 0);\n\nreturn null;",
+        "outputs": 0,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 740,
+        "wires": []
+    },
+    {
+        "id": "59c1611af669c0d0",
+        "type": "inject",
+        "z": "utility-weather-analysis",
+        "g": "013581a0b497e4ea",
+        "name": "Manual",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 1280,
+        "wires": [
+            [
+                "f21df83cbd2746d5"
+            ]
+        ]
+    },
+    {
+        "id": "56495481d2c52143",
+        "type": "inject",
+        "z": "utility-weather-analysis",
+        "g": "013581a0b497e4ea",
+        "name": "Manual",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 1340,
+        "wires": [
+            [
+                "cafa85c36fdde511"
+            ]
+        ]
+    },
+    {
+        "id": "f21df83cbd2746d5",
+        "type": "function",
+        "z": "utility-weather-analysis",
+        "g": "013581a0b497e4ea",
+        "name": "Force Threat",
+        "func": "// Inject synthetic data that mimics rain starting in 10 minutes\n// Bypasses the API call entirely — goes straight to Analyze Minutely\n\nconst now = Math.floor(Date.now() / 1000);\n\n// Build 61 synthetic minutely entries\n// Minutes 0-9: dry, Minutes 10-60: rain\nconst minutely = [];\nfor (let i = 0; i < 61; i++) {\n    const active = i >= 10;\n    minutely.push({\n        time:               now + (i * 60),\n        precip_intensity:   active ? 0.05 : 0,\n        precip_probability: active ? 0.75 : 0,\n        precip_error:       active ? 0.01 : 0,\n        precip_type:        active ? 'rain' : 'none',\n        rain_intensity:     active ? 0.05 : 0,\n        snow_intensity:     0,\n        sleet_intensity:    0\n    });\n}\n\nmsg.payload = {\n    fetched_at:              new Date().toISOString(),\n    hrrr_subh_age_minutes:   60,\n    nearest_storm_distance:  12.3,\n    nearest_storm_bearing:   228,\n    cape:                    0,\n    precip_type_model:       'rain',\n    minutely\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 1280,
+        "wires": [
+            [
+                "f81f6598d2085d1c"
+            ]
+        ]
+    },
+    {
+        "id": "cafa85c36fdde511",
+        "type": "function",
+        "z": "utility-weather-analysis",
+        "g": "013581a0b497e4ea",
+        "name": "Force Clear",
+        "func": "const now = Math.floor(Date.now() / 1000);\n\nconst minutely = Array.from({ length: 61 }, (_, i) => ({\n    time:               now + (i * 60),\n    precip_intensity:   0,\n    precip_probability: 0,\n    precip_error:       0,\n    precip_type:        'none',\n    rain_intensity:     0,\n    snow_intensity:     0,\n    sleet_intensity:    0\n}));\n\nmsg.payload = {\n    fetched_at:              new Date().toISOString(),\n    hrrr_subh_age_minutes:   60,\n    nearest_storm_distance:  50.0,\n    nearest_storm_bearing:   180,\n    cape:                    0,\n    precip_type_model:       'none',\n    minutely\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 1340,
+        "wires": [
+            [
+                "fedffdfcd28454f3"
+            ]
+        ]
+    },
+    {
+        "id": "f81f6598d2085d1c",
+        "type": "link out",
+        "z": "utility-weather-analysis",
+        "g": "013581a0b497e4ea",
+        "name": "Testing Bypass",
+        "mode": "link",
+        "links": [
+            "255b2b0506704589"
+        ],
+        "x": 540,
+        "y": 1280,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "fedffdfcd28454f3",
+        "type": "link out",
+        "z": "utility-weather-analysis",
+        "g": "013581a0b497e4ea",
+        "name": "Testing Bypass",
+        "mode": "link",
+        "links": [
+            "255b2b0506704589"
+        ],
+        "x": 540,
+        "y": 1340,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "7d1f424943b9c604",
+        "type": "link in",
+        "z": "utility-weather-analysis",
+        "g": "5f529a0d539eb8fa",
+        "name": "Begin Analysis Cycle",
+        "links": [
+            "0f61d9bb96867f60",
+            "aed0dc355f209edb"
+        ],
+        "x": 170,
+        "y": 80,
+        "wires": [
+            [
+                "69ac8a0d4a60c962"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "ce70860d2bb077bd",
+        "type": "link in",
+        "z": "utility-weather-analysis",
+        "g": "108ad1173576784c",
+        "name": "Analyze Run",
+        "links": [],
+        "x": 150,
+        "y": 380,
+        "wires": [
+            [
+                "23996aa3f18d0f44"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "d971476b6469760c",
+        "type": "link out",
+        "z": "utility-weather-analysis",
+        "g": "108ad1173576784c",
+        "name": "Analyze Run Return",
+        "mode": "return",
+        "links": [],
+        "x": 955,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "9a5f18f2cd0be6db",
+        "type": "link in",
+        "z": "utility-weather-analysis",
+        "g": "b8c179eea15090be",
+        "name": "Notification Management",
+        "links": [],
+        "x": 190,
+        "y": 560,
+        "wires": [
+            [
+                "886b911f966b4661"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "0d152e042260eb10",
+        "type": "link out",
+        "z": "utility-weather-analysis",
+        "g": "b8c179eea15090be",
+        "name": "Notification Management Return",
+        "mode": "return",
+        "links": [],
+        "x": 635,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "69ac8a0d4a60c962",
+        "type": "link call",
+        "z": "utility-weather-analysis",
+        "g": "5f529a0d539eb8fa",
+        "name": "",
+        "links": [
+            "49bb193e49b04e43"
+        ],
+        "linkType": "static",
+        "timeout": "30",
+        "x": 430,
+        "y": 80,
+        "wires": [
+            [
+                "abc389a194cfacd3"
+            ]
+        ]
+    },
+    {
+        "id": "23996aa3f18d0f44",
+        "type": "function",
+        "z": "utility-weather-analysis",
+        "g": "108ad1173576784c",
+        "name": "Analyze Minutely",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst p = msg.payload;\nconst minutely = p.minutely;\n\n// --- Thresholds ---\nconst PROB_THRESHOLD      = 0.60;  // provisional\nconst INTENSITY_THRESHOLD = 0.02;  // in/hr — ignore trace amounts\n\n// --- Helper: is a given minute considered active precipitation? ---\nfunction isActive(m) {\n    return m.precip_probability >= PROB_THRESHOLD\n        && m.precip_intensity   >= INTENSITY_THRESHOLD;\n}\n\n// --- Scan minutely into windows ---\n// A window is a contiguous block of minutes with the same active state\nconst windows = [];\nlet windowStart = 0;\nlet currentActive = isActive(minutely[0]);\n\nfor (let i = 1; i <= minutely.length; i++) {\n    const active = i < minutely.length ? isActive(minutely[i]) : !currentActive;\n    if (active !== currentActive) {\n        windows.push({\n            start_idx:  windowStart,\n            end_idx:    i - 1,\n            active:     currentActive,\n            minutes:    minutely.slice(windowStart, i)\n        });\n        windowStart   = i;\n        currentActive = active;\n    }\n}\n\nconst precipWindows = windows.filter(w => w.active);\n\n// --- For each precip window, extract type info and peak intensity ---\nfunction analyzeWindow(w) {\n    let peakIntensity   = 0;\n    let peakProbability = 0;\n    const types = new Set();\n\n    for (const m of w.minutes) {\n        if (m.precip_intensity > peakIntensity) {\n            peakIntensity   = m.precip_intensity;\n            peakProbability = m.precip_probability;\n        }\n        if (m.rain_intensity  > 0) types.add('rain');\n        if (m.snow_intensity  > 0) types.add('snow');\n        if (m.sleet_intensity > 0) types.add('sleet');\n    }\n\n    return {\n        start_idx:       w.start_idx,\n        end_idx:         w.end_idx,\n        duration_min:    w.end_idx - w.start_idx + 1,\n        peak_intensity:  Math.round(peakIntensity * 1000) / 1000,\n        peak_probability: Math.round(peakProbability * 100) / 100,\n        types:           [...types]\n    };\n}\n\nconst analyzedWindows = precipWindows.map(analyzeWindow);\n\n// --- Overall summary fields ---\nconst hasThreat      = analyzedWindows.length > 0;\nconst isIntermittent = analyzedWindows.length > 1;\nconst firstWindow    = analyzedWindows[0] ?? null;\nconst lastWindow     = analyzedWindows[analyzedWindows.length - 1] ?? null;\nconst extendsToEnd   = lastWindow ? lastWindow.end_idx === minutely.length - 1 : false;\n\n// Collect all types across all precip windows\nconst allTypes = [...new Set(analyzedWindows.flatMap(w => w.types))];\nconst overallPeak = Math.max(...analyzedWindows.map(w => w.peak_intensity), 0);\n\nmsg.payload = {\n    ...p,\n    analysis: {\n        has_threat:      hasThreat,\n        is_intermittent: isIntermittent,\n        extends_to_end:  extendsToEnd,\n        onset_minutes:   firstWindow?.start_idx ?? null,\n        clear_minutes:   hasThreat ? (extendsToEnd ? null : (lastWindow.end_idx + 1)) : null,\n        all_types:       allTypes,\n        peak_intensity:  Math.round(overallPeak * 1000) / 1000,\n        windows:         analyzedWindows\n    }\n};\n\nnode.status({\n    fill: hasThreat ? 'yellow' : 'green',\n    shape: 'dot',\n    text: formatStatus(\n        hasThreat\n            ? `${isIntermittent ? 'Intermittent' : 'Continuous'} — onset +${firstWindow.start_idx}min`\n            : 'No threat'\n    )\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 380,
+        "wires": [
+            [
+                "4767ebb49ad4d536"
+            ]
+        ]
+    },
+    {
+        "id": "4767ebb49ad4d536",
+        "type": "function",
+        "z": "utility-weather-analysis",
+        "g": "108ad1173576784c",
+        "name": "Build Message",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst p = msg.payload;\nconst a = p.analysis;\nconst cape = p.cape ?? 0;\n\n// --- Thresholds ---\nconst HEAVY_RAIN   = 0.30;  // in/hr\nconst HEAVY_SNOW   = 0.10;  // in/hr\nconst THUNDER_CAPE = 500;\n\n// --- Helpers ---\n\nfunction capitalize(str) {\n    return str.charAt(0).toUpperCase() + str.slice(1);\n}\n\nfunction typeLabel(types, peakIntensity, cape) {\n    const thunder = cape >= THUNDER_CAPE;\n    const hasRain  = types.includes('rain');\n    const hasSnow  = types.includes('snow');\n    const hasSleet = types.includes('sleet');\n\n    let primary;\n    if      (hasRain && hasSnow && hasSleet) primary = 'rain, snow, and sleet';\n    else if (hasRain && hasSnow)             primary = 'rain and snow';\n    else if (hasRain && hasSleet)            primary = 'rain and sleet';\n    else if (hasSnow && hasSleet)            primary = 'snow and sleet';\n    else if (hasRain)                        primary = 'rain';\n    else if (hasSnow)                        primary = 'snow';\n    else if (hasSleet)                       primary = 'sleet';\n    else                                     primary = 'precipitation';\n\n    // Thunder modifier\n    if (thunder) {\n        primary = primary\n            .replace(/^rain/, 'thunderstorms')\n            .replace(/^snow/, 'thundersnow')\n            .replace(/^sleet/, 'thundersleet');\n    }\n\n    // Heavy modifier — single type only, no thunder\n    if (!thunder && types.length === 1) {\n        if (hasRain && peakIntensity > HEAVY_RAIN) primary = 'heavy rain';\n        if (hasSnow && peakIntensity > HEAVY_SNOW) primary = 'heavy snow';\n    }\n\n    return primary;\n}\n\nfunction minuteText(n) {\n    return `${n} minute${n === 1 ? '' : 's'}`;\n}\n\n// --- Determine currently active from Tempest ---\nconst stationPrecipType = flow.get('station_precip_type') ?? 'None';\nconst currentlyActive   = stationPrecipType !== 'None';\n\n// --- Build message ---\nlet message = null;\n\nif (!a.has_threat) {\n    message = null;\n\n} else {\n    const label = typeLabel(a.all_types, a.peak_intensity, cape);\n\n    if (!currentlyActive) {\n        // DRY STATE — focus on onset\n        const onset = a.onset_minutes;\n\n        if (a.is_intermittent) {\n            if (onset === 0) {\n                message = `Periods of ${label} starting shortly`;\n            } else {\n                message = `Periods of ${label} starting in ${minuteText(onset)}`;\n            }\n        } else {\n            if (onset === 0) {\n                message = `${capitalize(label)} starting shortly`;\n            } else {\n                message = `${capitalize(label)} starting in ${minuteText(onset)}`;\n            }\n        }\n\n    } else {\n        // ACTIVE STATE — focus on duration/ending\n        if (a.is_intermittent) {\n            message = `Periods of ${label} for the next ${minuteText(a.clear_minutes ?? 60)}`;\n\n        } else if (a.extends_to_end) {\n            message = `${capitalize(label)} continuing for at least 60 minutes`;\n\n        } else {\n            message = `${capitalize(label)} stopping in ${minuteText(a.clear_minutes)}`;\n        }\n    }\n}\n\nmsg.payload = {\n    ...p,\n    message,\n    has_threat:      a.has_threat,\n    currently_active: currentlyActive\n};\n\nnode.status({\n    fill:  message ? 'yellow' : 'green',\n    shape: 'dot',\n    text:  formatStatus(message ?? 'Clear')\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 380,
+        "wires": [
+            [
+                "e2e12416b89d0aa0"
+            ]
+        ]
+    },
+    {
+        "id": "abc389a194cfacd3",
+        "type": "link call",
+        "z": "utility-weather-analysis",
+        "g": "5f529a0d539eb8fa",
+        "name": "",
+        "links": [
+            "ce70860d2bb077bd"
+        ],
+        "linkType": "static",
+        "timeout": "30",
+        "x": 670,
+        "y": 80,
+        "wires": [
+            [
+                "c4f38459811596e8"
+            ]
+        ]
+    },
+    {
+        "id": "255b2b0506704589",
+        "type": "link in",
+        "z": "utility-weather-analysis",
+        "g": "5f529a0d539eb8fa",
+        "name": "Testing Bypass",
+        "links": [
+            "f81f6598d2085d1c",
+            "fedffdfcd28454f3"
+        ],
+        "x": 460,
+        "y": 140,
+        "wires": [
+            [
+                "abc389a194cfacd3"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "429211988679bf98",
+        "type": "link out",
+        "z": "utility-weather-analysis",
+        "g": "012af42498dc4e20",
+        "name": "Acquire Current Forecast Return",
+        "mode": "return",
+        "links": [],
+        "x": 995,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "886b911f966b4661",
+        "type": "function",
+        "z": "utility-weather-analysis",
+        "g": "b8c179eea15090be",
+        "name": "Manage Notification",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst p = msg.payload;\nconst CORRELATION_ID = 'weather_precip_forecast';\nconst IMAGE_URL = `http://home.local:8123/local/hub.local/weather/radar/reflectivity.gif?t=${Math.floor(Date.now() / 1000)}`;\n\nconst wasActive = flow.get('notification_active') ?? false;\n\nif (!p.has_threat) {\n    if (wasActive) {\n        flow.set('notification_active', false);\n        node.status({ fill: 'green', shape: 'dot', text: formatStatus('Cleared') });\n        node.send([{\n            topic: 'highland/command/notify/clear',\n            payload: JSON.stringify({\n                correlation_id: CORRELATION_ID,\n                notification_id: 'weather.precip_forecast'\n            })\n        }, msg]);\n    } else {\n        node.status({ fill: 'green', shape: 'dot', text: formatStatus('No threat') });\n        node.send([null, msg]);\n    }\n} else {\n    flow.set('notification_active', true);\n    const action = wasActive ? 'Updated' : 'Created';\n    node.status({ fill: 'yellow', shape: 'dot', text: formatStatus(`${action}: ${p.message}`) });\n    node.send([{\n        topic: 'highland/event/notify',\n        payload: JSON.stringify({\n            correlation_id: CORRELATION_ID,\n            notification_id: 'weather.precip_forecast',\n            source: 'weather_analysis',\n            title: 'Weather Alert',\n            message: p.message,\n            media: { image: IMAGE_URL },\n            url: 'homeassistant://navigate/dashboard-weather/0?server=default',\n            sticky: true,\n            group: 'weather'\n        })\n    }, msg]);\n}\n\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 460,
+        "y": 560,
+        "wires": [
+            [
+                "13cbcf12551c0669"
+            ],
+            [
+                "0d152e042260eb10"
+            ]
+        ]
+    },
+    {
+        "id": "13cbcf12551c0669",
+        "type": "mqtt out",
+        "z": "utility-weather-analysis",
+        "g": "b8c179eea15090be",
+        "name": "Publish",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 680,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "c4f38459811596e8",
+        "type": "link call",
+        "z": "utility-weather-analysis",
+        "g": "5f529a0d539eb8fa",
+        "name": "",
+        "links": [
+            "9a5f18f2cd0be6db"
+        ],
+        "linkType": "static",
+        "timeout": "30",
+        "x": 910,
+        "y": 80,
+        "wires": [
+            [
+                "695fb76960558df6"
+            ]
+        ]
+    },
+    {
+        "id": "695fb76960558df6",
+        "type": "debug",
+        "z": "utility-weather-analysis",
+        "g": "5f529a0d539eb8fa",
+        "name": "Output",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1130,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "e2e12416b89d0aa0",
+        "type": "function",
+        "z": "utility-weather-analysis",
+        "g": "108ad1173576784c",
+        "name": "Publish State",
+        "func": "const p = msg.payload;\nconst a = p.analysis;\n\n// Send MQTT state update\nnode.send([{\n    topic:   'highland/state/weather/analysis',\n    retain:  true,\n    payload: JSON.stringify({\n        timestamp:             p.fetched_at,\n        hrrr_age_minutes:      p.hrrr_subh_age_minutes,\n        has_threat:            a.has_threat,\n        onset_minutes:         a.onset_minutes,\n        clear_minutes:         a.clear_minutes,\n        is_intermittent:       a.is_intermittent,\n        extends_to_end:        a.extends_to_end,\n        all_types:             a.all_types,\n        peak_intensity:        a.peak_intensity,\n        cape:                  p.cape,\n        nearest_storm_miles:   p.nearest_storm_distance,\n        nearest_storm_bearing: p.nearest_storm_bearing,\n        precip_type_model:     p.precip_type_model,\n        message:               p.message,\n        source:                'pirate_weather'\n    })\n}, null]);\n\nnode.status({ fill: 'green', shape: 'dot', text: 'Published' });\n\n// Pass structured payload through to return link\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 810,
+        "y": 380,
+        "wires": [
+            [
+                "85d46f7bfeb17a42"
+            ],
+            [
+                "d971476b6469760c"
+            ]
+        ]
+    },
+    {
+        "id": "85d46f7bfeb17a42",
+        "type": "mqtt out",
+        "z": "utility-weather-analysis",
+        "g": "108ad1173576784c",
+        "name": "Publish",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 1000,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "0f61d9bb96867f60",
+        "type": "link out",
+        "z": "utility-weather-analysis",
+        "g": "013581a0b497e4ea",
+        "name": "Begin Analysis Cycle",
+        "mode": "link",
+        "links": [
+            "7d1f424943b9c604"
+        ],
+        "x": 360,
+        "y": 1220,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "dc8e6034ac00281c",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-cron-plus": "2.2.4"
+        }
+    }
+]

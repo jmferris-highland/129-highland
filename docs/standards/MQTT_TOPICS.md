@@ -375,6 +375,46 @@ Current precipitation event state. Distinct from conditions — this is the acti
 
 ---
 
+#### Weather Analysis
+
+**`highland/state/weather/analysis`** ← RETAINED
+
+Current precipitation threat analysis from `Utility: Weather Analysis`. Published on every poll cycle (default 5-minute cadence via rate limiter, configurable). PirateWeather minutely data cross-validated against Tempest ground truth.
+
+| | |
+|--|--|
+| **Publisher** | Utility: Weather Analysis |
+| **Consumers** | Notification flows, dashboard consumers |
+| **Retained** | Yes |
+
+```json
+{
+  "timestamp": "2026-04-10T15:35:00Z",
+  "hrrr_age_minutes": 172,
+  "has_threat": false,
+  "onset_minutes": null,
+  "clear_minutes": null,
+  "is_intermittent": false,
+  "extends_to_end": false,
+  "all_types": [],
+  "peak_intensity": 0,
+  "cape": 0,
+  "nearest_storm_miles": 183.26,
+  "nearest_storm_bearing": 228,
+  "precip_type_model": "none",
+  "message": null,
+  "source": "pirate_weather"
+}
+```
+
+`message` — human-readable AccuWeather-style summary string, or `null` when no threat. Examples: `"Rain starting in 10 minutes"`, `"Rain continuing for at least 60 minutes"`, `"Periods of rain for the next 23 minutes"`.
+
+`hrrr_age_minutes` — age of the HRRR subhourly model data in minutes. Values above ~240 indicate stale forecast data.
+
+---
+
+---
+
 #### Radar Topics
 
 **`highland/status/weather/radar/{product}`** ← RETAINED
@@ -1081,8 +1121,7 @@ See `subsystems/CALENDAR_INTEGRATION.md` for full payload schemas and consumer p
   "title": "Lock Failed to Engage",
   "message": "Front Door Lock did not respond within 30 seconds",
   "targets": ["people.joseph.ha_companion"],
-  "icon": "mdi:lock-alert",
-  "dnd_override": true,
+  "url": "/dashboard-security",
   "actionable": true,
   "actions": [
     { "id": "retry", "label": "Retry Lock" },
@@ -1304,6 +1343,7 @@ HA audit payload (last backup older than 26 hours):
 | `highland/state/garage/#` | All garage state |
 | `highland/state/appliance/#` | All appliance cycle state |
 | `highland/event/weather/station/#` | All weather station events |
+| `highland/state/weather/analysis` | Weather analysis threat state |
 | `highland/event/weather/radar/#` | All radar events |
 | `highland/event/weather/radar/+/rendered` | Any product rendered |
 | `highland/event/weather/radar/+/error` | Any product error |
@@ -1343,4 +1383,4 @@ HA audit payload (last backup older than 26 hours):
 
 ---
 
-*Last Updated: 2026-04-03*
+*Last Updated: 2026-04-10*

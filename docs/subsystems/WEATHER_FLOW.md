@@ -11,9 +11,17 @@ Two separate Node-RED flows, both built and publishing:
 
 **Primary consumer:** Both Tier 1 flows feed the `Utility: Daily Digest` — the forecast and any active alerts are included in the nightly digest email sent to household residents.
 
-**Tier 2 — Synthesis (Future)**
+**Tier 2 — Weather Analysis (Partial — Live)**
 
-The full architecture described below — Tempest station, Pirate Weather API, polling state machine, precipitation event tracking — is the target end state. The black-box synthesis model and MQTT topic namespace are designed to accommodate Tier 2 without breaking Tier 1 consumers.
+`Utility: Weather Analysis` is live and polling PirateWeather every 5 minutes (rate-limitable to 1 minute). It provides:
+- Minutely precipitation threat analysis with AccuWeather-style messaging
+- Persistent HA Companion notifications for imminent precipitation events
+- Tempest cross-validation (PirateWeather forecast vs. ground truth)
+- `highland/state/weather/analysis` retained state topic
+
+Remaining Tier 2 work: threshold calibration from observed weather events, removal of the rate limiter in favor of 1-minute continuous polling once committed to the PirateWeather paid plan, and `Utility: Weather Lightning` for hyperlocal lightning notifications.
+
+The full synthesis layer (`highland/state/weather/conditions`) combining Tempest observations with PirateWeather data into a unified conditions snapshot is deferred until a concrete consumer need emerges (likely a cohesive HA weather dashboard).
 
 ---
 
@@ -154,6 +162,88 @@ NWS condition codes are extracted from the NWS icon URL path. Priority hierarchy
 All weather configuration lives in `weather.json`, loaded into `global.config.weather` by the Config Loader. This includes radar loop profiles, layer definitions, and Tier 2 polling thresholds. See `config/weather.json` in the repo for the current schema.
 
 Tier 2 threshold values are initial estimates — calibrate against observed events.
+
+---
+
+## Weather Analysis
+
+### Architecture
+
+`Utility: Weather Analysis` polls the PirateWeather API for minutely forecast data, analyzes the 61-minute window for precipitation threats, cross-validates against Tempest ground truth, publishes a state topic, and manages persistent HA Companion notifications.
+
+**Data source:** PirateWeather API v2 (`https://api.pirateweather.net/forecast/{key}/{lat},{lon}?units=us&version=2`). Full payload fetched on every cycle — no `exclude` parameter.
+
+**Cadence:** CronPlus fires every minute; a rate limiter gate allows through every N ticks (`gate_tick` flow variable, default 5 = 5-minute effective cadence). Set `gate_tick = 1` for 1-minute cadence during active weather.
+
+**Tempest cross-validation:** The flow subscribes to `highland/state/weather/station` and tracks `precipitation_type` in flow context. `Build Message` uses this to determine dry vs. active state, driving different message framing for the same PirateWeather analysis result.
+
+### Flow Design
+
+`Utility: Weather Analysis` groups:
+
+| Group | Purpose |
+|-------|--------|
+| **Analysis Pipeline** | Entry point: Begin Analysis Cycle link in → link calls to Forecast Acquisition, Forecast Analysis, MinuteCast Notifications |
+| **Forecast Acquisition** | link in → Build Request → Fetch Forecast → Extract Data → return link |
+| **Forecast Analysis** | link in → Analyze Minutely → Build Message → Publish State → return link |
+| **MinuteCast Notifications** | link in → Manage Notification → MQTT Out → return link |
+| **Local Observations** | MQTT In (`highland/state/weather/station`) → Extract Station Data (flow context only, no output) |
+| **Sinks** | CronPlus Poll → Rate Limiter → link out to Begin Analysis Cycle |
+| **Test Cases** | Manual cadence controls + Force Threat + Force Clear synthetic data injectors |
+| **Error Handling** | Catch All → debug |
+
+### Minutely Analysis
+
+`Analyze Minutely` scans the 61-minute array and produces precipitation windows — contiguous blocks of active minutes. A minute is considered active when both `precip_probability >= 0.60` AND `precip_intensity >= 0.02 in/hr`.
+
+**Provisional thresholds (calibrate from observed events):**
+
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| Trigger probability | ≥ 0.60 | Create/maintain notification |
+| Clear probability | < 0.30 | Hysteresis — clear notification |
+| Minimum intensity | ≥ 0.02 in/hr | Ignore trace amounts |
+| Heavy rain | > 0.30 in/hr | Prefix "Heavy" |
+| Heavy snow | > 0.10 in/hr | ~1–2 in/hr snow equivalent |
+| Thunderstorm CAPE | > 500 J/kg | Replace type label with thunder variant |
+
+### Message Generation
+
+`Build Message` generates AccuWeather-style strings based on Tempest dry/active state and the analysis window:
+
+**Dry state (Tempest confirms nothing active):**
+- `"Rain starting in 10 minutes"` — single window, clean onset
+- `"Periods of rain starting in 10 minutes"` — multiple windows (intermittent)
+- `"Rain starting shortly"` — onset at minute 0
+
+**Active state (Tempest confirms precipitation):**
+- `"Rain continuing for at least 60 minutes"` — extends to end of window
+- `"Rain stopping in 7 minutes"` — clears within window
+- `"Periods of rain for the next 23 minutes"` — intermittent, then clears
+
+**Type labels:** `rain` | `snow` | `sleet` | `rain and snow` | `rain and sleet` | `snow and sleet` | `rain, snow, and sleet`. Thunder modifier replaces primary type: `thunderstorms` | `thundersnow` | `thundersleet`. Heavy modifier prefixes single-type rain or snow.
+
+### Notification Lifecycle
+
+`Manage Notification` maintains a single persistent notification per household with `correlation_id: weather_precip_forecast`. Hysteresis via `flow.notification_active` prevents flicker at threshold boundaries:
+
+- **Threat emerges** — publish to `highland/event/notify` with `notification_id: weather.precip_forecast`, `sticky: true`, radar loop image, `clickAction` tap to weather dashboard
+- **Threat persists** — re-publish same `correlation_id` (HA replaces in-place)
+- **Threat clears** — publish to `highland/command/notify/clear`; only fires once (hysteresis)
+
+Notification subscription in `notifications.json`:
+```json
+"weather.precip_forecast": {
+  "targets": ["people.joseph.ha_companion"],
+  "severity": "low"
+}
+```
+
+### MQTT Topics
+
+See `standards/MQTT_TOPICS.md` — Weather Analysis section for full payload schema.
+
+- `highland/state/weather/analysis` — retained, full threat analysis on every cycle
 
 ---
 
@@ -390,4 +480,4 @@ The free tier is acceptable during development. Before go-live, upgrade to the *
 
 ---
 
-*Last Updated: 2026-04-02*
+*Last Updated: 2026-04-10*

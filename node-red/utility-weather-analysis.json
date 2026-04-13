@@ -26,7 +26,7 @@
             "0f61d9bb96867f60"
         ],
         "x": 54,
-        "y": 1059,
+        "y": 1179,
         "w": 592,
         "h": 202
     },
@@ -80,7 +80,7 @@
             "3673c43bc907dd08"
         ],
         "x": 54,
-        "y": 939,
+        "y": 1059,
         "w": 352,
         "h": 82
     },
@@ -159,8 +159,26 @@
         ],
         "x": 54,
         "y": 519,
-        "w": 712,
+        "w": 692,
         "h": 142
+    },
+    {
+        "id": "b2a49637da0f8a66",
+        "type": "group",
+        "z": "utility-weather-analysis",
+        "name": "Home Assistant Discovery",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "c9d02df01008e7dd",
+            "19ca3476bf8d86ac",
+            "bba22a14762c2ee8"
+        ],
+        "x": 54,
+        "y": 939,
+        "w": 612,
+        "h": 82
     },
     {
         "id": "f8a8e0b8a100cb7e",
@@ -304,7 +322,7 @@
         "scope": null,
         "uncaught": false,
         "x": 140,
-        "y": 980,
+        "y": 1100,
         "wires": [
             [
                 "3673c43bc907dd08"
@@ -326,7 +344,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 310,
-        "y": 980,
+        "y": 1100,
         "wires": []
     },
     {
@@ -352,7 +370,7 @@
         "payload": "",
         "payloadType": "date",
         "x": 150,
-        "y": 1100,
+        "y": 1220,
         "wires": [
             [
                 "0f61d9bb96867f60"
@@ -421,7 +439,7 @@
         "payload": "",
         "payloadType": "date",
         "x": 150,
-        "y": 1160,
+        "y": 1280,
         "wires": [
             [
                 "f21df83cbd2746d5"
@@ -451,7 +469,7 @@
         "payload": "",
         "payloadType": "date",
         "x": 150,
-        "y": 1220,
+        "y": 1340,
         "wires": [
             [
                 "cafa85c36fdde511"
@@ -472,7 +490,7 @@
         "finalize": "",
         "libs": [],
         "x": 330,
-        "y": 1160,
+        "y": 1280,
         "wires": [
             [
                 "f81f6598d2085d1c"
@@ -493,7 +511,7 @@
         "finalize": "",
         "libs": [],
         "x": 330,
-        "y": 1220,
+        "y": 1340,
         "wires": [
             [
                 "fedffdfcd28454f3"
@@ -511,7 +529,7 @@
             "255b2b0506704589"
         ],
         "x": 540,
-        "y": 1160,
+        "y": 1280,
         "wires": [],
         "l": true
     },
@@ -526,7 +544,7 @@
             "255b2b0506704589"
         ],
         "x": 540,
-        "y": 1220,
+        "y": 1340,
         "wires": [],
         "l": true
     },
@@ -651,7 +669,7 @@
         "z": "utility-weather-analysis",
         "g": "108ad1173576784c",
         "name": "Build Message",
-        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst p = msg.payload;\nconst a = p.analysis;\nconst cape = p.cape ?? 0;\n\n// --- Thresholds ---\nconst HEAVY_RAIN   = 0.30;  // in/hr\nconst HEAVY_SNOW   = 0.10;  // in/hr\nconst THUNDER_CAPE = 500;\n\n// --- Helpers ---\n\nfunction capitalize(str) {\n    return str.charAt(0).toUpperCase() + str.slice(1);\n}\n\nfunction typeLabel(types, peakIntensity, cape) {\n    const thunder = cape >= THUNDER_CAPE;\n    const hasRain  = types.includes('rain');\n    const hasSnow  = types.includes('snow');\n    const hasSleet = types.includes('sleet');\n\n    let primary;\n    if      (hasRain && hasSnow && hasSleet) primary = 'rain, snow, and sleet';\n    else if (hasRain && hasSnow)             primary = 'rain and snow';\n    else if (hasRain && hasSleet)            primary = 'rain and sleet';\n    else if (hasSnow && hasSleet)            primary = 'snow and sleet';\n    else if (hasRain)                        primary = 'rain';\n    else if (hasSnow)                        primary = 'snow';\n    else if (hasSleet)                       primary = 'sleet';\n    else                                     primary = 'precipitation';\n\n    // Thunder modifier\n    if (thunder) {\n        primary = primary\n            .replace(/^rain/, 'thunderstorms')\n            .replace(/^snow/, 'thundersnow')\n            .replace(/^sleet/, 'thundersleet');\n    }\n\n    // Heavy modifier — single type only, no thunder\n    if (!thunder && types.length === 1) {\n        if (hasRain && peakIntensity > HEAVY_RAIN) primary = 'heavy rain';\n        if (hasSnow && peakIntensity > HEAVY_SNOW) primary = 'heavy snow';\n    }\n\n    return primary;\n}\n\nfunction minuteText(n) {\n    return `${n} minute${n === 1 ? '' : 's'}`;\n}\n\n// --- Determine currently active from Tempest ---\nconst stationPrecipType = flow.get('station_precip_type') ?? 'None';\nconst currentlyActive   = stationPrecipType !== 'None';\n\n// --- Build message ---\nlet message = null;\n\nif (!a.has_threat) {\n    message = null;\n\n} else {\n    const label = typeLabel(a.all_types, a.peak_intensity, cape);\n\n    if (!currentlyActive) {\n        // DRY STATE — focus on onset\n        const onset = a.onset_minutes;\n\n        if (a.is_intermittent) {\n            if (onset === 0) {\n                message = `Periods of ${label} starting shortly`;\n            } else {\n                message = `Periods of ${label} starting in ${minuteText(onset)}`;\n            }\n        } else {\n            if (onset === 0) {\n                message = `${capitalize(label)} starting shortly`;\n            } else {\n                message = `${capitalize(label)} starting in ${minuteText(onset)}`;\n            }\n        }\n\n    } else {\n        // ACTIVE STATE — focus on duration/ending\n        if (a.is_intermittent) {\n            message = `Periods of ${label} for the next ${minuteText(a.clear_minutes ?? 60)}`;\n\n        } else if (a.extends_to_end) {\n            message = `${capitalize(label)} continuing for at least 60 minutes`;\n\n        } else {\n            message = `${capitalize(label)} stopping in ${minuteText(a.clear_minutes)}`;\n        }\n    }\n}\n\nmsg.payload = {\n    ...p,\n    message,\n    has_threat:      a.has_threat,\n    currently_active: currentlyActive\n};\n\nnode.status({\n    fill:  message ? 'yellow' : 'green',\n    shape: 'dot',\n    text:  formatStatus(message ?? 'Clear')\n});\n\nreturn msg;",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst p = msg.payload;\nconst a = p.analysis;\nconst cape = p.cape ?? 0;\n\n// --- Thresholds ---\nconst HEAVY_RAIN   = 0.30;  // in/hr\nconst HEAVY_SNOW   = 0.10;  // in/hr\nconst THUNDER_CAPE = 500;\n\n// --- Helpers ---\n\nfunction capitalize(str) {\n    return str.charAt(0).toUpperCase() + str.slice(1);\n}\n\nfunction typeLabel(types, peakIntensity, cape) {\n    const thunder = cape >= THUNDER_CAPE;\n    const hasRain  = types.includes('rain');\n    const hasSnow  = types.includes('snow');\n    const hasSleet = types.includes('sleet');\n\n    let primary;\n    if      (hasRain && hasSnow && hasSleet) primary = 'rain, snow, and sleet';\n    else if (hasRain && hasSnow)             primary = 'rain and snow';\n    else if (hasRain && hasSleet)            primary = 'rain and sleet';\n    else if (hasSnow && hasSleet)            primary = 'snow and sleet';\n    else if (hasRain)                        primary = 'rain';\n    else if (hasSnow)                        primary = 'snow';\n    else if (hasSleet)                       primary = 'sleet';\n    else                                     primary = 'precipitation';\n\n    // Thunder modifier\n    if (thunder) {\n        primary = primary\n            .replace(/^rain/, 'thunderstorms')\n            .replace(/^snow/, 'thundersnow')\n            .replace(/^sleet/, 'thundersleet');\n    }\n\n    // Heavy modifier — single type only, no thunder\n    if (!thunder && types.length === 1) {\n        if (hasRain && peakIntensity > HEAVY_RAIN) primary = 'heavy rain';\n        if (hasSnow && peakIntensity > HEAVY_SNOW) primary = 'heavy snow';\n    }\n\n    return primary;\n}\n\nfunction minuteText(n) {\n    return `${n} minute${n === 1 ? '' : 's'}`;\n}\n\n// --- Determine currently active from Tempest ---\nconst stationPrecipType = flow.get('station_precip_type') ?? 'None';\nconst currentlyActive   = stationPrecipType !== 'None';\n\n// --- Build message and threat type ---\nlet message     = null;\nlet threat_type = null;\n\nif (a.has_threat) {\n    const label = typeLabel(a.all_types, a.peak_intensity, cape);\n    threat_type = capitalize(label);\n\n    if (!currentlyActive) {\n        // DRY STATE — focus on onset\n        const onset = a.onset_minutes;\n\n        if (a.is_intermittent) {\n            message = onset === 0\n                ? `Periods of ${label} starting shortly`\n                : `Periods of ${label} starting in ${minuteText(onset)}`;\n        } else {\n            message = onset === 0\n                ? `${capitalize(label)} starting shortly`\n                : `${capitalize(label)} starting in ${minuteText(onset)}`;\n        }\n\n    } else {\n        // ACTIVE STATE — focus on duration/ending\n        if (a.is_intermittent) {\n            message = `Periods of ${label} for the next ${minuteText(a.clear_minutes ?? 60)}`;\n        } else if (a.extends_to_end) {\n            message = `${capitalize(label)} continuing for at least 60 minutes`;\n        } else {\n            message = `${capitalize(label)} stopping in ${minuteText(a.clear_minutes)}`;\n        }\n    }\n}\n\nmsg.payload = {\n    ...p,\n    message,\n    threat_type,\n    has_threat:       a.has_threat,\n    currently_active: currentlyActive\n};\n\nnode.status({\n    fill:  message ? 'yellow' : 'green',\n    shape: 'dot',\n    text:  formatStatus(message ?? 'Clear')\n});\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -745,7 +763,7 @@
         "type": "mqtt out",
         "z": "utility-weather-analysis",
         "g": "b8c179eea15090be",
-        "name": "Publish",
+        "name": "Notify",
         "topic": "",
         "qos": "",
         "retain": "",
@@ -755,7 +773,7 @@
         "correl": "",
         "expiry": "",
         "broker": "4cefa2ad2d8b462e",
-        "x": 680,
+        "x": 670,
         "y": 560,
         "wires": []
     },
@@ -802,7 +820,7 @@
         "z": "utility-weather-analysis",
         "g": "108ad1173576784c",
         "name": "Publish State",
-        "func": "const p = msg.payload;\nconst a = p.analysis;\n\n// Send MQTT state update\nnode.send([{\n    topic:   'highland/state/weather/analysis',\n    retain:  true,\n    payload: JSON.stringify({\n        timestamp:             p.fetched_at,\n        hrrr_age_minutes:      p.hrrr_subh_age_minutes,\n        has_threat:            a.has_threat,\n        onset_minutes:         a.onset_minutes,\n        clear_minutes:         a.clear_minutes,\n        is_intermittent:       a.is_intermittent,\n        extends_to_end:        a.extends_to_end,\n        all_types:             a.all_types,\n        peak_intensity:        a.peak_intensity,\n        cape:                  p.cape,\n        nearest_storm_miles:   p.nearest_storm_distance,\n        nearest_storm_bearing: p.nearest_storm_bearing,\n        precip_type_model:     p.precip_type_model,\n        message:               p.message,\n        source:                'pirate_weather'\n    })\n}, null]);\n\nnode.status({ fill: 'green', shape: 'dot', text: 'Published' });\n\n// Pass structured payload through to return link\nreturn [null, msg];",
+        "func": "const p = msg.payload;\nconst a = p.analysis;\n\n// Send MQTT state update\nnode.send([{\n    topic:   'highland/state/weather/analysis',\n    retain:  true,\n    payload: JSON.stringify({\n        timestamp:             p.fetched_at,\n        hrrr_age_minutes:      p.hrrr_subh_age_minutes,\n        has_threat:            a.has_threat,\n        onset_minutes:         a.onset_minutes,\n        clear_minutes:         a.clear_minutes,\n        is_intermittent:       a.is_intermittent,\n        extends_to_end:        a.extends_to_end,\n        all_types:             a.all_types,\n        peak_intensity:        a.peak_intensity,\n        cape:                  p.cape,\n        nearest_storm_miles:   p.nearest_storm_distance,\n        nearest_storm_bearing: p.nearest_storm_bearing,\n        precip_type_model:     p.precip_type_model,\n        message:               p.message,\n        threat_type:           p.threat_type,\n        source:                'pirate_weather',\n        minutely:              p.minutely.map(m => ({\n            t: m.time,\n            i: m.precip_intensity,\n            p: m.precip_probability,\n            k: m.precip_type\n        }))\n    })\n}, null]);\n\nnode.status({ fill: 'green', shape: 'dot', text: 'Published' });\n\n// Pass structured payload through to return link\nreturn [null, msg];",
         "outputs": 2,
         "timeout": 0,
         "noerr": 0,
@@ -850,9 +868,79 @@
             "7d1f424943b9c604"
         ],
         "x": 360,
-        "y": 1100,
+        "y": 1220,
         "wires": [],
         "l": true
+    },
+    {
+        "id": "c9d02df01008e7dd",
+        "type": "function",
+        "z": "utility-weather-analysis",
+        "g": "b2a49637da0f8a66",
+        "name": "Build Sensors",
+        "func": "const STATE_TOPIC = 'highland/state/weather/analysis';\nconst base        = 'homeassistant/sensor/highland_weather_analysis';\n\nconst device = {\n    identifiers:  ['highland_weather_analysis'],\n    name:         'Highland Weather Analysis',\n    model:        'PirateWeather',\n    manufacturer: 'Highland'\n};\n\nnode.send({\n    topic:   `${base}/analysis/config`,\n    retain:  true,\n    qos:     1,\n    payload: JSON.stringify({\n        name:                  'Weather Analysis',\n        unique_id:             'highland_weather_analysis',\n        state_topic:           STATE_TOPIC,\n        value_template: \"{{ value_json.threat_type if value_json.threat_type else 'Clear' }}\",\n        json_attributes_topic: STATE_TOPIC,\n        icon:                  'mdi:weather-rainy',\n        device\n    })\n});\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 980,
+        "wires": [
+            [
+                "bba22a14762c2ee8"
+            ]
+        ]
+    },
+    {
+        "id": "19ca3476bf8d86ac",
+        "type": "inject",
+        "z": "utility-weather-analysis",
+        "g": "b2a49637da0f8a66",
+        "name": "On Startup",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 980,
+        "wires": [
+            [
+                "c9d02df01008e7dd"
+            ]
+        ]
+    },
+    {
+        "id": "bba22a14762c2ee8",
+        "type": "mqtt out",
+        "z": "utility-weather-analysis",
+        "g": "b2a49637da0f8a66",
+        "name": "Publish",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 580,
+        "y": 980,
+        "wires": []
     },
     {
         "id": "4cefa2ad2d8b462e",
@@ -886,7 +974,7 @@
         "sessionExpiry": ""
     },
     {
-        "id": "d6771d119f00ad28",
+        "id": "422ac2dc9135393a",
         "type": "global-config",
         "env": [],
         "modules": {

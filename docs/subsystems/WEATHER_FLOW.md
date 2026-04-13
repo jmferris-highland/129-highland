@@ -11,17 +11,30 @@ Two separate Node-RED flows, both built and publishing:
 
 **Primary consumer:** Both Tier 1 flows feed the `Utility: Daily Digest` — the forecast and any active alerts are included in the nightly digest email sent to household residents.
 
-**Tier 2 — Weather Analysis (Partial — Live)**
+**Tier 2 — Weather Analysis (Live)**
 
-`Utility: Weather Analysis` is live and polling PirateWeather every 5 minutes (rate-limitable to 1 minute). It provides:
+`Utility: Weather Analysis` is live and polling PirateWeather every minute (1-minute continuous cadence on paid PirateWeather plan — rate limiter removed). It provides:
 - Minutely precipitation threat analysis with AccuWeather-style messaging
+- `threat_type` entity state (title-cased type, e.g. `Rain`) — cleaner history than full message string
+- Per-minute `minutely` array in state payload for dashboard chart rendering
 - Persistent HA Companion notifications for imminent precipitation events
 - Tempest cross-validation (PirateWeather forecast vs. ground truth)
 - `highland/state/weather/analysis` retained state topic
+- HA Discovery sensor (`sensor.weather_analysis` under `Highland Weather Analysis` device)
 
-Remaining Tier 2 work: threshold calibration from observed weather events, removal of the rate limiter in favor of 1-minute continuous polling once committed to the PirateWeather paid plan, and `Utility: Weather Lightning` for hyperlocal lightning notifications.
+**Tier 2 — Weather Alerts (Enhanced — Live)**
 
-The full synthesis layer (`highland/state/weather/conditions`) combining Tempest observations with PirateWeather data into a unified conditions snapshot is deferred until a concrete consumer need emerges (likely a cohesive HA weather dashboard).
+`Utility: Weather Alerts` has been significantly enhanced beyond its original Tier 1 implementation:
+- Three-tier deduplication (formal supersession → VTEC → heuristic) reduces duplicate NWS alerts to a single authoritative entry
+- Pre-filter removes alerts with `expires` in the past regardless of NWS feed inclusion
+- `highland/state/weather/alerts` consolidated to serve both operational consumers and HA Weather Alerts Card sensor entity
+- Per-alert notifications via `Build Notifications` group with proximity-aware severity mapping
+- HA Discovery sensor (`sensor.weather_alerts` under `Highland Weather Alerts` device)
+- Weather Alerts Card (HACS) installed and configured on weather dashboard
+
+Remaining Tier 2 work: `Utility: Weather Lightning` for hyperlocal lightning notifications (designed, not yet implemented — see issue #26), threshold calibration from observed weather events, and MinuteCast dashboard visualization (see issue #30).
+
+The full synthesis layer (`highland/state/weather/conditions`) combining Tempest observations with PirateWeather data into a unified conditions snapshot is deferred until a concrete consumer need emerges.
 
 ---
 
@@ -173,7 +186,7 @@ Tier 2 threshold values are initial estimates — calibrate against observed eve
 
 **Data source:** PirateWeather API v2 (`https://api.pirateweather.net/forecast/{key}/{lat},{lon}?units=us&version=2`). Full payload fetched on every cycle — no `exclude` parameter.
 
-**Cadence:** CronPlus fires every minute; a rate limiter gate allows through every N ticks (`gate_tick` flow variable, default 5 = 5-minute effective cadence). Set `gate_tick = 1` for 1-minute cadence during active weather.
+**Cadence:** CronPlus fires every minute. 1-minute continuous polling on paid PirateWeather plan (Pirate Plan, 60K calls/month). Rate limiter removed.
 
 **Tempest cross-validation:** The flow subscribes to `highland/state/weather/station` and tracks `precipitation_type` in flow context. `Build Message` uses this to determine dry vs. active state, driving different message framing for the same PirateWeather analysis result.
 
@@ -188,8 +201,9 @@ Tier 2 threshold values are initial estimates — calibrate against observed eve
 | **Forecast Analysis** | link in → Analyze Minutely → Build Message → Publish State → return link |
 | **MinuteCast Notifications** | link in → Manage Notification → MQTT Out → return link |
 | **Local Observations** | MQTT In (`highland/state/weather/station`) → Extract Station Data (flow context only, no output) |
-| **Sinks** | CronPlus Poll → Rate Limiter → link out to Begin Analysis Cycle |
-| **Test Cases** | Manual cadence controls + Force Threat + Force Clear synthetic data injectors |
+| **Sinks** | CronPlus Poll (every minute, continuous) → link out to Begin Analysis Cycle |
+| **Test Cases** | Force Threat + Force Clear synthetic data injectors |
+| **Home Assistant Discovery** | On Startup → Build Discovery Config → MQTT Out |
 | **Error Handling** | Catch All → debug |
 
 ### Minutely Analysis
@@ -209,7 +223,7 @@ Tier 2 threshold values are initial estimates — calibrate against observed eve
 
 ### Message Generation
 
-`Build Message` generates AccuWeather-style strings based on Tempest dry/active state and the analysis window:
+`Build Message` generates AccuWeather-style strings based on Tempest dry/active state and the analysis window, and sets `threat_type` to the title-cased precipitation type label (e.g. `Rain`, `Heavy Snow`, `Thunderstorms`):
 
 **Dry state (Tempest confirms nothing active):**
 - `"Rain starting in 10 minutes"` — single window, clean onset
@@ -221,7 +235,23 @@ Tier 2 threshold values are initial estimates — calibrate against observed eve
 - `"Rain stopping in 7 minutes"` — clears within window
 - `"Periods of rain for the next 23 minutes"` — intermittent, then clears
 
-**Type labels:** `rain` | `snow` | `sleet` | `rain and snow` | `rain and sleet` | `snow and sleet` | `rain, snow, and sleet`. Thunder modifier replaces primary type: `thunderstorms` | `thundersnow` | `thundersleet`. Heavy modifier prefixes single-type rain or snow.
+**Type labels:** `Rain` | `Snow` | `Sleet` | `Rain and Snow` | `Rain and Sleet` | `Snow and Sleet` | `Rain, Snow, and Sleet`. Thunder modifier replaces primary type: `Thunderstorms` | `Thundersnow` | `Thundersleet`. Heavy modifier prefixes single-type rain or snow: `Heavy Rain` | `Heavy Snow`.
+
+`threat_type` is `null` when `has_threat` is false. The HA entity state uses `threat_type` (falling back to `'Clear'`) rather than `message` to avoid churning history on every poll cycle as timing counts down.
+
+### Published State
+
+`Publish State` publishes `highland/state/weather/analysis` retained on every cycle. The payload includes:
+- All analysis fields (`has_threat`, `onset_minutes`, `clear_minutes`, etc.)
+- `threat_type` — title-cased type string or `null`
+- `message` — full human-readable string or `null`
+- `minutely` — compact 61-entry array `[{ t, i, p, k }]` for dashboard chart rendering
+
+See `standards/MQTT_TOPICS.md` — Weather Analysis section for full payload schema.
+
+### HA Discovery
+
+`Home Assistant Discovery` group publishes `sensor.weather_analysis` config on startup. Entity state = `threat_type` (or `Clear`). All analysis fields including `minutely` available as attributes for `apexcharts-card` MinuteCast visualization (see issue #30).
 
 ### Notification Lifecycle
 
@@ -244,6 +274,123 @@ Notification subscription in `notifications.json`:
 See `standards/MQTT_TOPICS.md` — Weather Analysis section for full payload schema.
 
 - `highland/state/weather/analysis` — retained, full threat analysis on every cycle
+
+---
+
+## Weather Alerts
+
+### Architecture
+
+`Utility: Weather Alerts` polls the NWS active alerts API every 30 seconds and manages a complete alert lifecycle including deduplication, expiry filtering, state publishing, and per-alert notifications.
+
+**Data source:** NWS alerts API (`https://api.weather.gov/alerts/active?point={lat},{lon}`). NWS is the sole data source for alerts — both for notifications and for the dashboard sensor. PirateWeather was evaluated as an alternative but rejected: PirateWeather refreshes alert polygons every 10 minutes, which would create inconsistency between notification arrival and dashboard display.
+
+### Deduplication
+
+Three-tier deduplication runs on every poll cycle before any processing:
+
+**Tier 1: Formal supersession** — `messageType: Update` + non-empty `references` array. Superseded alert IDs are filtered from the incoming set.
+
+**Tier 2: VTEC deduplication** — For alerts with a `VTEC` parameter, group by `(office.phenomenon.significance.eventNumber)`. Keep only the most recently `sent` per group.
+
+**Tier 3: Heuristic** — For non-VTEC products (e.g. Special Weather Statements), group by `event + senderName + areaDesc`. If any two in a group have overlapping time windows, keep only the most recently `sent`. Handles the NWS pattern of issuing fresh alerts rather than formal updates for SPS products.
+
+Pre-filter: alerts with `expires` in the past are removed before deduplication regardless of NWS feed inclusion (NWS sometimes returns stale alerts).
+
+### Alert Lifecycle
+
+`Process Alerts` tracks alert IDs in `flow.known_alerts` (disk-backed). On each cycle:
+- **New** — ID appears in `deduped` but not in `known_alerts` → fires `highland/event/weather/alert/new`
+- **Updated** — ID present in both but `sent` timestamp changed → fires `highland/event/weather/alert/updated`
+- **Expired** — ID present in `known_alerts` but not in `deduped` → fires `highland/event/weather/alert/expired`
+- **Ongoing** — ID present in both, `sent` unchanged → no event
+
+A stable `correlation_id` is computed per alert for notification update-in-place: VTEC-based for watches/warnings/advisories (`weather_alert_{office}_{phenom}_{sig}_{num}`), sanitized `event+senderName` for non-VTEC products.
+
+### Notifications
+
+`Build Notifications` iterates `msg.events` and publishes to `highland/event/notify` for `new` and `updated` events, and to `highland/command/notify/clear` for `expired` events. Per-alert severity (`notification_severity`) overrides the subscription default.
+
+Subscription: `weather.alert` → `people.joseph.ha_companion`, default severity `low`.
+
+### Consolidated State Topic
+
+`highland/state/weather/alerts` serves both operational consumers and the HA Weather Alerts Card sensor. The payload combines the `alerts` array (for Daily Digest and other consumers) with flat indexed attributes at the top level (for the card):
+
+```
+alerts[]          — full alert objects for operational consumers
+count             — HA entity state
+attribution       — "Pirate Weather" (triggers card auto-detection)
+title / title_0   — NWS event name
+severity / ...    — NWS severity
+time / ...        — onset timestamp
+expires / ...     — expiry timestamp
+regions / ...     — areaDesc string
+uri / ...         — empty string (kiosk-safe — full description in payload)
+description / ... — full NWS alert text
+```
+
+### HA Discovery
+
+`Home Assistant Discovery` group publishes `sensor.weather_alerts` config on startup. Entity state = alert count integer. Weather Alerts Card (HACS) auto-detects provider from `attribution: "Pirate Weather"` and renders severity-coded expandable alert cards.
+
+Dashboard visibility condition: `numeric_state above 0` — card hidden when no alerts active.
+
+### Flow Design
+
+| Group | Purpose |
+|-------|--------|
+| **Sinks** | Every 30 Seconds inject → link out to Alert Pipeline |
+| **Alert Pipeline** | link in → Build Request → Fetch Alerts → Process Alerts → Build Dispatches → MQTT Out; Process Alerts also wires to Build Notifications → MQTT Out |
+| **Home Assistant Discovery** | On Startup → Build Sensors → MQTT Out |
+| **Error Handling** | Catch All → debug |
+
+---
+
+## Weather Lightning
+
+### Architecture
+
+`Utility: Weather Lightning` — **Designed, not yet implemented** (see issue #26).
+
+Dedicated flow for hyperlocal lightning detection and notification. Lightning events come exclusively from the Tempest hardware sensor via `highland/event/weather/station/lightning`. Separate flow maintains architectural clarity and provides a future home for third-party lightning data (triangulated strike mapping, etc.).
+
+### Notification Logic
+
+One persistent notification (`correlation_id: weather_lightning`, `sticky: true`) updated in place. Flow context tracks `last_notified_distance` and `last_notified_at`.
+
+**Decision logic on each incoming strike:**
+
+- **No prior notification** → notify (first strike)
+- **Incoming distance < `nearby_miles` (5)** → always notify (proximity mode — no cooldown)
+- **Incoming distance < last notified distance** → notify (storm approaching)
+- **Last notified was nearby (< 5 mi)** → suppress unless `nearby_age_out_minutes` (10) has elapsed
+- **Otherwise** → suppress unless `distant_cooldown_minutes` (5) has elapsed
+
+Approaching storms generate more notifications than departing — intentional asymmetry. Proximity mode is a pure override. Aging out provides natural all-clear without explicit notification.
+
+**Notification content:**
+- Nearby (< 5 miles): Title `"Lightning Nearby"`, Message `"Lightning nearby — X miles away"`, Severity `high`
+- Distant (≥ 5 miles): Title `"Lightning Detected"`, Message `"Strike detected X miles away"`, Severity `medium`
+- `url: '/dashboard-weather/0'`, `group: 'weather_lightning'`
+
+### Thresholds (`thresholds.json`)
+
+```json
+"lightning": {
+    "nearby_miles": 5,
+    "distant_cooldown_minutes": 5,
+    "nearby_age_out_minutes": 10
+}
+```
+
+### State Topic
+
+`highland/state/weather/lightning` — retained, published on every incoming strike. See `standards/MQTT_TOPICS.md` for full payload schema.
+
+### HA Discovery
+
+`sensor.weather_lightning` under `Highland Weather Lightning` device. Entity state = `none` | `distant` | `nearby`.
 
 ---
 
@@ -440,9 +587,9 @@ All exec nodes, HTTP request nodes, and script invocation are removed. The flow 
 
 See `standards/MQTT_TOPICS.md` for authoritative payload definitions.
 
-**State (retained):** `highland/state/weather/conditions` | `forecast` | `alerts` | `precipitation`
+**State (retained):** `highland/state/weather/conditions` | `forecast` | `alerts` | `analysis` | `lightning` | `precipitation`
 
-> **Note:** `highland/state/weather/alerts` is published by `Utility: Weather Alerts` (Tier 1, live). The remaining state topics are Tier 2 targets.
+> **Note:** `highland/state/weather/alerts` is published by `Utility: Weather Alerts` (live). `highland/state/weather/analysis` is published by `Utility: Weather Analysis` (live). `highland/state/weather/lightning` will be published by `Utility: Weather Lightning` (designed, not yet implemented). The remaining state topics are future targets.
 
 **Events (not retained):** `highland/event/weather/precipitation_start` | `precipitation_end` | `precipitation_type_change` | `lightning_detected` | `wind_gust` | `alert/new` | `alert/updated` | `alert/expired`
 
@@ -480,4 +627,4 @@ The free tier is acceptable during development. Before go-live, upgrade to the *
 
 ---
 
-*Last Updated: 2026-04-10*
+*Last Updated: 2026-04-13*

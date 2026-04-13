@@ -50,6 +50,10 @@
       "targets": ["people.joseph.ha_companion"],
       "severity": "low"
     },
+    "weather.lightning": {
+      "targets": ["people.joseph.ha_companion"],
+      "severity": "medium"
+    },
     "weather.precip_forecast": {
       "targets": ["people.joseph.ha_companion"],
       "severity": "low"

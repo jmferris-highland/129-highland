@@ -315,34 +315,50 @@ NWS forecast normalized to a date-keyed period map. Updated hourly by `Utility: 
 
 **`highland/state/weather/alerts`** ← RETAINED
 
-Active NWS weather alerts for the configured location. Updated every 30 seconds by `Utility: Weather Alerts`. `alerts` is an empty array when no alerts are active.
+Active NWS weather alerts for the configured location. Updated every 30 seconds by `Utility: Weather Alerts`. Single topic serves both operational consumers and the HA Weather Alerts Card sensor entity. `alerts` is an empty array and `count` is `0` when no alerts are active.
+
+Alerts are deduplicated before publishing via three-tier logic: (1) `messageType: Update` + `references` formal supersession, (2) VTEC key deduplication, (3) heuristic deduplication for non-VTEC products (same `event` + `senderName` + `areaDesc` with overlapping time windows). Alerts with `expires` in the past are pre-filtered regardless of NWS feed inclusion.
 
 | | |
 |--|--|
 | **Publisher** | Utility: Weather Alerts |
-| **Consumers** | Utility: Daily Digest, notification flows |
+| **Consumers** | Utility: Daily Digest, notification flows, HA (via MQTT Discovery) |
 | **Retained** | Yes |
 
 ```json
 {
-  "timestamp": "2026-03-26T14:00:00Z",
+  "timestamp": "2026-04-13T12:00:00Z",
   "source": "weather_alerts",
   "alerts": [
     {
-      "id": "urn:oid:2.49.0.1.840.0.abc123",
       "event": "Winter Storm Warning",
-      "headline": "Winter Storm Warning issued March 26 at 2:00PM EDT",
+      "headline": "Winter Storm Warning issued April 13 at 12:00PM EDT",
       "severity": "Severe",
-      "urgency": "Expected",
-      "certainty": "Likely",
-      "onset": "2026-03-26T18:00:00-04:00",
-      "expires": "2026-03-27T12:00:00-04:00"
+      "onset": "2026-04-13T18:00:00-04:00",
+      "expires": "2026-04-14T12:00:00-04:00",
+      "ends": null,
+      "areaDesc": "Orange; Putnam; Rockland",
+      "description": "A significant winter storm will affect the area...",
+      "instruction": "Avoid travel if possible."
     }
-  ]
+  ],
+  "count": 1,
+  "attribution": "Pirate Weather",
+  "title": "Winter Storm Warning",
+  "severity": "Severe",
+  "time": "2026-04-13T18:00:00-04:00",
+  "expires": "2026-04-14T12:00:00-04:00",
+  "regions": "Orange; Putnam; Rockland",
+  "uri": "",
+  "description": "A significant winter storm will affect the area..."
 }
 ```
 
+The flat top-level fields (`count`, `attribution`, `title`, `severity`, `time`, `expires`, `regions`, `uri`, `description`) are the indexed attribute structure consumed by the Weather Alerts Card. For multiple alerts, indexed suffixes are used (`title_0`, `title_1`, etc.).
+
 `severity` values (NWS): `Extreme` | `Severe` | `Moderate` | `Minor` | `Unknown`
+
+**HA Discovery:** `sensor.weather_alerts` under `Highland Weather Alerts` device. `value_template: "{{ value_json.count }}"`; `json_attributes_topic` same as `state_topic`. Weather Alerts Card auto-detects provider from `attribution: "Pirate Weather"` attribute.
 
 ---
 
@@ -379,37 +395,84 @@ Current precipitation event state. Distinct from conditions — this is the acti
 
 **`highland/state/weather/analysis`** ← RETAINED
 
-Current precipitation threat analysis from `Utility: Weather Analysis`. Published on every poll cycle (default 5-minute cadence via rate limiter, configurable). PirateWeather minutely data cross-validated against Tempest ground truth.
+Current precipitation threat analysis from `Utility: Weather Analysis`. Published every minute by CronPlus (1-minute continuous cadence on paid PirateWeather plan). PirateWeather minutely data cross-validated against Tempest ground truth. Single topic serves both operational consumers and HA sensor entity.
 
 | | |
 |--|--|
 | **Publisher** | Utility: Weather Analysis |
-| **Consumers** | Notification flows, dashboard consumers |
+| **Consumers** | Notification flows, dashboard consumers, HA (via MQTT Discovery) |
 | **Retained** | Yes |
 
 ```json
 {
-  "timestamp": "2026-04-10T15:35:00Z",
-  "hrrr_age_minutes": 172,
-  "has_threat": false,
-  "onset_minutes": null,
-  "clear_minutes": null,
+  "timestamp": "2026-04-13T12:00:00Z",
+  "hrrr_age_minutes": 45,
+  "has_threat": true,
+  "onset_minutes": 14,
+  "clear_minutes": 37,
   "is_intermittent": false,
   "extends_to_end": false,
-  "all_types": [],
-  "peak_intensity": 0,
+  "all_types": ["rain"],
+  "peak_intensity": 0.08,
   "cape": 0,
-  "nearest_storm_miles": 183.26,
+  "nearest_storm_miles": 12.4,
   "nearest_storm_bearing": 228,
-  "precip_type_model": "none",
-  "message": null,
-  "source": "pirate_weather"
+  "precip_type_model": "rain",
+  "threat_type": "Rain",
+  "message": "Rain starting in 14 minutes",
+  "source": "pirate_weather",
+  "minutely": [
+    { "t": 1744545600, "i": 0.0, "p": 0.0, "k": "none" },
+    { "t": 1744545660, "i": 0.0, "p": 0.12, "k": "none" }
+  ]
 }
 ```
 
-`message` — human-readable AccuWeather-style summary string, or `null` when no threat. Examples: `"Rain starting in 10 minutes"`, `"Rain continuing for at least 60 minutes"`, `"Periods of rain for the next 23 minutes"`.
+`threat_type` — title-cased precipitation type when `has_threat` is true, `null` otherwise. HA entity state; changes only when threat type changes (cleaner history than `message`). Values: `Rain` | `Snow` | `Sleet` | `Rain and Snow` | `Rain and Sleet` | `Snow and Sleet` | `Rain, Snow, and Sleet` | `Heavy Rain` | `Heavy Snow` | `Thunderstorms` | `Thundersnow` | `null`.
+
+`message` — human-readable AccuWeather-style summary string, or `null` when no threat. HA entity attribute. Examples: `"Rain starting in 14 minutes"`, `"Rain continuing for at least 60 minutes"`, `"Periods of rain for the next 23 minutes"`.
 
 `hrrr_age_minutes` — age of the HRRR subhourly model data in minutes. Values above ~240 indicate stale forecast data.
+
+`minutely` — compact 61-entry array of per-minute forecast data for dashboard chart rendering. Fields: `t` (Unix timestamp), `i` (precip intensity in/hr), `p` (precip probability 0–1), `k` (precip type string).
+
+**HA Discovery:** `sensor.weather_analysis` under `Highland Weather Analysis` device. `value_template: "{{ value_json.threat_type if value_json.threat_type else 'Clear' }}"`; `json_attributes_topic` same as `state_topic`.
+
+---
+
+---
+
+#### Lightning
+
+**`highland/state/weather/lightning`** ← RETAINED
+
+Current lightning threat state. Published by `Utility: Weather Lightning` on every incoming strike event from the Tempest hardware sensor. Updated regardless of whether a notification was fired.
+
+| | |
+|--|--|
+| **Publisher** | Utility: Weather Lightning |
+| **Consumers** | HA (via MQTT Discovery), automation flows, dashboard consumers |
+| **Retained** | Yes |
+
+```json
+{
+  "timestamp": "2026-04-13T12:00:00Z",
+  "source": "weather_lightning",
+  "state": "nearby",
+  "last_strike_distance": 2.4,
+  "last_strike_at": "2026-04-13T12:00:00Z",
+  "last_notified_distance": 2.4,
+  "last_notified_at": "2026-04-13T12:00:00Z"
+}
+```
+
+`state` values: `"none"` | `"distant"` | `"nearby"`
+
+`state` is derived from `last_strike_distance` relative to the `nearby_miles` threshold (default 5 miles from `thresholds.json`). `"none"` when no strikes observed in the current session.
+
+`last_notified_distance` and `last_notified_at` — the strike that last triggered a notification, which may differ from `last_strike_distance` when a notification was suppressed by cooldown logic.
+
+**HA Discovery:** `sensor.weather_lightning` under `Highland Weather Lightning` device. `value_template: "{{ value_json.state }}"`; `json_attributes_topic` same as `state_topic`.
 
 ---
 
@@ -1344,6 +1407,8 @@ HA audit payload (last backup older than 26 hours):
 | `highland/state/appliance/#` | All appliance cycle state |
 | `highland/event/weather/station/#` | All weather station events |
 | `highland/state/weather/analysis` | Weather analysis threat state |
+| `highland/state/weather/alerts` | Weather alerts state + card attributes |
+| `highland/state/weather/lightning` | Lightning threat state |
 | `highland/event/weather/radar/#` | All radar events |
 | `highland/event/weather/radar/+/rendered` | Any product rendered |
 | `highland/event/weather/radar/+/error` | Any product error |
@@ -1383,4 +1448,4 @@ HA audit payload (last backup older than 26 hours):
 
 ---
 
-*Last Updated: 2026-04-10*
+*Last Updated: 2026-04-13*

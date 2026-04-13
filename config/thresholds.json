@@ -1,1 +1,7 @@
-{}
+{
+  "lightning": {
+    "nearby_miles": 5,
+    "distant_cooldown_minutes": 5,
+    "nearby_age_out_minutes": 10
+  }
+}

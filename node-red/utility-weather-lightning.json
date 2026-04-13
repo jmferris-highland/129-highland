@@ -1,0 +1,437 @@
+[
+    {
+        "id": "b9b88997cea68d04",
+        "type": "tab",
+        "label": "Utility: Weather Lightning",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "f8522c5d466265df",
+        "type": "group",
+        "z": "b9b88997cea68d04",
+        "name": "Sinks",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "2fe9e62491933b87",
+            "4c508c9734e6c134",
+            "97efa5fa3074ca40",
+            "330b6917669b7839"
+        ],
+        "x": 54,
+        "y": 239,
+        "w": 452,
+        "h": 142
+    },
+    {
+        "id": "593961c391d72422",
+        "type": "group",
+        "z": "b9b88997cea68d04",
+        "name": "Lightning Pipeline",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "ba326f69a9142bd6",
+            "208b5abe22fe3be7",
+            "ca4e175cd889771d",
+            "9c8f98c1330916a4",
+            "1bd77778519ba428",
+            "df502c8cfe9dfb73",
+            "05e39c737688a2af"
+        ],
+        "x": 54,
+        "y": 59,
+        "w": 1052,
+        "h": 142
+    },
+    {
+        "id": "612439dba6d25015",
+        "type": "group",
+        "z": "b9b88997cea68d04",
+        "name": "Home Assistant Discovery",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "bc552c59e993841d",
+            "ebee08c628e0ab5f",
+            "5b6dc3e08332a0ed"
+        ],
+        "x": 54,
+        "y": 419,
+        "w": 612,
+        "h": 82
+    },
+    {
+        "id": "c1093ddb0fa50e3d",
+        "type": "group",
+        "z": "b9b88997cea68d04",
+        "name": "Error Handling",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "cd0a374b7a69f2e1",
+            "ca0a2819b106e964"
+        ],
+        "x": 54,
+        "y": 539,
+        "w": 352,
+        "h": 82
+    },
+    {
+        "id": "2fe9e62491933b87",
+        "type": "mqtt in",
+        "z": "b9b88997cea68d04",
+        "g": "f8522c5d466265df",
+        "name": "Lightning Strike",
+        "topic": "highland/event/weather/station/lightning",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": false,
+        "rh": 0,
+        "inputs": 0,
+        "x": 160,
+        "y": 280,
+        "wires": [
+            [
+                "4c508c9734e6c134"
+            ]
+        ]
+    },
+    {
+        "id": "4c508c9734e6c134",
+        "type": "link out",
+        "z": "b9b88997cea68d04",
+        "g": "f8522c5d466265df",
+        "name": "Lightning Pipeline",
+        "mode": "link",
+        "links": [
+            "ba326f69a9142bd6"
+        ],
+        "x": 390,
+        "y": 280,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "97efa5fa3074ca40",
+        "type": "cronplus",
+        "z": "b9b88997cea68d04",
+        "g": "f8522c5d466265df",
+        "name": "Every Minute",
+        "outputField": "payload",
+        "timeZone": "",
+        "storeName": "",
+        "commandResponseMsgOutput": "output1",
+        "defaultLocation": "",
+        "defaultLocationType": "default",
+        "outputs": 1,
+        "options": [
+            {
+                "name": "Every Minute",
+                "topic": "every-minute",
+                "payloadType": "default",
+                "payload": "",
+                "expressionType": "cron",
+                "expression": "0 * * * * * *",
+                "location": "",
+                "offset": "0",
+                "solarType": "all",
+                "solarEvents": "sunrise,sunset"
+            }
+        ],
+        "x": 170,
+        "y": 340,
+        "wires": [
+            [
+                "330b6917669b7839"
+            ]
+        ]
+    },
+    {
+        "id": "330b6917669b7839",
+        "type": "link out",
+        "z": "b9b88997cea68d04",
+        "g": "f8522c5d466265df",
+        "name": "Recalculate State",
+        "mode": "link",
+        "links": [
+            "05e39c737688a2af"
+        ],
+        "x": 390,
+        "y": 340,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "ba326f69a9142bd6",
+        "type": "link in",
+        "z": "b9b88997cea68d04",
+        "g": "593961c391d72422",
+        "name": "Lightning Pipeline",
+        "links": [
+            "4c508c9734e6c134"
+        ],
+        "x": 170,
+        "y": 100,
+        "wires": [
+            [
+                "208b5abe22fe3be7"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "208b5abe22fe3be7",
+        "type": "function",
+        "z": "b9b88997cea68d04",
+        "g": "593961c391d72422",
+        "name": "Evaluate Strike",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst thresholds = global.get('config')?.thresholds?.lightning || {};\nconst NEARBY_MILES             = thresholds.nearby_miles             ?? 5;\nconst DISTANT_COOLDOWN_MINUTES = thresholds.distant_cooldown_minutes ?? 5;\nconst NEARBY_AGE_OUT_MINUTES   = thresholds.nearby_age_out_minutes   ?? 10;\n\nconst p = msg.payload;\nconst distance = p.distance_miles;\nconst now = new Date();\n\n// Always track the latest strike\nflow.set('last_strike_distance', distance);\nflow.set('last_strike_at', now.toISOString());\n\nconst lastNotifiedDistance = flow.get('last_notified_distance');\nconst lastNotifiedAt       = flow.get('last_notified_at');\n\n// --- Notification decision ---\nlet shouldNotify = false;\n\nif (lastNotifiedDistance === null || lastNotifiedDistance === undefined) {\n    // First strike ever\n    shouldNotify = true;\n\n} else if (distance < NEARBY_MILES) {\n    // Proximity mode — always notify\n    shouldNotify = true;\n\n} else if (distance < lastNotifiedDistance) {\n    // Storm approaching\n    shouldNotify = true;\n\n} else {\n    const elapsedMinutes = lastNotifiedAt\n        ? (now.getTime() - new Date(lastNotifiedAt).getTime()) / 60000\n        : Infinity;\n\n    if (lastNotifiedDistance < NEARBY_MILES) {\n        shouldNotify = elapsedMinutes >= NEARBY_AGE_OUT_MINUTES;\n    } else {\n        shouldNotify = elapsedMinutes >= DISTANT_COOLDOWN_MINUTES;\n    }\n}\n\nif (shouldNotify) {\n    flow.set('last_notified_distance', distance);\n    flow.set('last_notified_at', now.toISOString());\n}\n\nmsg.shouldNotify = shouldNotify;\n\nnode.status({\n    fill:  distance < NEARBY_MILES ? 'red' : 'yellow',\n    shape: 'dot',\n    text:  formatStatus(`${distance} mi${shouldNotify ? ' — notified' : ' — suppressed'}`)\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 100,
+        "wires": [
+            [
+                "ca4e175cd889771d"
+            ]
+        ]
+    },
+    {
+        "id": "ca4e175cd889771d",
+        "type": "function",
+        "z": "b9b88997cea68d04",
+        "g": "593961c391d72422",
+        "name": "Derive State",
+        "func": "const thresholds = global.get('config')?.thresholds?.lightning || {};\nconst NEARBY_MILES             = thresholds.nearby_miles             ?? 5;\nconst DISTANT_COOLDOWN_MINUTES = thresholds.distant_cooldown_minutes ?? 5;\nconst NEARBY_AGE_OUT_MINUTES   = thresholds.nearby_age_out_minutes   ?? 10;\n\nconst lastStrikeDistance = flow.get('last_strike_distance');\nconst lastStrikeAt       = flow.get('last_strike_at');\n\nfunction deriveState(distance, strikeAt) {\n    if (distance === null || distance === undefined) return 'Clear';\n    const elapsedMinutes = (new Date().getTime() - new Date(strikeAt).getTime()) / 60000;\n    if (distance < NEARBY_MILES && elapsedMinutes < NEARBY_AGE_OUT_MINUTES) return 'Nearby';\n    if (distance >= NEARBY_MILES && elapsedMinutes < DISTANT_COOLDOWN_MINUTES) return 'Distant';\n    return 'Clear';\n}\n\nconst state = deriveState(lastStrikeDistance, lastStrikeAt);\n\nconst lastNotifiedDistance = flow.get('last_notified_distance');\nconst lastNotifiedAt       = flow.get('last_notified_at');\n\nnode.send([{\n    topic:   'highland/state/weather/lightning',\n    retain:  true,\n    qos:     1,\n    payload: JSON.stringify({\n        timestamp:              new Date().toISOString(),\n        source:                 'weather_lightning',\n        state,\n        last_strike_distance:   lastStrikeDistance   ?? null,\n        last_strike_at:         lastStrikeAt         ?? null,\n        last_notified_distance: lastNotifiedDistance ?? null,\n        last_notified_at:       lastNotifiedAt       ?? null\n    })\n}, null]);\n\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 610,
+        "y": 100,
+        "wires": [
+            [
+                "9c8f98c1330916a4"
+            ],
+            [
+                "1bd77778519ba428"
+            ]
+        ]
+    },
+    {
+        "id": "9c8f98c1330916a4",
+        "type": "mqtt out",
+        "z": "b9b88997cea68d04",
+        "g": "593961c391d72422",
+        "name": "State Output",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 810,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "1bd77778519ba428",
+        "type": "function",
+        "z": "b9b88997cea68d04",
+        "g": "593961c391d72422",
+        "name": "Build Notification",
+        "func": "if (!msg.shouldNotify) return null;\n\nconst distance = flow.get('last_strike_distance');\nconst isNearby = flow.get('last_strike_distance') < (global.get('config')?.thresholds?.lightning?.nearby_miles ?? 5);\n\nconst title   = isNearby ? 'Lightning Nearby'    : 'Lightning Detected';\nconst message = isNearby\n    ? `Lightning nearby \\u2014 ${distance} miles away`\n    : `Strike detected ${distance} miles away`;\nconst severity = isNearby ? 'high' : 'medium';\n\nmsg.payload = JSON.stringify({\n    notification_id: 'weather.lightning',\n    severity,\n    source:         'weather_lightning',\n    title,\n    message,\n    correlation_id: 'weather_lightning',\n    url:            '/dashboard-weather/0',\n    sticky:         true,\n    group:          'weather_lightning'\n});\n\nmsg.topic = 'highland/event/notify';\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 830,
+        "y": 160,
+        "wires": [
+            [
+                "df502c8cfe9dfb73"
+            ]
+        ]
+    },
+    {
+        "id": "df502c8cfe9dfb73",
+        "type": "mqtt out",
+        "z": "b9b88997cea68d04",
+        "g": "593961c391d72422",
+        "name": "Notify",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 1030,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "bc552c59e993841d",
+        "type": "inject",
+        "z": "b9b88997cea68d04",
+        "g": "612439dba6d25015",
+        "name": "On Startup",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 460,
+        "wires": [
+            [
+                "ebee08c628e0ab5f"
+            ]
+        ]
+    },
+    {
+        "id": "ebee08c628e0ab5f",
+        "type": "function",
+        "z": "b9b88997cea68d04",
+        "g": "612439dba6d25015",
+        "name": "Build Sensors",
+        "func": "const STATE_TOPIC = 'highland/state/weather/lightning';\nconst base        = 'homeassistant/sensor/highland_weather_lightning';\n\nconst device = {\n    identifiers:  ['highland_weather_lightning'],\n    name:         'Highland Weather Lightning',\n    model:        'Tempest',\n    manufacturer: 'Highland'\n};\n\nnode.send({\n    topic:   `${base}/lightning/config`,\n    retain:  true,\n    qos:     1,\n    payload: JSON.stringify({\n        name:                  'Weather Lightning',\n        unique_id:             'highland_weather_lightning',\n        state_topic:           STATE_TOPIC,\n        value_template:        '{{ value_json.state }}',\n        json_attributes_topic: STATE_TOPIC,\n        icon:                  'mdi:weather-lightning',\n        device\n    })\n});\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 460,
+        "wires": [
+            [
+                "5b6dc3e08332a0ed"
+            ]
+        ]
+    },
+    {
+        "id": "5b6dc3e08332a0ed",
+        "type": "mqtt out",
+        "z": "b9b88997cea68d04",
+        "g": "612439dba6d25015",
+        "name": "Publish",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 580,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "cd0a374b7a69f2e1",
+        "type": "catch",
+        "z": "b9b88997cea68d04",
+        "g": "c1093ddb0fa50e3d",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 140,
+        "y": 580,
+        "wires": [
+            [
+                "ca0a2819b106e964"
+            ]
+        ]
+    },
+    {
+        "id": "ca0a2819b106e964",
+        "type": "debug",
+        "z": "b9b88997cea68d04",
+        "g": "c1093ddb0fa50e3d",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 310,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "05e39c737688a2af",
+        "type": "link in",
+        "z": "b9b88997cea68d04",
+        "g": "593961c391d72422",
+        "name": "Recalculate State",
+        "links": [
+            "330b6917669b7839"
+        ],
+        "x": 400,
+        "y": 160,
+        "wires": [
+            [
+                "ca4e175cd889771d"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "8fdd564482b4755b",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-cron-plus": "2.2.4"
+        }
+    }
+]

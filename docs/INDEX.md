@@ -135,13 +135,16 @@ Domain-specific designs. Each subsystem is fully designed and ready for implemen
 - HAOS live: Node-RED, PostgreSQL, all utility flows operational
 - Radar pipeline live: Python daemon on hub, SFTP delivery to HAOS, Node-RED MQTT integration
 - Weather station live: WeatherFlow Tempest via UDP relay, 14 HA entities via MQTT Discovery
-- Weather Analysis live: PirateWeather minutely forecast, MinuteCast-style precipitation notifications, Tempest cross-validation
+- Weather Analysis live: PirateWeather minutely forecast, 1-minute cadence, MinuteCast notifications, `threat_type` entity state, `minutely` array for dashboard chart, HA Discovery sensor
+- Weather Alerts enhanced: three-tier deduplication, expiry pre-filter, per-alert notifications, consolidated state topic, Weather Alerts Card on dashboard, HA Discovery sensor
 
 **What's next:**
 - Security system: Node-RED FSM, Noonlight integration, Frient keypads
 - Hygrostat: RoC-based bathroom fan, Inovelli Blue LED bar
 - LoRaWAN: bin monitoring, mailbox delivery detection
 - Garage door: Konnected GDO blaQ bridge
+- Weather Lightning: hyperlocal lightning notifications (designed — issue #26)
+- MinuteCast dashboard visualization: apexcharts-card bar chart (designed — issue #30)
 - Remaining subsystems per `AUTOMATION_BACKLOG.md`
 
 ---
@@ -173,4 +176,4 @@ New automation ideas → `AUTOMATION_BACKLOG.md`. Don't derail current work; cap
 
 ---
 
-*Last Updated: 2026-04-10*
+*Last Updated: 2026-04-13*

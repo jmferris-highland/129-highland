@@ -189,6 +189,9 @@ Centralized configuration using external JSON files. Config is separated from co
   "ai_providers": {
     "openai_api_key": "...",
     "anthropic_api_key": "..."
+  },
+  "weatherflow": {
+    "device_id": 0
   }
 }
 ```
@@ -238,25 +241,25 @@ On partial failure (one file fails to parse), log the error and continue loading
 const userAgent = global.get('config')?.system?.http?.user_agent;
 
 // Location
-const location = global.get('config.location');
+const location = global.get('config')?.location;
 const { latitude, longitude, timezone } = location;
 
 // Thresholds
-const batteryWarn = global.get('config.thresholds.battery.warning');
-const batteryCrit = global.get('config.thresholds.battery.critical');
+const batteryWarn = global.get('config')?.thresholds?.battery?.warning;
+const batteryCrit = global.get('config')?.thresholds?.battery?.critical;
 
 // Secrets
-const apiKey = global.get('config.secrets.weather_api_key');
+const apiKey = global.get('config')?.secrets?.weather_api_key;
 
 // Notification recipients
-const adminRecipients = global.get('config.notifications.defaults.admin_only');
+const adminRecipients = global.get('config')?.notifications?.defaults?.admin_only;
 
 // Device info
-const device = global.get('config.device_registry')?.devices?.['foyer_entry_door'];
+const device = global.get('config')?.device_registry?.devices?.['foyer_entry_door'];
 const friendlyName = device?.friendly_name;
 
 // Device model metadata (battery specs, reporting intervals)
-const catalog = global.get('config.device_catalog');
+const catalog = global.get('config')?.device_catalog;
 const modelSpec = catalog?.models?.[modelId];
 const battery = modelSpec?.battery;
 const reportingInterval = modelSpec?.max_reporting_interval_minutes;
@@ -273,5 +276,5 @@ On load, validate each config file:
 
 ---
 
-*Last Updated: 2026-04-03*
+*Last Updated: 2026-04-15*
 

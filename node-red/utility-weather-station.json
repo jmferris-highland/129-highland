@@ -21,7 +21,7 @@
             "9bb4c8d11986ede6"
         ],
         "x": 54,
-        "y": 699,
+        "y": 819,
         "w": 612,
         "h": 82
     },
@@ -67,12 +67,19 @@
             "a63474c91619b71b",
             "cd700ed9e434f76a",
             "e882273679663011",
-            "22d9c1f038973cad"
+            "22d9c1f038973cad",
+            "023b2c11260b2bf6",
+            "de4d4592a6561547",
+            "e2e247f57e10a8d8",
+            "2a2687c51d678ba7",
+            "0db2d6d324ac25d2",
+            "e5da9a28ea7cd75d",
+            "86fd9bbda42a7314"
         ],
         "x": 54,
         "y": 579,
-        "w": 812,
-        "h": 82
+        "w": 872,
+        "h": 202
     },
     {
         "id": "f1217c591455b2e0",
@@ -87,7 +94,7 @@
             "2058b51a2c24d25f"
         ],
         "x": 54,
-        "y": 819,
+        "y": 939,
         "w": 352,
         "h": 82
     },
@@ -96,14 +103,14 @@
         "type": "udp in",
         "z": "utility-weather-station",
         "g": "01e6abb3808d0e60",
-        "name": "Tempest Listener",
+        "name": "UDP Listener",
         "iface": "",
         "port": "50223",
         "ipv": "udp4",
         "multicast": "false",
         "group": "",
         "datatype": "buffer",
-        "x": 160,
+        "x": 150,
         "y": 620,
         "wires": [
             [
@@ -124,7 +131,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 380,
+        "x": 360,
         "y": 620,
         "wires": [
             [
@@ -138,14 +145,14 @@
         "z": "utility-weather-station",
         "g": "01e6abb3808d0e60",
         "name": "Build Target",
-        "func": "switch (msg.payload.type) {\n    case 'evt_precip':\n        msg.target = 'Precipitation Start';\n        break;\n    case 'evt_strike':\n        msg.target = 'Lightning Strike';\n        break;\n    case 'obs_st':\n        msg.target = 'Observation';\n        break;\n    case 'rapid_wind':\n        msg.target = 'Rapid Wind';\n        break;\n    default:\n        return null;\n}\n\nreturn msg;",
+        "func": "switch (msg.payload.type) {\n    case 'evt_precip':\n        msg.target = 'Precipitation Start';\n        break;\n    case 'obs_st':\n        msg.target = 'Observation';\n        break;\n    case 'rapid_wind':\n        msg.target = 'Rapid Wind';\n        break;\n    default:\n        return null;\n}\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 590,
+        "x": 570,
         "y": 620,
         "wires": [
             [
@@ -162,7 +169,7 @@
         "links": [],
         "linkType": "dynamic",
         "timeout": "30",
-        "x": 780,
+        "x": 760,
         "y": 620,
         "wires": [
             []
@@ -253,7 +260,7 @@
         "finalize": "",
         "libs": [],
         "x": 380,
-        "y": 740,
+        "y": 860,
         "wires": [
             [
                 "9bb4c8d11986ede6"
@@ -283,7 +290,7 @@
         "payload": "",
         "payloadType": "date",
         "x": 170,
-        "y": 740,
+        "y": 860,
         "wires": [
             [
                 "2271d2fc92f367e7"
@@ -306,7 +313,7 @@
         "expiry": "",
         "broker": "4cefa2ad2d8b462e",
         "x": 580,
-        "y": 740,
+        "y": 860,
         "wires": []
     },
     {
@@ -318,7 +325,7 @@
         "scope": null,
         "uncaught": false,
         "x": 140,
-        "y": 860,
+        "y": 980,
         "wires": [
             [
                 "2058b51a2c24d25f"
@@ -340,7 +347,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 310,
-        "y": 860,
+        "y": 980,
         "wires": []
     },
     {
@@ -533,6 +540,145 @@
         "wires": []
     },
     {
+        "id": "023b2c11260b2bf6",
+        "type": "websocket in",
+        "z": "utility-weather-station",
+        "g": "01e6abb3808d0e60",
+        "name": "Receive",
+        "server": "",
+        "client": "lt-ws-client",
+        "x": 140,
+        "y": 740,
+        "wires": [
+            [
+                "de4d4592a6561547"
+            ]
+        ]
+    },
+    {
+        "id": "de4d4592a6561547",
+        "type": "function",
+        "z": "utility-weather-station",
+        "g": "01e6abb3808d0e60",
+        "name": "Filter Strike",
+        "func": "let d;\ntry {\n    d = typeof msg.payload === 'string' ? JSON.parse(msg.payload) : msg.payload;\n} catch(e) {\n    node.status({ fill: 'grey', shape: 'ring', text: 'parse error' });\n    return null;\n}\n\nif (!d || !d.type) return null;\n\nnode.status({ fill: 'grey', shape: 'dot', text: d.type });\n\nif (d.type !== 'evt_strike') return null;\n\nmsg.payload = d;\n\nnode.status({ fill: 'yellow', shape: 'dot', text: `Strike ${msg.payload.distance_miles} mi` });\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 740,
+        "wires": [
+            [
+                "86fd9bbda42a7314"
+            ]
+        ]
+    },
+    {
+        "id": "e2e247f57e10a8d8",
+        "type": "inject",
+        "z": "utility-weather-station",
+        "g": "01e6abb3808d0e60",
+        "name": "On Startup",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "0.1",
+        "topic": "",
+        "payload": "{}",
+        "payloadType": "json",
+        "x": 170,
+        "y": 680,
+        "wires": [
+            [
+                "2a2687c51d678ba7"
+            ]
+        ]
+    },
+    {
+        "id": "2a2687c51d678ba7",
+        "type": "delay",
+        "z": "utility-weather-station",
+        "g": "01e6abb3808d0e60",
+        "name": "Initialization Delay",
+        "pauseType": "delay",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 390,
+        "y": 680,
+        "wires": [
+            [
+                "0db2d6d324ac25d2"
+            ]
+        ]
+    },
+    {
+        "id": "0db2d6d324ac25d2",
+        "type": "function",
+        "z": "utility-weather-station",
+        "g": "01e6abb3808d0e60",
+        "name": "Build Listen Command",
+        "func": "const device_id = global.get('config')?.secrets.weatherflow.device_id;\n\nmsg.payload = {\n    \"id\": \"highland-lightning\",\n    \"type\": \"listen_start\",\n    device_id\n}\n\nnode.status({ fill: 'green', shape: 'dot', text: `DEVICE ${device_id}`});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 680,
+        "wires": [
+            [
+                "e5da9a28ea7cd75d"
+            ]
+        ]
+    },
+    {
+        "id": "e5da9a28ea7cd75d",
+        "type": "websocket out",
+        "z": "utility-weather-station",
+        "g": "01e6abb3808d0e60",
+        "name": "Send",
+        "server": "",
+        "client": "lt-ws-client",
+        "x": 850,
+        "y": 680,
+        "wires": []
+    },
+    {
+        "id": "86fd9bbda42a7314",
+        "type": "link call",
+        "z": "utility-weather-station",
+        "g": "01e6abb3808d0e60",
+        "name": "Lightning Strike",
+        "links": [
+            "4cd616612c873c95"
+        ],
+        "linkType": "static",
+        "timeout": "30",
+        "x": 540,
+        "y": 740,
+        "wires": [
+            []
+        ]
+    },
+    {
         "id": "4cefa2ad2d8b462e",
         "type": "mqtt-broker",
         "name": "Hub",
@@ -562,5 +708,15 @@
         "willMsg": {},
         "userProps": "",
         "sessionExpiry": ""
+    },
+    {
+        "id": "lt-ws-client",
+        "type": "websocket-client",
+        "path": "${WEATHERFLOW_WSS_URL}",
+        "tls": "",
+        "wholemsg": "false",
+        "hb": "0",
+        "subprotocol": "",
+        "headers": []
     }
 ]

@@ -103,7 +103,7 @@ Domain-specific designs. Each subsystem is fully designed and ready for implemen
 | [`subsystems/CALENDAR_INTEGRATION.md`](subsystems/CALENDAR_INTEGRATION.md) | ✅ Designed | Google Calendar bridge, attendee-based camera suppression, stateless re-derivation |
 | [`subsystems/GARAGE_DOOR.md`](subsystems/GARAGE_DOOR.md) | ✅ Designed | Konnected GDO blaQ, SSE stream integration, REST commands, MQTT Discovery |
 | [`subsystems/LORA.md`](subsystems/LORA.md) | ✅ Designed | LoRaWAN gateway relay, bin monitoring state machine, mailbox delivery detection |
-| [`subsystems/STAIR_LIGHTING.md`](subsystems/STAIR_LIGHTING.md) | ✅ Designed | Continuous wall-side RGB IC FCOB accent lighting in dual-chamber channel, M5Stack Atom + Atomic RS485 Base + ToF Unit sensor nodes integrated into channel, GLEDOPTO GL-C-015WL-D WLED controller, direction-inference FSM, schedule + outdoor lux active window gating |
+| [`subsystems/STAIR_LIGHTING.md`](subsystems/STAIR_LIGHTING.md) | ✅ Designed | Continuous wall-side RGB IC FCOB accent lighting in single-chamber U-channel, M5Stack Atom + Atomic RS485 Base + ToF Unit sensor nodes integrated at channel endpoints, GLEDOPTO GL-C-015WL-D WLED controller in adjacent bedroom, direction-inference FSM, schedule + outdoor lux active window gating |
 | [`subsystems/VIDEO_PIPELINE.md`](subsystems/VIDEO_PIPELINE.md) | ✅ Designed | Three-stage analysis ladder, CPAI triage, Gemini analysis, zone filtering, cooldown/kill switch |
 | [`subsystems/WEATHER_FLOW.md`](subsystems/WEATHER_FLOW.md) | 🔄 Tier 1 + Radar + Station + Analysis Live | NWS forecast + alerts live; radar pipeline live; Tempest station live; Weather Analysis live (OWM minutely + Open-Meteo convective, Tempest ground truth, MinuteCast notifications); Weather Lightning live |
 | [`subsystems/EUFY_LOCKS.md`](subsystems/EUFY_LOCKS.md) | 📋 Planned | eufy-bridge TypeScript service, MQTT integration for Eufy Wi-Fi locks, lock-only scope, secondary account strategy |
@@ -177,4 +177,4 @@ New automation ideas → `AUTOMATION_BACKLOG.md`. Don't derail current work; cap
 
 ---
 
-*Last Updated: 2026-04-18*
+*Last Updated: 2026-04-19*

@@ -62,13 +62,13 @@ Twelve-volt addressable RGB IC FCOB (flexible chip-on-board) strip, single conti
 
 **Landing inclusion is an open question** — whether the strip terminates at the top step or extends across the upper landing is a design decision pending further evaluation. See Open Questions.
 
-### Power Supply — Meanwell LRS-150-12
+### Power Supply — Meanwell LRS-150-12 (or BTF-Lighting 130W equivalent)
 
-150W, 12V DC. Sized for realistic working load with comfortable headroom for full-brightness emergency scenarios at the RGB IC FCOB's higher physical LED density.
+150W, 12V DC. Sized for realistic working load with comfortable headroom for full-brightness emergency scenarios at the RGB IC FCOB's higher physical LED density. A BTF-Lighting 130W LED-rated transformer is an equivalent option in the same capacity class; both land near the 50–60% loaded sweet spot for SMPS efficiency.
 
-**Location:** Adjacent bedroom. No usable outlet exists at the top or bottom of the stairs, and the stair underside is a finished closet (no access). PSU in the bedroom is Phase 1 solution; an electrician-installed outlet at the top of the stairs is a possible future refinement.
+**Location:** Adjacent bedroom. No usable outlet exists at the top or bottom of the stairs, and the stair underside is a finished closet (no access). Both the PSU *and* the WLED controller live in the bedroom. A 14/3 cable runs from the bedroom to the top of the staircase, carrying 12V + GND + DATA (see Cable Routing). PSU-in-bedroom is Phase 1 solution; an electrician-installed outlet at the top of the stairs is a possible future refinement.
 
-**12V DC distribution run:** 15–20 ft from PSU to top-of-stairs controller location, 14 AWG minimum. Voltage drop at 14 AWG × 20 ft × 6A (realistic emergency-bright draw) is well under 4%, well within tolerance. Low-voltage DC wiring is Class 2 and has no electrical code restrictions — routable through wall channels without permits or licensed trades.
+**PSU-to-controller run:** Trivial — both live in the bedroom, connected by short leads. No long DC distribution run required.
 
 ### Motion Sensors — M5Stack Atom Stack
 
@@ -138,34 +138,44 @@ Neither the U010 nor U172 exposes the VL53Lxx's XSHUT pin externally in the M5St
 
 ## Physical Installation
 
-### Channel Profile — Dual-Chamber ("H-Profile")
+### Channel Profile — Single-Chamber U
 
-**Approach:** Aluminum LED channel with two chambers, mounted along the **wall side of the staircase** following the stair slope as a single continuous run.
+**Approach:** Standard aluminum U-channel with frosted diffuser, mounted along the **wall side of the staircase** following the stair slope as a single continuous run.
 
-- **Front chamber** (visible): houses the LED strip and frosted diffuser. Produces the continuous line of light.
-- **Rear chamber** (concealed, wall-side): houses the Atom + ToF + buck electronics bricks at each end, plus the 12V/GND/data trunk conductors along the full run.
+- **Channel interior** holds the LED strip down its full length plus a compact Atom sensor stack at each end (top and bottom). The middle of the channel carries only the strip.
+- **Diffuser** snaps into retention grooves at the top of the channel's side walls, covering the strip and electronics uniformly.
 
-Commonly marketed as "dual-chamber," "H-profile," "architectural LED extrusion with raceway," or "LED profile with cable channel." Terminology is inconsistent across vendors — shop by cross-section, not name.
+**Why single-chamber over dual-chamber H-profile:**
 
-**Why dual-chamber over single-chamber U:**
+The design initially called for a dual-chamber H-profile to hide electronics and a cable trunk in a separate rear cavity. Three developments simplified the problem:
 
-- The Atom + RS485 Base stack plus Grove-tethered ToF Unit would not fit cleanly in a standard single-chamber U alongside the strip. Dual-chamber allows the front chamber to carry a continuous uninterrupted light line edge-to-edge while the electronics hide behind it.
-- Cable routing for the full 15–19 ft trunk (12V, GND, data) lives invisibly in the rear raceway — no zip ties, clips, or tacky wire hiding along the strip itself.
-- Lateral ToF optical port through the front face of the channel is short (just the channel wall thickness), not through a deeper single-chamber volume.
+1. **No full-length cable trunk needed.** The Atoms tap the LED strip's own integrated 12V/GND pads at each end of the run (see Cable Routing below). There is no separate power wire running the length of the channel — only the strip itself.
+2. **Smaller electronics footprint than estimated.** The Atom + RS485 Base stack is ~24 × 24 × 25 mm, compact enough to fit inside a reasonable U-channel alongside the strip at each end.
+3. **Single cable entry point.** The 14/3 from the bedroom enters the channel at the top end only. A small wall-side pass-through drilled behind the channel routes the cable invisibly from the wall cavity into the channel interior.
 
-**Trade-off:** Dual-chamber profiles run $15–25/m versus $5–8/m for basic U-channel. For the ~5–6 m run, the delta is $50–100 — accepted for the aesthetic result.
+**Visual compromise accepted:** The Atom stacks at each end occupy ~30 mm of channel length and read as slightly darker shadows through the diffuser near the ends of the strip. In practice this is a minor aesthetic concession that tends to read as "end of strip" rather than "something is wrong."
 
-**Target profile dimensions (ranges for sourcing):**
+**Cost and sourcing advantages:**
 
-| Chamber | Approximate interior dimensions |
-|---------|-------------------------------|
-| Front | ≥ 10 mm wide, ≥ 8 mm deep; accommodates ~10 mm strip + snap-in frosted PC diffuser |
-| Rear | ≥ 30 mm wide, ≥ 25 mm deep; accommodates the ~24 × 24 × 25 mm Atom+Base stack plus ToF Unit and service loop |
-| Overall profile | ~40 mm wall-face width × ~30 mm protrusion from wall |
+| Profile | Cost per m | Sourcing | Splice accessories |
+|---------|------------|----------|-------------------|
+| Standard U-channel | $5–10 | Amazon, Home Depot, multiple SKUs | Widely available |
+| Architectural H-profile | $15–25 | Specialty suppliers (Klus, etc.) | Limited |
 
-**Sourcing direction:** Klus ("PAC" and "GIP" series have rear cavities; custom orders available), Alumbrera, LED Profiles Europe, Alcon Lighting, BudgetLightingOnline (stocks Klus). Most commercial channels ship in 1 m or 2 m lengths — splicing will be required for a 15–19 ft run. Clean joints are worth sourcing carefully.
+For a ~5–6 m run, the channel-only savings are $50–100, plus meaningful accessory savings and significantly better local availability.
 
-**Final profile selection is deferred to bench POC.** Small-scale testing with sample lengths of candidate profiles will verify assembly fit, diffuser appearance, and mounting practicality before committing to the production SKU.
+**Target profile dimensions:**
+
+| Dimension | Target |
+|-----------|--------|
+| Interior width | ≥ 25 mm (fits strip plus Atom stack side-by-side at endpoints) |
+| Interior depth | ≥ 15 mm (accommodates Atom stack height comfortably) |
+| Overall external | ~30 × 18 mm typical |
+| Length | 1 m or 2 m sections (most common), spliced to full 15–19 ft run |
+
+**Sourcing direction:** Generic aluminum LED channels in this size range are plentiful on Amazon, Home Depot, and local electrical supply houses. Brand matters less than dimensions — shop by interior measurements. Look for channels explicitly listed as compatible with LED strips and including a matching frosted PC or acrylic diffuser.
+
+**Final profile selection is deferred to bench POC.** Small-scale testing with sample lengths of candidate profiles will verify assembly fit (especially at endpoints where Atom stacks reside), diffuser appearance, and mounting practicality before committing to the production SKU.
 
 ### Mounting Height
 
@@ -184,44 +194,77 @@ Two independent constraints ruled out both under-tread and riser-face mounting:
 - **Under-tread:** The stair underside is a finished closet with no access. True under-tread mounting would require opening the closet ceiling.
 - **Riser-face:** Molding installed beneath each nosing leaves insufficient clearance for an LED channel, ruling out the shadow-line placement originally considered.
 
-Wall-side mounting sidesteps both constraints and — with the dual-chamber profile — delivers a cleaner installation than either under-tread alternative: a continuous light line that follows the stair geometry, with all electronics and cabling hidden behind it.
+Wall-side mounting sidesteps both constraints and — with a reasonably-sized U-channel — delivers a clean installation: a continuous light line that follows the stair geometry, with electronics tucked at each end and only a single cable entry required at the top.
 
 ### Sensor Integration
 
 Both sensor nodes (top and bottom) are fully integrated into the channel itself. No separate sensor enclosures or visible mounting hardware.
 
-**Assembly placement:** Each Atom + RS485 Base stack sits inside the rear chamber at the end of the channel — one at the top of the run, one at the bottom. The Grove-tethered ToF Unit sits slightly forward, positioned so its optical face aligns with the fabricated port in the channel wall. Location within the rear chamber is dictated by where the ToF sensor needs to see out.
+**Assembly placement:** Each Atom + RS485 Base stack sits inside the channel at the end of the run — one at the top, one at the bottom — immediately adjacent to the strip's endpoint. The Grove-tethered ToF Unit sits positioned so its optical face aligns with the fabricated port in the channel wall. The stack occupies ~30 mm of channel length at each end; the middle of the channel holds only the strip.
 
 **ToF optical port:** The VL53L0X's (or VL53L1X's) 940 nm laser cannot see through a frosted diffuser. Optical path is provided by:
 
 - A hole drilled through the channel wall at the ToF location (side-facing or front-facing, depending on desired beam direction)
 - A small clear window bonded over the hole — thin clear acrylic or polycarbonate, 10–15 mm square, CA-glued into a shallow recess cut into the channel exterior
-- ToF Unit positioned in the rear chamber with its optical face aligned against the window
+- ToF Unit positioned inside the channel with its optical face aligned against the window
 
 Fabrication is minor: drill, shallow countersink with a Dremel, cut acrylic square to fit, glue. Estimated 15 minutes per node at the workbench.
 
-**Power entry:** 12V and GND from the strip's trunk conductors land at the RS485 Base's terminal block screws. The Base's internal regulator steps down to 5V for the Atom; no external buck or filtering components are needed.
+**Power entry at each Atom:** Short jumper wires (~3–4 inches) run from the LED strip's own +12V and GND solder pads to the RS485 Base's terminal block at each Atom location. Both Atoms share the strip's 12V rail — the top Atom taps the rail at the strip's top end (close to where the controller feed enters), the bottom Atom taps at the strip's bottom end.
 
-**Thermal considerations:** At motion-triggered duty cycles (seconds of full brightness at a time, not continuous), ambient temperature inside the channel during operation is not expected to approach the Atom's or Base's limits. If prolonged emergency-bright operation became common, additional thought would be warranted. Placement of the assemblies at the *ends* of the channel puts them further from the main length of the active LED strip, which additionally mitigates thermal buildup.
+**Thermal considerations:** At motion-triggered duty cycles (seconds of full brightness at a time, not continuous), ambient temperature inside the channel during operation is not expected to approach the Atom's or Base's limits. If prolonged emergency-bright operation became common, additional thought would be warranted. Placement of the assemblies at the *ends* of the channel puts them slightly further from the main length of the active LED strip, which also mitigates thermal buildup.
 
 ### Cable Routing
 
-The rear chamber doubles as a cable raceway. The trunk carries three conductors (12V, GND, data) the full length of the run:
+**Controller-to-strip cable:** A single 14/3 stranded cable runs from the WLED controller in the bedroom to the top end of the channel on the staircase. This is the only external cable in the installation. It carries three conductors:
 
-- Top end: terminates at the WLED controller and top Atom (both taps share the 12V/GND feed; data comes from the controller output)
-- Bottom end: terminates at the bottom Atom (taps 12V/GND; data line continues no further)
+| Conductor | Purpose |
+|-----------|---------|
+| +12V (14 AWG) | Power rail for strip and Atom nodes |
+| GND (14 AWG) | Return and data reference |
+| DATA (14 AWG) | WS2811 control signal from GLEDOPTO |
 
-No external wire channels, no visible cabling outside the LED channel itself.
+14 AWG sizing accommodates the ~6.25A steady-state and 12–18A inrush of the full strip plus both Atoms, with voltage drop under 6% at 20 ft round trip. Stranded construction for flexibility during wall-cavity routing.
 
-### Power Injection
+**CL2-rated in-wall cable** is preferred if any portion of the run passes inside a wall cavity. Monoprice and Southwire both sell CL2-rated 14/3 stranded cable by the spool.
 
-Single-end feed at the top of the stairs (at the controller) is expected sufficient at 15–19 ft with the RGB IC FCOB's characteristics at realistic brightness levels. Bottom-end injection is available as a commissioning-time refinement if visible brightness drop manifests at the far end. Injection cabling, if added, routes through the rear chamber alongside the primary trunk.
+**Cable entry at the channel:** A small pass-through drilled through the wall behind the top end of the channel carries the cable from the wall cavity into the channel interior. Cable is not visible externally — the entry point is covered by the channel itself or a matching end cap.
+
+**Cable entry at the bedroom:** Cable exits the wall near the PSU and controller location. Controller connects to cable via its built-in screw terminals.
+
+**No full-length power trunk inside the channel.** The LED strip's own integrated +12V/GND pads serve as the power distribution along the channel's length. Each Atom taps the strip pads at its location via short jumpers (see Sensor Integration above). The only cable running beyond the top-end entry point is the strip itself.
+
+**Bottom-end injection option:** If commissioning reveals visible brightness drop at the bottom of the strip under full-brightness conditions (a symptom of accumulated voltage drop across the strip's own conductors over 5–6 m), a dedicated power-injection wire can be added. This would run a pair of 14 AWG conductors from the top-end cable entry point down the length of the channel to tap into the strip's +12V and GND pads at the bottom end. Not expected to be necessary at realistic brightness levels, and adding it later is straightforward.
+
+### Signal Conditioning (Production Install)
+
+The GLEDOPTO GL-C-015WL-D outputs a 3.3V data signal from its onboard ESP32. WS2811 ICs nominally accept 3.3V data, but over the 15–20 ft controller-to-strip run, signal integrity can degrade enough to cause intermittent pixel glitches.
+
+**For bench POC:** Not required. Short leads between controller and strip produce clean signal without conditioning.
+
+**For production install:** A small signal conditioning module at the strip-input end addresses data integrity concerns:
+
+| Component | Purpose |
+|-----------|---------|
+| 74AHCT125 quad level shifter | Converts 3.3V data in → 5V data out for the strip's WS2811 inputs |
+| 100 nF ceramic decoupling capacitor | Between 12V and GND at strip input, smooths supply noise |
+| 330Ω series resistor | Between level shifter output and strip data input, dampens reflections |
+
+The level shifter is powered from 5V, which is available locally from the top Atom's RS485 Base output rail.
+
+The module fits in a ~30 × 40 mm perfboard and lives inside the channel at the top end, near the cable entry point and the top Atom stack. Components are inexpensive (a few dollars total from Mouser or similar).
+
+**Mouser part references:**
+
+- 74AHCT125: **595-SN74AHCT125N** (Texas Instruments, through-hole DIP)
+- 100 nF ceramic: any 0.1 µF, 50V, X7R MLCC
+- 330Ω resistor: any 1/4W, 5% tolerance
 
 ### Sensor Placement
 
-**Top node:** Atom stack in rear chamber at top end of channel. ToF optical port angled to sweep across the upper landing and top step at ankle-to-knee height. Stairlift parks "around the corner" from the top landing and does not occlude the ToF beam.
+**Top node:** Atom stack inside the channel at the top end, immediately adjacent to the strip's top pad terminations. ToF optical port angled to sweep across the upper landing and top step at ankle-to-knee height. Stairlift parks "around the corner" from the top landing and does not occlude the ToF beam.
 
-**Bottom node:** Atom stack in rear chamber at bottom end of channel. ToF optical port angled to sweep across the bottom step similarly. Stairlift has a parking position at the bottom that is also around a corner and does not occlude the ToF beam.
+**Bottom node:** Atom stack inside the channel at the bottom end, immediately adjacent to the strip's bottom pad terminations. ToF optical port angled to sweep across the bottom step similarly. Stairlift has a parking position at the bottom that is also around a corner and does not occlude the ToF beam.
 
 **Stairlift consideration:** Non-factor. The lift has parking positions at both the top and bottom of the stairs, but both are around corners and out of ToF line-of-sight. No current clamp, dry-contact, or other instrumentation of the lift is needed.
 
@@ -230,23 +273,25 @@ Single-end feed at the top of the stairs (at the controller) is expected suffici
 Ahead of production installation, a small-scale bench proof-of-concept is planned to validate:
 
 - Actual stacked dimensions of the Atom + RS485 Base + ToF Unit assembly
-- Fit of the assembly inside candidate rear-chamber profiles
+- Fit of the assembly inside candidate U-channel profiles (especially interior width at endpoints)
 - Sample lengths of 2–3 candidate channel profiles for visual and mechanical evaluation
 - Diffuser appearance at candidate mounting heights
 - ToF optical port fabrication technique (drill, cut, clear window bond)
 - ESPHome U010 native-component behavior against live sensor; validate detection performance with bench-top simulated traversal
 - Escalation path to U172 with external ESPHome component if U010 FoV proves problematic
 - Atom-reboot recovery behavior if sensor is deliberately hung
+- Data signal integrity over short bench leads *without* the signal conditioning module (short runs should not need it; validates the module is only required at production scale)
 
-Assembly is intentionally plug-and-play — no breadboarding. Bench build is:
+Assembly is intentionally plug-and-play — no breadboarding at bench scale. Bench build is:
 
 1. Connect 12V bench supply to Atomic RS485 Base's terminal block
 2. Stack Atom Lite onto RS485 Base
 3. Plug ToF Unit (U010) into Atom's Grove port
 4. Flash Atom with ESPHome YAML
 5. Confirm MQTT traffic on the broker; validate threshold crossing triggers events
+6. Separately, wire GLEDOPTO to a ~1 m strip segment with short leads to validate WLED control
 
-Findings from POC feed final channel SKU selection, mounting height decision, U010-vs-U172 confirmation, and any wiring or housing refinements.
+Findings from POC feed final channel SKU selection, mounting height decision, U010-vs-U172 confirmation, signal conditioning necessity confirmation, and any wiring or housing refinements.
 
 ---
 
@@ -272,10 +317,19 @@ Bottom ToF node  ──► highland/event/motion/stairs_bottom  ──►  Trave
                                          highland/command/stair_lights/preset
                                                         │
                                                         ▼
-                                          WLED (GL-C-015WL-D)
+                                          WLED — GL-C-015WL-D
+                                          (co-located with PSU
+                                           in adjacent bedroom)
+                                                        │
+                                                14/3 cable run
+                                               (12V, GND, DATA)
+                                                15–20 ft to top
+                                                   of stairs
                                                         │
                                                         ▼
-                                               LED strip output
+                                           LED strip (in channel,
+                                            along wall side of
+                                              staircase)
 ```
 
 **Layer responsibilities:**
@@ -606,11 +660,13 @@ WLED's native HA integration is **not enabled** for this controller. All HA visi
 
 ### Phase 1 — Core Subsystem (This Design)
 
-- GLEDOPTO GL-C-015WL-D controller, single output channel
+- GLEDOPTO GL-C-015WL-D controller co-located with PSU in adjacent bedroom
 - Single continuous RGB IC FCOB strip (WS2811 protocol, 12V)
-- Dual-chamber H-profile aluminum channel with frosted diffuser
-- Two M5Stack Atom sensor nodes (Atom Lite + Atomic RS485 Base + ToF Unit U010), fully integrated into channel rear cavity
+- Standard single-chamber aluminum U-channel with frosted diffuser
+- 14/3 stranded CL2-rated cable from bedroom controller to top of staircase
+- Two M5Stack Atom sensor nodes (Atom Lite + Atomic RS485 Base + ToF Unit U010), integrated into channel at each end, tapping strip pads for power
 - ToF optical ports fabricated in channel walls with clear windows
+- Signal conditioning module (74AHCT125 level shifter + decoupling + damping resistor) at top end of channel
 - Motion-triggered operation with schedule + lux gating
 - HA dashboard for manual mode control
 - No physical switches
@@ -632,13 +688,14 @@ WLED's native HA integration is **not enabled** for this controller. All HA visi
 
 - [ ] Landing inclusion — strip terminates at top step, or extends across upper landing?
 - [ ] Wall-side mounting height — skirt-top, mid-wall, or recessed into skirt board?
-- [ ] Dual-chamber channel SKU selection — confirm interior dimensions fit the Atom+Base stack plus ToF Unit, evaluate diffuser appearance
+- [ ] U-channel SKU selection — confirm interior dimensions accommodate the Atom+Base stack alongside the strip at endpoints, evaluate diffuser appearance
 - [ ] ToF optical port fabrication technique — refine at bench POC (drill size, countersink depth, window material and bond)
 - [ ] Splice plan for the full run — most commercial channels ship in 1 m / 2 m lengths
 - [ ] Atom variant — Atom Lite vs AtomS3 Lite; confirm RS485 Base compatibility with whichever is selected
 - [ ] Confirm U010 FoV is adequate in actual install geometry; pivot to U172 if opposite-wall reflections cause false triggers
 - [ ] Validate Atom-reboot recovery as sufficient for hung-sensor scenarios; promote MOSFET-switched power to Phase 1 if not
 - [ ] Finalize ToF aiming geometry against real sensor performance — cat false positives vs. missed detections at knee height
+- [ ] Confirm at bench POC whether data signal is clean over 15–20 ft without signal conditioning — if yes, signal conditioning module could be simplified or dropped
 - [ ] Calibrate outdoor lux thresholds from observed Tempest data over several weeks
 - [ ] Decide home for subsystem parameters (timeouts, preset mappings) — dependent on #45 outcome
 - [ ] Validate PSU headroom against measured full-brightness draw at commissioning
@@ -646,4 +703,4 @@ WLED's native HA integration is **not enabled** for this controller. All HA visi
 
 ---
 
-*Last Updated: 2026-04-18*
+*Last Updated: 2026-04-19*

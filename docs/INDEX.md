@@ -177,4 +177,4 @@ New automation ideas → `AUTOMATION_BACKLOG.md`. Don't derail current work; cap
 
 ---
 
-*Last Updated: 2026-04-19*
+*Last Updated: 2026-04-21*

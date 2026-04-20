@@ -20,6 +20,26 @@ This document is the authoritative registry of all `highland/` MQTT topics. It d
 | `highland/status/` | Service health and liveness. Infra concerns only. | No (heartbeats); Yes (health snapshots) |
 | `highland/command/` | Imperative instructions to a service. | No |
 | `highland/ack/` | Acknowledgment infrastructure. | No |
+| `highland/homeassistant/` | HA-facing projections. Consumer-shaped payloads that deviate from Highland conventions. | **Always** |
+
+### `highland/homeassistant/` — Consumer-Shaped Projections
+
+Some downstream consumers (specifically HA custom cards and integrations) require attribute payloads shaped to a specific external contract — PascalCase field names, specific key names, or other conventions that differ from Highland's snake_case standards. Rather than pollute canonical `highland/state/` topics with consumer-shaped data, those payloads are published to a parallel `highland/homeassistant/` topic.
+
+**Rules:**
+- Always retained — HA reads attributes on startup and must get current data immediately.
+- Payloads may use PascalCase, mixed case, or any field naming required by the external consumer contract. This is intentional and not a bug.
+- The corresponding `highland/state/` topic always exists and carries the canonical snake_case version of the same data.
+- HA Discovery config points `json_attributes_topic` at the `highland/homeassistant/` topic, not `highland/state/`.
+- No internal Highland flow should subscribe to `highland/homeassistant/` topics — use `highland/state/` instead.
+
+**Current topics using this pattern:**
+
+| `highland/homeassistant/` topic | Corresponding `highland/state/` topic | Consumer |
+|--------------------------------|--------------------------------------|----------|
+| `highland/homeassistant/weather/alerts` | `highland/state/weather/alerts` | `seevee/weather_alerts_card` (NwsAdapter) |
+
+---
 
 ### Key Distinctions
 
@@ -315,50 +335,93 @@ NWS forecast normalized to a date-keyed period map. Updated hourly by `Utility: 
 
 **`highland/state/weather/alerts`** ← RETAINED
 
-Active NWS weather alerts for the configured location. Updated every 30 seconds by `Utility: Weather Alerts`. Single topic serves both operational consumers and the HA Weather Alerts Card sensor entity. `alerts` is an empty array and `count` is `0` when no alerts are active.
+Canonical active NWS weather alerts for the configured location. Updated every 30 seconds by `Utility: Weather Alerts`. `alerts` is an empty array and `count` is `0` when no alerts are active. This is the operational truth topic — internal consumers read from here.
 
 Alerts are deduplicated before publishing via three-tier logic: (1) `messageType: Update` + `references` formal supersession, (2) VTEC key deduplication, (3) heuristic deduplication for non-VTEC products (same `event` + `senderName` + `areaDesc` with overlapping time windows). Alerts with `expires` in the past are pre-filtered regardless of NWS feed inclusion.
 
 | | |
 |--|--|
 | **Publisher** | Utility: Weather Alerts |
-| **Consumers** | Utility: Daily Digest, notification flows, HA (via MQTT Discovery) |
+| **Consumers** | Utility: Daily Digest, notification flows |
 | **Retained** | Yes |
 
 ```json
 {
   "timestamp": "2026-04-13T12:00:00Z",
   "source": "weather_alerts",
+  "count": 1,
+  "attribution": "Data provided by Weather.gov",
   "alerts": [
     {
       "event": "Winter Storm Warning",
       "headline": "Winter Storm Warning issued April 13 at 12:00PM EDT",
       "severity": "Severe",
+      "certainty": "Likely",
+      "urgency": "Expected",
+      "sent": "2026-04-13T10:00:00-04:00",
       "onset": "2026-04-13T18:00:00-04:00",
       "expires": "2026-04-14T12:00:00-04:00",
       "ends": null,
-      "areaDesc": "Orange; Putnam; Rockland",
+      "area_desc": "Orange; Putnam; Rockland",
       "description": "A significant winter storm will affect the area...",
-      "instruction": "Avoid travel if possible."
+      "instruction": "Avoid travel if possible.",
+      "nws_code": "WSW",
+      "type": "Alert",
+      "status": "Actual",
+      "url": "https://api.weather.gov/alerts/urn:oid:...",
+      "correlation_id": "weather_alert_okx_wsw_w_0123"
     }
-  ],
-  "count": 1,
-  "attribution": "Pirate Weather",
-  "title": "Winter Storm Warning",
-  "severity": "Severe",
-  "time": "2026-04-13T18:00:00-04:00",
-  "expires": "2026-04-14T12:00:00-04:00",
-  "regions": "Orange; Putnam; Rockland",
-  "uri": "",
-  "description": "A significant winter storm will affect the area..."
+  ]
 }
 ```
 
-The flat top-level fields (`count`, `attribution`, `title`, `severity`, `time`, `expires`, `regions`, `uri`, `description`) are the indexed attribute structure consumed by the Weather Alerts Card. For multiple alerts, indexed suffixes are used (`title_0`, `title_1`, etc.).
-
 `severity` values (NWS): `Extreme` | `Severe` | `Moderate` | `Minor` | `Unknown`
 
-**HA Discovery:** `sensor.weather_alerts` under `Highland Weather Alerts` device. `value_template: "{{ value_json.count }}"`; `json_attributes_topic` same as `state_topic`. Weather Alerts Card auto-detects provider from `attribution: "Pirate Weather"` attribute.
+> **HA-facing projection:** The `seevee/weather_alerts_card` NwsAdapter requires PascalCase field names and a capitalized `Alerts` key. This shaped payload is published to `highland/homeassistant/weather/alerts` — see that topic for details. HA Discovery for `sensor.weather_alerts` points `json_attributes_topic` at the `highland/homeassistant/` topic, not this one.
+
+---
+
+**`highland/homeassistant/weather/alerts`** ← RETAINED
+
+HA-facing projection of `highland/state/weather/alerts`. Field names are PascalCase to satisfy the `NwsAdapter` contract in `seevee/weather_alerts_card`. Payload deviates from Highland snake_case conventions intentionally — see `highland/homeassistant/` namespace rules above.
+
+| | |
+|--|--|
+| **Publisher** | Utility: Weather Alerts (same flow, same cycle) |
+| **Consumers** | HA sensor entity `sensor.weather_alerts` (via MQTT Discovery) |
+| **Retained** | Yes |
+
+```json
+{
+  "timestamp": "2026-04-13T12:00:00Z",
+  "source": "weather_alerts",
+  "count": 1,
+  "attribution": "Data provided by Weather.gov",
+  "Alerts": [
+    {
+      "ID": "urn:oid:2.49.0.1.840.0.abc123",
+      "Event": "Winter Storm Warning",
+      "Headline": "Winter Storm Warning issued April 13 at 12:00PM EDT",
+      "Severity": "Severe",
+      "Certainty": "Likely",
+      "Urgency": "Expected",
+      "Sent": "2026-04-13T10:00:00-04:00",
+      "Onset": "2026-04-13T18:00:00-04:00",
+      "Expires": "2026-04-14T12:00:00-04:00",
+      "Ends": null,
+      "AreasAffected": "Orange; Putnam; Rockland",
+      "Description": "A significant winter storm will affect the area...",
+      "Instruction": "Avoid travel if possible.",
+      "NWSCode": "WSW",
+      "Type": "Alert",
+      "Status": "Actual",
+      "URL": "https://api.weather.gov/alerts/urn:oid:..."
+    }
+  ]
+}
+```
+
+**HA Discovery:** `sensor.weather_alerts` under `Highland Weather Alerts` device. `value_template: "{{ value_json.count }}"`; `json_attributes_topic: highland/homeassistant/weather/alerts`. Card config: `provider: nws`.
 
 ---
 
@@ -1384,6 +1447,7 @@ HA audit payload (last backup older than 26 hours):
 | Topic Pattern | Retained |
 |---------------|----------|
 | `highland/state/#` | **Always** |
+| `highland/homeassistant/#` | **Always** |
 | `highland/status/+/health` | Yes |
 | `highland/status/+/heartbeat` | No |
 | `highland/event/#` | **No** |
@@ -1403,7 +1467,8 @@ HA audit payload (last backup older than 26 hours):
 | `highland/state/appliance/#` | All appliance cycle state |
 | `highland/event/weather/station/#` | All weather station events |
 | `highland/state/weather/analysis` | Weather analysis threat state |
-| `highland/state/weather/alerts` | Weather alerts state + card attributes |
+| `highland/state/weather/alerts` | Canonical weather alerts state (internal consumers) |
+| `highland/homeassistant/weather/alerts` | HA-facing weather alerts projection (card attributes) |
 | `highland/state/weather/lightning` | Lightning threat state |
 | `highland/event/weather/radar/#` | All radar events |
 | `highland/event/weather/radar/+/rendered` | Any product rendered |
@@ -1444,4 +1509,4 @@ HA audit payload (last backup older than 26 hours):
 
 ---
 
-*Last Updated: 2026-04-14*
+*Last Updated: 2026-04-20*

@@ -2,9 +2,11 @@
 
 ## Scope
 
-The `Utility: Deliveries` flow owns the **informational layer** of every delivery that touches the property — letter mail, USPS packages, and eventually other carriers (UPS, FedEx, Amazon). It parses external signals (primarily delivery-related emails), maintains authoritative delivery state, and publishes a clean consumer-facing surface for dashboards, notifications, and other flows.
+The `Utility: Deliveries` flow owns the **informational layer** of every delivery that touches the property — letter mail, USPS packages, and eventually other carriers (UPS, FedEx, Amazon). It consumes normalized email events from `Utility: Email Ingress`, parses delivery-specific content, maintains authoritative delivery state, and publishes a clean consumer-facing surface for dashboards, notifications, and other flows.
 
-Physical sensors belong elsewhere. When a mailbox door sensor or driveway package sensor is installed, its raw events are published by `Area: Driveway`. `Utility: Deliveries` subscribes to those raw events and fuses them with the informational layer to produce richer state.
+The flow does **not** own IMAP connection management, folder conventions, or deduplication. Those concerns belong to `Utility: Email Ingress` (see `subsystems/EMAIL_INGRESS.md`).
+
+Physical sensors also belong elsewhere. When a mailbox door sensor or driveway package sensor is installed, its raw events are published by `Area: Driveway`. `Utility: Deliveries` subscribes to those raw events and fuses them with the informational layer to produce richer state.
 
 ### Phases
 
@@ -15,6 +17,13 @@ Physical sensors belong elsewhere. When a mailbox door sensor or driveway packag
 | **Phase 3 — Physical sensor fusion** | Consume `Area: Driveway` mailbox door events; detect retrieval; reconcile email vs. physical signals | Blocked on LoRa hardware |
 
 This document covers Phase 1 in detail and sketches Phase 3 to establish the contract that the eventual `Area: Driveway` flow will publish against. Phase 2 is captured in `AUTOMATION_BACKLOG.md`.
+
+---
+
+## Dependencies
+
+- **`Utility: Email Ingress`** — Provides the normalized email stream via `highland/event/email/informed_delivery/received`. This flow must be live before Phase 1 can go into production. See `subsystems/EMAIL_INGRESS.md`.
+- **USPS Informed Delivery registration** — Requires a mailed PIN for identity verification before email delivery begins. Done once, out-of-band, before Phase 1 goes live.
 
 ---
 
@@ -30,7 +39,7 @@ USPS Informed Delivery sends scan-previews and delivery confirmations via email,
 
 ### Email Contract
 
-USPS sends two relevant email types on mail days. Both originate from the Informed Delivery sender domain.
+USPS sends two relevant email types on mail days. Both originate from the Informed Delivery sender domain and are routed by the Gmail filter into the `Highland/Informed Delivery` folder.
 
 | Email | Typical Timing | Signal |
 |-------|---------------|--------|
@@ -43,26 +52,11 @@ Critical points:
 - The morning digest is **informational, not load-bearing** — it tells us what to expect but not when it arrives.
 - On Sundays, federal holidays, and other no-mail days, neither email fires. `NO_MAIL_SCHEDULED` is inferred from absence of the digest by a cutoff time.
 
-### Gmail Account
+### Ingress Contract
 
-A dedicated household Gmail account is used (referenced in `secrets.json` as `gmail.deliveries_account`). Rationale:
+This flow subscribes to `highland/event/email/informed_delivery/received` and receives payloads in the standard shape defined in `subsystems/EMAIL_INGRESS.md § Payload Schema`. For every successfully processed (or deliberately rejected) message, this flow publishes `highland/ack/email` with the matching `message_id`.
 
-- Keeps Node-RED out of any personal inbox — blast radius of a parser bug or credential leak is contained to the house account.
-- This same account holds the household Google Calendar used by `subsystems/CALENDAR_INTEGRATION.md` — natural fit.
-- The USPS Informed Delivery registration for the property points at this mailbox.
-
-### Authentication
-
-IMAP access to Gmail requires 2FA on the account (Google deprecated "less secure app access" in 2022). The flow is:
-
-1. Enable 2FA on the household Gmail account.
-2. Generate an **app password** scoped to "Mail."
-3. Store the app password in `secrets.json` as `gmail.deliveries_app_password`.
-4. Node-RED's IMAP node uses the account email + app password for standard IMAP auth.
-
-App passwords are revocable and scoped — a compromise of Node-RED does not expose the account's primary credential.
-
-**Prerequisite:** USPS Informed Delivery registration requires a mailed PIN for identity verification before email delivery begins. This is done once, out-of-band, before Phase 1 goes live.
+The Gmail filter that labels incoming Informed Delivery mail is manually configured in Gmail, not defined in this flow. Gmail filter setup is part of the Ingress operational runbook.
 
 ### State Machine
 
@@ -128,26 +122,32 @@ MAIL_EXPECTED ──── Midnight rollover w/o delivery ────► DELIVE
 | `highland/event/deliveries/letter_delivered` | Delivery confirmation parsed | `{ timestamp }` |
 | `highland/event/deliveries/exception` | Midnight rollover with `MAIL_EXPECTED` unresolved | `{ expected_pieces, digest_received_at, timestamp }` |
 
+**ACK (not retained):**
+
+`highland/ack/email` — published after each ingress message is processed. See `subsystems/EMAIL_INGRESS.md § ACK` for schema.
+
 ### Flow Outline — `Utility: Deliveries`
 
 Per `nodered/OVERVIEW.md` conventions: groups are the primary organizing unit; link nodes connect groups; no node has more than two outputs.
 
-**Group 1 — Email Ingestion**
-- IMAP node polling Gmail (credentials from `secrets.json`, polling every ~5 min)
-- Filter by sender domain (Informed Delivery sender)
-- Route by subject pattern → Daily Digest parser / Delivery Confirmation parser
-- Link-outs to parser groups
+**Group 1 — Ingress Subscription**
+- MQTT In on `highland/event/email/informed_delivery/received`
+- Route by subject pattern / sender confirmation → Daily Digest parser / Delivery Confirmation parser
+- On unknown subject pattern: publish `highland/ack/email` with `status: "rejected"` and log
 
 **Group 2 — Digest Parser**
 - Extract piece count (image count heuristic)
 - Detect "no mail scheduled" text variant
 - Mutate flow context with digest data
+- On success: publish `highland/ack/email` with `status: "ok"`
+- On parse failure: publish `highland/ack/email` with `status: "parse_error"`
 - Link-out to State Machine on state change
 
 **Group 3 — Delivery Confirmation Parser**
 - Confirm sender + subject shape
 - Timestamp the confirmation
-- Link-out to State Machine
+- On success: publish `highland/ack/email` with `status: "ok"` and link-out to State Machine
+- On parse failure: publish `highland/ack/email` with `status: "parse_error"`
 
 **Group 4 — State Machine**
 - Single transition engine; reads flow context, applies rules, emits new state
@@ -165,29 +165,22 @@ Per `nodered/OVERVIEW.md` conventions: groups are the primary organizing unit; l
 - Sensor: `sensor.mail_last_digest_received` (timestamp)
 - Sensor: `sensor.mail_last_delivered` (timestamp)
 
+Notably absent compared to earlier drafts: no IMAP group, no folder-management group. `Utility: Email Ingress` owns those.
+
 ### Configuration
 
-Captured in `config/deliveries.json` (referenced via `global.get()`):
+Delivery-specific tunables only. All IMAP/folder/retention concerns live in `config/email_ingress.json`.
 
 ```json
 {
-  "gmail": {
-    "imap_server": "imap.gmail.com",
-    "imap_port": 993,
-    "mailbox_folder": "Highland/Informed Delivery",
-    "poll_interval_minutes": 5
-  },
   "informed_delivery": {
     "sender_domain": "email.informeddelivery.usps.com",
-    "digest_cutoff_time": "10:00",
-    "processed_email_retention_days": 14
+    "digest_cutoff_time": "10:00"
   }
 }
 ```
 
-**Gmail filter setup (manual, one-time):** A Gmail filter labels all Informed Delivery emails with `Highland/Informed Delivery` and skips the inbox. IMAP polling is scoped to this folder only, keeping the account's inbox usable for other purposes and keeping parser scope tight.
-
-**Email retention:** Processed emails are **moved** to `Highland/Informed Delivery/Processed` rather than deleted. Provides an audit trail for parser debugging. Purged after 14 days.
+File location is TBD — depends on how configuration groups ultimately organize. Candidates include a dedicated `config/deliveries.json` or inclusion in a broader file once the shape stabilizes. Decision deferred to implementation.
 
 ---
 
@@ -224,7 +217,7 @@ The sensor hardware, installation, and raw event contract are owned by `subsyste
 - [ ] Confirm digest "no mail scheduled" text variant (may require observation across a Sunday/holiday)
 - [ ] Validate piece count heuristic (image count ≈ piece count) against real digests
 - [ ] Calibrate `digest_cutoff_time` — 10am is a starting guess; adjust based on observed arrival pattern
-- [ ] Gmail filter folder name — decide on `Highland/Informed Delivery` or preferred alternative
+- [ ] Finalize configuration file location (dedicated `deliveries.json` vs. broader grouping)
 
 **Phase 3 — LoRa sensor fusion (future)**
 
@@ -237,4 +230,4 @@ The sensor hardware, installation, and raw event contract are owned by `subsyste
 
 ---
 
-*Last Updated: 2026-04-21*
+*Last Updated: 2026-04-22*

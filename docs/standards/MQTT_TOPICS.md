@@ -211,7 +211,7 @@ Point-in-time triggers — fire at the moment of transition. Not retained (use s
 Bespoke point-in-time triggers for specific scheduled jobs.
 
 **`highland/event/scheduler/midnight`**
-Daily boundary trigger. Fires at 00:00:00. Both the Daily Digest flow and the LoRaWAN mailbox flow subscribe to this event.
+Daily boundary trigger. Fires at 00:00:00. Both the Daily Digest flow and `Utility: Deliveries` subscribe to this event.
 
 **`highland/event/scheduler/backup_daily`**
 Triggers the backup orchestration flow.
@@ -999,28 +999,104 @@ See `subsystems/CALENDAR_INTEGRATION.md` for full payload schemas and consumer p
 
 ---
 
-### Mailbox
+### Mailbox Sensor (LoRa)
 
-**Architecture:** LoRaWAN door/contact sensor (Milesight EM300-MCS) combined with USPS Informed Delivery email parsing. Neither signal alone is sufficient. See `subsystems/LORA.md`.
+**Architecture:** LoRaWAN door/contact sensor (Milesight EM300-MCS) reporting raw door-open events only. Delivery classification and state fusion happens in `Utility: Deliveries` — see `subsystems/LORA.md § Use Case 2` and `subsystems/DELIVERIES.md § Phase 3`.
 
-**`highland/state/mailbox/delivery`** ← RETAINED
+**`highland/state/driveway/mailbox`** ← RETAINED
 
 ```json
 {
   "timestamp": "2026-03-09T14:22:00Z",
   "source": "lora_mailbox",
-  "state": "MAIL_WAITING",
-  "last_door_event": "2026-03-09T14:20:00Z",
-  "advisory_received_at": "2026-03-09T06:03:00Z",
-  "confirmation_received_at": "2026-03-09T14:21:00Z"
+  "door_state": "closed",
+  "battery_pct": 96,
+  "temperature_c": 12.4,
+  "humidity_pct": 58,
+  "rssi": -102,
+  "snr": -3.1
 }
 ```
 
-`state` values: `"IDLE"` | `"UNCLASSIFIED"` | `"ADVISORY_RECEIVED"` | `"MAIL_WAITING"` | `"DELIVERY_EXCEPTION"` | `"RETRIEVED"`
+`door_state` values: `"open"` | `"closed"`.
 
-**`highland/event/mailbox/door_activity`** — Any open/close event (unclassified at publication time).
+**`highland/event/driveway/mailbox/opened`** — Door opened. Non-retained.
 
-**`highland/event/mailbox/mail_expected`** | **`mail_delivered`** | **`mail_retrieved`** | **`delivery_exception`** — State transition events. All carry `{ previous_state, new_state }` payload.
+```json
+{ "timestamp": "...", "source": "lora_mailbox" }
+```
+
+---
+
+### Deliveries
+
+**Architecture:** `Utility: Deliveries` consumes normalized email from `Utility: Email Ingress` plus (Phase 3) the mailbox sensor events above, and maintains authoritative delivery state. See `subsystems/DELIVERIES.md`.
+
+**`highland/state/deliveries/mail`** ← RETAINED
+
+Current letter-mail delivery state for today.
+
+```json
+{
+  "timestamp": "2026-04-21T14:15:00-04:00",
+  "source": "informed_delivery",
+  "state": "MAIL_DELIVERED",
+  "expected_pieces": 3,
+  "digest_received_at": "2026-04-21T07:15:00-04:00",
+  "delivered_at": "2026-04-21T14:15:00-04:00"
+}
+```
+
+`state` values: `"UNKNOWN"` | `"NO_MAIL_SCHEDULED"` | `"MAIL_EXPECTED"` | `"MAIL_DELIVERED"` | `"DELIVERY_EXCEPTION"`.
+
+Phase 3 extends with `"MAIL_RETRIEVED"` when LoRa mailbox sensor lands.
+
+**Events (not retained):**
+
+- `highland/event/deliveries/digest_received` — Daily digest parsed. Payload: `{ piece_count, has_packages, timestamp }`.
+- `highland/event/deliveries/letter_delivered` — Delivery confirmation parsed. Payload: `{ timestamp }`.
+- `highland/event/deliveries/exception` — Midnight rollover with `MAIL_EXPECTED` unresolved. Payload: `{ expected_pieces, digest_received_at, timestamp }`.
+
+---
+
+### Email Ingress
+
+**Architecture:** `Utility: Email Ingress` is the single owner of IMAP polling against the household Gmail account. Normalizes incoming mail and publishes per-label events for consumption by domain flows. See `subsystems/EMAIL_INGRESS.md`.
+
+**`highland/event/email/<label>/received`** — New email received on a configured label. Non-retained.
+
+`<label>` values currently in use: `informed_delivery`. Additional labels added as consumers come online.
+
+```json
+{
+  "message_id": "<CAxxxx@mail.gmail.com>",
+  "label": "informed_delivery",
+  "folder": "Highland/Informed Delivery",
+  "from": "USPSInformeddelivery@email.informeddelivery.usps.com",
+  "from_name": "USPS Informed Delivery",
+  "to": "<household gmail>",
+  "subject": "Your Daily Digest",
+  "received_at": "2026-04-22T07:15:23-04:00",
+  "body_text": "...",
+  "body_html": "...",
+  "attachment_count": 3
+}
+```
+
+**`highland/ack/email`** — Consumer acknowledges message processing. Non-retained.
+
+```json
+{
+  "message_id": "<CAxxxx@mail.gmail.com>",
+  "consumer": "utility_deliveries",
+  "processed_at": "2026-04-22T07:15:45-04:00",
+  "status": "ok"
+}
+```
+
+`status` values: `"ok"` | `"rejected"` | `"parse_error"`. See `subsystems/EMAIL_INGRESS.md § ACK` for semantics.
+
+**`highland/status/email_ingress/health`** ← RETAINED. See Status / Health section below.
 
 ---
 
@@ -1404,7 +1480,22 @@ HA audit payload (last backup older than 26 hours):
 
 **`highland/status/{service}/health`** ← RETAINED — Detailed health snapshot. `status` values: `"healthy"` | `"degraded"` | `"unhealthy"`
 
-**Monitored services:** `mqtt` | `z2m` | `zwave` | `ha` | `node_red`
+**Monitored services:** `mqtt` | `z2m` | `zwave` | `ha` | `node_red` | `email_ingress`
+
+Specific notes on `email_ingress`:
+
+```json
+{
+  "status": "healthy",
+  "last_poll_at": "2026-04-22T07:20:00-04:00",
+  "last_successful_auth": "2026-04-22T07:20:00-04:00",
+  "messages_in_flight": 0,
+  "imap_connection": "connected",
+  "timestamp": "2026-04-22T07:20:00-04:00"
+}
+```
+
+Published on every poll cycle. Degraded: messages past ACK TTL, repeated parse_error statuses, elevated poll latency. Unhealthy: IMAP auth failure, no successful poll in >N intervals.
 
 ---
 
@@ -1482,7 +1573,8 @@ HA audit payload (last backup older than 26 hours):
 | `highland/command/weather/radar/+/enable` | All radar enable/disable commands |
 | `highland/event/scheduler/#` | All scheduler events |
 | `highland/event/driveway/#` | All bin events |
-| `highland/event/mailbox/#` | All mailbox events |
+| `highland/event/email/+/received` | All email events across every label |
+| `highland/ack/email` | Email ACKs from all consumers |
 | `highland/event/garage/#` | All garage events |
 | `highland/event/appliance/#` | All appliance cycle events |
 | `highland/event/appliance/+/cycle_finished` | Any machine finishing |
@@ -1513,4 +1605,4 @@ HA audit payload (last backup older than 26 hours):
 
 ---
 
-*Last Updated: 2026-04-21*
+*Last Updated: 2026-04-22*

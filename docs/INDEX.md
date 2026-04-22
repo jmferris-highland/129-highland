@@ -101,7 +101,8 @@ Domain-specific designs. Each subsystem is fully designed and ready for implemen
 | [`subsystems/DISHWASHER_ATTENTION.md`](subsystems/DISHWASHER_ATTENTION.md) | ✅ Designed | Dishwasher attention state machine — tilt sensor, button, guest heuristic, CLEAN_UNATTENDED/LIKELY_EMPTY states |
 | [`subsystems/WASHER_DRYER_ATTENTION.md`](subsystems/WASHER_DRYER_ATTENTION.md) | ✅ Designed | Washer & dryer attention state machines — PIR presence, button, UNATTENDED/LIKELY_ATTENDED states |
 | [`subsystems/CALENDAR_INTEGRATION.md`](subsystems/CALENDAR_INTEGRATION.md) | ✅ Designed | Google Calendar bridge, attendee-based camera suppression, stateless re-derivation |
-| [`subsystems/DELIVERIES.md`](subsystems/DELIVERIES.md) | 📋 Planned | `Utility: Deliveries` flow — USPS Informed Delivery letter-mail baseline via IMAP; future phases add multi-carrier packages and LoRa mailbox sensor fusion; owns `highland/state/deliveries/*` contract |
+| [`subsystems/DELIVERIES.md`](subsystems/DELIVERIES.md) | 📋 Planned | `Utility: Deliveries` flow — delivery informational layer; USPS Informed Delivery letter-mail baseline (consumes `Utility: Email Ingress`); future phases add multi-carrier packages and LoRa mailbox sensor fusion; owns `highland/state/deliveries/*` contract |
+| [`subsystems/EMAIL_INGRESS.md`](subsystems/EMAIL_INGRESS.md) | 📋 Planned | `Utility: Email Ingress` flow — single owner for IMAP polling of household Gmail account; normalizes messages and publishes to `highland/event/email/<label>/received` with ACK-gated lifecycle |
 | [`subsystems/GARAGE_DOOR.md`](subsystems/GARAGE_DOOR.md) | ✅ Designed | Konnected GDO blaQ, SSE stream integration, REST commands, MQTT Discovery |
 | [`subsystems/LORA.md`](subsystems/LORA.md) | ✅ Designed | LoRaWAN gateway relay, bin monitoring state machine, mailbox activity sensor (delivery logic owned by `subsystems/DELIVERIES.md`) |
 | [`subsystems/PARKING_ASSIST.md`](subsystems/PARKING_ASSIST.md) | ✅ Designed | Per-bay ultrasonic vehicle position indicator, AtomS3 Lite + Atomic RS485 Base + Ultrasonic Unit U098-B1 sensor nodes, WS2812B strip driven directly from ESPHome (no WLED), distance-band color logic, button-based calibration |
@@ -180,5 +181,5 @@ New automation ideas → `AUTOMATION_BACKLOG.md`. Don't derail current work; cap
 
 ---
 
-*Last Updated: 2026-04-21*
+*Last Updated: 2026-04-22*
 

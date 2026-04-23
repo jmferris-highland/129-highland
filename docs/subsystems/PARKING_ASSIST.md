@@ -2,25 +2,27 @@
 
 ## Overview
 
-Per-bay vehicle position indicator for the garage. An ultrasonic sensor mounted at the front of each bay measures the distance from the bay's front wall to the vehicle's nose, and a short LED strip provides color-coded visual guidance to the driver — green when safe to continue forward, yellow when approaching the parked position, red when at the correct stopping point. No dependency on HA for runtime logic; the sensor node drives the strip directly from ESPHome. Distance and parking state are published to MQTT so Highland can consume them for other purposes.
+Per-bay vehicle position indicator for the garage. An ultrasonic sensor mounted at the front of each bay measures the distance from the bay's front wall to the vehicle's nose, and a visual indicator (LED strip or industrial tower light) provides color-coded guidance to the driver across six distance bands. No dependency on HA for runtime logic; the sensor node drives the indicator directly from ESPHome. Distance and parking state are published to MQTT so Highland can consume them for other purposes.
 
-**Design philosophy:** Keep the subsystem architecturally self-contained. The visual logic is "distance → color," which is simple enough that a dedicated WLED controller adds more complexity than it saves. ESPHome runs both the ultrasonic sensor and the strip on a single device per bay. The MQTT surface exists primarily to expose bay occupancy as a consumer signal for other subsystems (garage door, security, analytics), not to drive the visual itself.
+**Design philosophy:** Keep the subsystem architecturally self-contained. The visual logic is "distance → color," which is simple enough that ESPHome owns both sensing and indicator driving on a single device per bay. The MQTT surface exposes bay occupancy as a consumer signal for other subsystems (garage door, security, analytics); it does not drive the visual itself.
 
 **Bay naming.** Bays are numbered from the exterior approach, left to right. `bay_one` is the primary bay and the left bay when viewed from outside the house; `bay_two` is the right bay. All MQTT topics, HA entities, and ESPHome device names follow this convention, aligning with the garage door subsystem.
+
+**Hardware approach is pending.** Two candidate visual indicators — an addressable LED strip and an industrial tower light — are both documented below with their respective tradeoffs and visualization mappings. The sensing, FSM, MQTT surface, and operating-window logic are shared between the two approaches. The hardware decision is captured as an Open Question.
 
 ---
 
 ## Implementation Status
 
-📋 **Designed — not yet implemented.** Hardware sourcing and installation pending. Installation paired with garage door subsystem commissioning is natural but not required.
+📋 **Designed — not yet implemented.** Hardware sourcing and installation pending; indicator choice between LED strip and tower light still open. Installation paired with garage door subsystem commissioning is natural but not required.
 
 ---
 
 ## Hardware
 
-One sensor node per bay. Hardware is identical across bays — only MQTT client ID and topic paths differ.
+One sensor node per bay. Hardware is identical across bays — only MQTT client ID and topic paths differ. The sensor-side of the hardware is fixed; the visual-indicator-side has two candidate approaches.
 
-### Sensor Node Stack
+### Sensor Node Stack (shared across both indicator approaches)
 
 | Component | M5 SKU | Purpose |
 |-----------|--------|---------|
@@ -58,35 +60,87 @@ One sensor node per bay. Hardware is identical across bays — only MQTT client 
 
 The I²C variant (U098-B1) is preferred over the GPIO variant (U098-B2) for bus-sharing flexibility — if a future enhancement adds a second sensor per bay (e.g., a second ultrasonic at a different angle, an environmental sensor), it can daisy-chain on the same Grove bus without pin conflicts.
 
-### LED Strip
+### Indicator Candidates
+
+Two approaches are on the table. The sensing, FSM, MQTT, and operating-window logic are identical between them; only the physical indicator and its driver circuit differ.
+
+#### Candidate A — Addressable LED Strip
 
 | Spec | Value |
 |------|-------|
-| Type | WS2812B (or WS2811) 5V/12V addressable RGB strip |
+| Type | WS2812B (or WS2811) 12V addressable RGB strip |
 | Length | 0.5 m |
 | Pixel count | ~30 LEDs at 60/m density, or ~15 at 30/m |
 | Mounting | Aluminum channel with frosted diffuser, short section |
 
-**Choice rationale:** Standard SMD WS2812B is adequate at this scale — the strip is viewed from ~6+ feet away (driver seat to front wall), and the dot-visibility concern that drove the stair subsystem's RGB IC FCOB choice does not apply at this distance. Cost is meaningfully lower (~$5 vs. ~$25) and availability is ubiquitous.
+**Choice rationale:** Standard SMD WS2812B is adequate at this scale — the strip is viewed from ~6+ feet away, and the dot-visibility concern that drove the stair subsystem's RGB IC FCOB choice does not apply at this distance. Cost is meaningfully lower and availability is ubiquitous.
 
-**Color palette:** Green, yellow, red. Full-brightness is acceptable — visibility through a windshield in a well-lit garage requires more output than accent lighting through a diffuser. Tune intensity at commissioning.
+**Driver circuit:** AtomS3 Lite drives the strip's data input directly from GPIO via a short jumper. No signal conditioning required at this length.
+
+**Pros:**
+
+- More visual presence along the mounting surface
+- Architectural aesthetic — blends with the bay's visual space rather than announcing itself
+- Full RGB addressable surface enables future reuse as a general-purpose indicator for non-parking events
+- Flexible mounting (front wall, ceiling, joist) depending on driver sightline
+
+**Cons:**
+
+- More complex wiring (power + data, diffuser channel, strip mounting)
+- ESPHome FastLED/NeoPixel complexity vs. raw GPIO
+- Per-pixel addressability is overkill for the six-band discrete state model
+- Higher worst-case power draw (~10W)
+
+#### Candidate B — Industrial Tower Light
+
+**Product reference:** [Adafruit 2993 — Tower Light with Buzzer, 12VDC](https://www.adafruit.com/product/2993) or equivalent red/yellow/green stacked tower light.
+
+| Spec | Value |
+|------|-------|
+| Lamps | Red, yellow, green (three discrete stacked segments) |
+| Buzzer | Integrated, independently switchable |
+| Input | 12VDC, common +12V with individual ground-switched control per lamp/buzzer |
+| Dimensions | 340 mm tall × 50 mm diameter |
+| Mounting | Integrated bracket, 180° rotation range |
+
+**Driver circuit:** Common +12V to the tower. Each lamp wire and the buzzer wire are switched to ground via a small 4-channel N-channel MOSFET breakout (Adafruit or generic), driven from AtomS3 Lite GPIO at 3.3V. No PWM required — simple on/off per channel. Flashing patterns implemented in ESPHome software via GPIO toggle.
+
+**Pros:**
+
+- Unambiguous industrial-status-light vocabulary — familiar to anyone who has driven through an automated car wash (same color semantics, same visual pattern)
+- Buzzer provides a genuinely useful audible escalation for the `overshot` state that the strip cannot match without adding a separate speaker
+- Dramatically simpler wiring — three GPIO lines through MOSFETs, no addressable-LED complexity, no diffuser channel, no pixel-level driver
+- Much higher brightness output per lamp — designed for factory-floor visibility
+- Lower power draw (~1W per lit lamp)
+- Single mounting decision (wall bracket, 180° tilt), no per-bay sightline judgment
+
+**Cons:**
+
+- Industrial aesthetic — some users will find this visually disruptive in a residential garage
+- Only three discrete colors available — no gradient or per-pixel expression
+- Cannot have yellow and red lit simultaneously (product constraint)
+- Limited reuse potential as a general-purpose indicator (three colors + buzzer vs. the strip's full RGB addressable surface)
+- ~2x the cost per bay
+
+**Both candidates use the same sensor node, the same ESPHome firmware architecture, the same FSM, and the same MQTT surface.** The decision comes down to aesthetic preference and whether the buzzer's value on the `overshot` state tips the balance. See Open Questions for the hardware decision.
 
 ### Power Supply
 
 Single 12V/2A wall-wart per bay (or per garage if locations permit sharing). Meanwell LRS-35-12 or equivalent enclosed supply recommended for reliability; generic barrel-jack wall-warts are acceptable.
 
-**Power budget per bay:**
+**Power budget per bay (worst case):**
 
-| Load | Approx. draw |
-|------|------|
-| WS2812B strip (0.5 m, worst case all red or all white at full brightness) | ~9 W |
-| AtomS3 Lite + RS485 Base | ~1 W |
-| Ultrasonic Unit | negligible |
-| **Total worst case** | **~10 W** |
+| Component | Candidate A (strip) | Candidate B (tower) |
+|-----------|---------------------|---------------------|
+| Indicator | ~9 W (strip at full brightness) | ~1 W (one lamp lit) |
+| AtomS3 Lite + RS485 Base | ~1 W | ~1 W |
+| Ultrasonic Unit | negligible | negligible |
+| MOSFET breakout (tower only) | — | negligible |
+| **Total worst case** | **~10 W** | **~2 W** |
 
-A 12V/2A (24 W) supply runs at under 50% load. Plenty of headroom, SMPS runs in its efficient band.
+A 12V/2A (24 W) supply comfortably handles either approach with headroom. The tower light approach is significantly more power-efficient but the strip approach is still well within supply capacity.
 
-**No long DC distribution run.** The supply lives near the sensor assembly, short leads to both the strip and the RS485 Base's terminal block.
+**No long DC distribution run.** The supply lives near the sensor assembly, short leads to the indicator and the RS485 Base's terminal block.
 
 ---
 
@@ -106,25 +160,25 @@ A 12V/2A (24 W) supply runs at under 50% load. Plenty of headroom, SMPS runs in 
 
 **Stored items consideration.** Any items stored between the sensor and the vehicle's parked position will register as the "closest target" and defeat the parking assist. The sensor is dumb to what it's looking at. Mitigate by placing the sensor at a height where stored items (bikes on hooks, tool chests, shelving) are above or below the beam path.
 
-### LED Strip Placement
+### Indicator Placement
 
-**Location:** In the driver's forward line of sight when parking. Candidates include:
+**If using the LED strip (Candidate A):** In the driver's forward line of sight when parking. Candidates include:
 
 - Mounted on the front wall above or alongside the sensor (the "obvious" placement — visible through the windshield)
 - Mounted on the ceiling just above the front wall (good for trucks/SUVs where the windshield view of the front wall is obstructed by the hood)
 - Mounted on a joist or beam in the bay's upper volume
 
-Pick per-bay based on the specific vehicle's sightlines. The strip should be mountable in any of these locations because the strip-to-sensor wiring is short and flexible.
+Pick per-bay based on the specific vehicle's sightlines. Channel is a standard aluminum LED channel, 0.5 m length, with frosted diffuser — a single off-the-shelf section per bay, no splicing.
 
-**Channel:** Standard aluminum LED channel, 0.5 m length, with frosted diffuser. Same family as the stair channel but dramatically shorter — a single off-the-shelf section is enough per bay, no splicing needed.
+**If using the tower light (Candidate B):** Mount on the front wall at a height where the top of the tower is at or slightly above the driver's natural eye level when seated in the vehicle. The tower's 180° tilt mount allows fine-tuning the angle so all three lamps are visible through the windshield at the parked position. Mounting location is less sightline-sensitive than the strip because the tower's brightness is high enough to be visible across a wide viewing angle.
 
 ### Enclosure and Wiring
 
-**Sensor assembly enclosure:** A small project box (~50 × 50 × 30 mm internal) houses the Atom + RS485 Base stack, with a cable exit for the Grove cable to the Ultrasonic Unit and a cable exit for the 12V input and strip data/power lines.
+**Sensor assembly enclosure:** A small project box (~50 × 50 × 30 mm internal) houses the Atom + RS485 Base stack. For the tower light candidate, the MOSFET breakout also lives in this enclosure. Cable exits for Grove cable to the Ultrasonic Unit, 12V input, and indicator output lines.
 
 **Ultrasonic Unit mounting:** The Unit itself ships in its own small enclosure. Mount it directly to the front wall with a hole sized to expose the 16 mm probe face. The 20 cm Grove cable connects it back to the Atom stack in the enclosure.
 
-**Wiring diagram:**
+**Wiring — Candidate A (LED strip):**
 
 ```
 12V wall-wart
@@ -140,9 +194,30 @@ Pick per-bay based on the specific vehicle's sightlines. The strip should be mou
                                      └── Grove I²C ──► Ultrasonic Unit U098-B1
 ```
 
-**No signal conditioning required.** The strip is short (~0.5 m) and the data line from the AtomS3 Lite to the strip is a short jumper. The level shifting concerns that drove the stair subsystem's 74AHCT125 module do not apply at this scale.
+**Wiring — Candidate B (tower light):**
 
-**Cable management:** Wall-wart plugs into the nearest outlet; 12V and data routing is per-bay local — no long runs through walls or ceilings.
+```
+12V wall-wart
+        │
+        ├───────────────────────► Tower light (+12V common)
+        │
+        └───────────────────────► RS485 Base terminal block (+12V, GND)
+                                         │
+                                 AtomS3 Lite (via pin header)
+                                     │    │
+                                     │    └── 4× GPIO ──► 4-channel MOSFET board
+                                     │                         │
+                                     │                         ├── Red lamp GND switch
+                                     │                         ├── Yellow lamp GND switch
+                                     │                         ├── Green lamp GND switch
+                                     │                         └── Buzzer GND switch
+                                     │
+                                     └── Grove I²C ──► Ultrasonic Unit U098-B1
+```
+
+**No signal conditioning required in either case.** Short runs between controller and indicator, no level-shifting concerns.
+
+**Cable management:** Wall-wart plugs into the nearest outlet; all wiring is per-bay local — no long runs through walls or ceilings.
 
 ---
 
@@ -155,9 +230,9 @@ Ultrasonic Unit (I²C)
   AtomS3 Lite (ESPHome)
    │         │         ▲
    │         ▼         │
-   │    Distance band mapper ──► WS2812B strip (direct GPIO)
+   │    Distance band FSM ──► Indicator driver (strip GPIO or MOSFET GPIOs)
    │    + active window gate    (fires only when door open
-   │    (door state + target)    AND target within 200 cm)
+   │    (door state + target)    AND target within 300 cm)
    │         ▲
    │         │
    │    highland/state/garage/bay_{N}/door_state (subscribed)
@@ -175,114 +250,163 @@ Ultrasonic Unit (I²C)
 | Layer | Owns |
 |-------|------|
 | Ultrasonic Unit | Raw distance measurement |
-| AtomS3 Lite (ESPHome) | Sample rate control, active-window gating (door state + target presence), distance-to-color mapping, direct strip driving, MQTT publishing |
-| Node-RED | Subscribes to state topics for downstream automations (garage door integration, analytics); does **not** drive the strip |
+| AtomS3 Lite (ESPHome) | Sample rate control, active-window gating (door state + target presence), distance-to-state FSM, direct indicator driving, MQTT publishing |
+| Node-RED | Subscribes to state topics for downstream automations (garage door integration, analytics); does **not** drive the indicator |
 | HA | Dashboard display only — current distance, parking state, bay occupancy |
 
-**Why ESPHome owns the strip directly.** The visual logic is a pure function of current distance: measure, classify, set color. No animation state, no time-of-day variation, no preset catalog, no cross-device coordination. Running that through MQTT to a separate WLED controller adds latency and a moving part for no gain. The stair subsystem's WLED controller earns its complexity with cascade presets, fades, direction-aware choreography, and holiday effects — none of which apply here.
+**Why ESPHome owns the indicator directly.** The visual logic is a pure function of current distance: measure, classify, set state. No animation state, no time-of-day variation, no preset catalog, no cross-device coordination. Running that through MQTT to a separate controller (WLED or otherwise) adds latency and a moving part for no gain.
 
 ---
 
-## Distance Band Logic
+## Distance Band Logic (Hardware-Agnostic)
 
-Distance bands are configurable per bay in the ESPHome YAML. Bands are evaluated on each sample; the resulting color is written to the strip.
+The FSM classifies the current ultrasonic reading into one of six discrete states. The state model is shared between both candidate indicators; only the visualization of each state differs. Bands are configurable per bay in the ESPHome YAML. Bands are evaluated on each sample; the resulting state drives the indicator.
+
+### The Six States
 
 **Provisional bands (tune per bay at commissioning):**
 
-| Distance from front wall | Strip state | Meaning |
-|--------------------------|-------------|---------|
-| > 200 cm | Off (or dim white at ~10%) | Too far — no guidance needed, or ambient indicator that system is alive |
-| 200 cm → 50 cm | Green, solid | Continue forward |
-| 50 cm → 20 cm | Yellow, solid | Approaching parked position |
-| 20 cm → 5 cm | Red, solid | At parked position — stop |
-| < 5 cm | Red, flashing (2 Hz) | Too close — emergency attention |
+| Distance from front wall | `parking_state` | Meaning |
+|--------------------------|-----------------|---------|
+| > 300 cm | `clear` | No vehicle detected |
+| 300 → 50 cm | `approaching` | Pull forward — plenty of room |
+| 50 → 20 cm | `close` | Getting close, pay attention |
+| 20 → 10 cm | `very_close` | Slow down, almost there |
+| 10 → 5 cm | `parked` | Stop — correct position |
+| < 5 cm | `overshot` | Back up, you've gone past the mark |
 
-**Parking state classification:** The same distance bands produce a categorical `parking_state` value for MQTT consumers:
+**Rationale for six bands over five.** An earlier draft used five bands, combining what are now `close` and `very_close`. The split matters because the discrete-indicator approach (tower light) benefits from a visually distinct "slow down" signal between "getting close" and "at the mark." The strip could have done without the split, but the hardware-agnostic design benefits from having both candidates work from the same state model.
 
-| Band | `parking_state` |
-|------|----------------|
-| > 200 cm | `clear` |
-| 200 → 50 cm | `approaching` |
-| 50 → 20 cm | `close` |
-| 20 → 5 cm | `parked` |
-| < 5 cm | `too_close` |
+**The `parked` band is the target state.** Red on the tower light (or the target color on the strip) indicates correct positioning. This mirrors the color semantics of automated car washes — a familiar visual vocabulary that drivers already understand without training.
 
-**Hysteresis.** Each band boundary has a small hysteresis margin (provisional: 5 cm) to prevent flapping when a vehicle is oscillating at a threshold. The strip color and `parking_state` only change when the distance crosses a threshold plus the hysteresis margin.
+**`overshot` is the error state.** Flashing indicator and (on the tower light) the buzzer. This only triggers when the vehicle has gone past the correct parked position.
 
-**Sampling rate.** ESPHome polls the Ultrasonic Unit at 10 Hz. Strip updates at the same cadence. This is fast enough to feel responsive without being wasteful — a vehicle moving at 1 m/s closes 10 cm per sample, which is well under the narrowest distance band.
+### Hysteresis
+
+Each band boundary has a small hysteresis margin (provisional: 5 cm for the larger bands, 2 cm for the narrower ones near the parked position) to prevent flapping when a vehicle is oscillating at a threshold. State transitions only occur when the distance crosses a threshold plus the hysteresis margin.
+
+### Sampling Rate
+
+ESPHome polls the Ultrasonic Unit at 10 Hz. Indicator updates at the same cadence. This is fast enough to feel responsive without being wasteful — a vehicle moving at 1 m/s closes 10 cm per sample, which is well under the narrowest distance band.
+
+---
+
+## Visualization
+
+The six states map to the indicator differently depending on which candidate hardware is selected. Both mappings are documented so the decision can be made cleanly at commissioning.
+
+### Candidate A — LED Strip Mapping
+
+| State | Strip behavior |
+|-------|---------------|
+| `clear` | Off (or dim white at ~10% as optional "system alive" indicator) |
+| `approaching` | Green, solid |
+| `close` | Yellow, solid |
+| `very_close` | Yellow, flashing (2 Hz) |
+| `parked` | Red, solid |
+| `overshot` | Red, flashing (2 Hz) — no buzzer available |
+
+The strip's RGB addressability permits future expansion: gradient transitions between bands, per-pixel effects in the `very_close` band, a "bounce" pattern on `overshot`, etc. Phase 1 uses the simple solid-and-flash pattern above; expression beyond that is Phase 2+ territory.
+
+### Candidate B — Tower Light Mapping
+
+| State | Tower behavior |
+|-------|---------------|
+| `clear` | All lamps off |
+| `approaching` | Green, solid |
+| `close` | Yellow, solid |
+| `very_close` | Yellow, flashing (2 Hz) |
+| `parked` | Red, solid |
+| `overshot` | Red, flashing (2 Hz) + buzzer (short burst, ~200 ms on / 800 ms off) |
+
+The tower light constraint that yellow and red cannot be lit simultaneously does not affect this mapping — the six states are mutually exclusive and the mapping only ever requests one lamp at a time. The buzzer on `overshot` is the meaningful differentiator from the strip approach and is a significant value-add for the error-state signaling.
+
+### Color Semantics (Both Candidates)
+
+The color progression intentionally mirrors automated car wash indicator lights:
+
+- **Green** = continue forward, action required
+- **Yellow** = approaching stop position, slow down
+- **Flashing yellow** = very close, prepare to stop
+- **Red** = stop, you are correctly positioned
+- **Flashing red** = you have gone too far, back up
+
+Drivers will find this intuitive without explanation. The semantic that "red = correctly parked" is unusual outside of this specific domain, but the prior progression through green → yellow → flashing yellow establishes the context, and the flashing-red-plus-buzzer error state keeps the "red as danger" instinct meaningful when it actually applies.
 
 ---
 
 ## Active Operating Window
 
-The parking assist strip is not continuously active. It illuminates only during active parking scenarios, defined by a combination of garage door state and vehicle motion.
+The indicator is not continuously active. It illuminates only during active parking scenarios, defined by a combination of garage door state and vehicle motion.
 
 ### Activation
 
-The strip begins responding to distance-band transitions when **both** of the following are true:
+The indicator begins responding to state transitions when **both** of the following are true:
 
 1. The corresponding garage door is `open` (consumed from the garage door subsystem's state topic).
-2. The ultrasonic sensor reports a target within the `approaching` band or closer (distance ≤ 200 cm).
+2. The ultrasonic sensor reports a target within the `approaching` band or closer (distance ≤ 300 cm).
 
-Door open without a target present means no one is parking — strip stays off. Target present without the door open is a state that shouldn't happen in normal operation; if it does (object stored in the beam path while the door is closed), the strip still stays off because the door gate is not satisfied.
+Door open without a target present means no one is parking — indicator stays off. Target present without the door open is a state that shouldn't happen in normal operation; if it does (object stored in the beam path while the door is closed), the indicator still stays off because the door gate is not satisfied.
 
-**No time-of-day gating.** The garage has one small window and otherwise relies on the open door for ambient light. The strip is readily visible at any time of day when the door is open, so a schedule or lux gate adds no value.
+**No time-of-day gating.** The garage has one small window and otherwise relies on the open door for ambient light. The indicator is readily visible at any time of day when the door is open, so a schedule or lux gate adds no value.
 
 ### Deactivation (Parked Cooldown)
 
-Once the vehicle reaches a stable position — distance reading stationary within a tolerance of ±2 cm for `parked_stable_seconds` (provisional: 10 s) — the system enters a cooldown phase. The strip continues to display the current band for `parked_cooldown_seconds` (provisional: 30 s), then fades to off.
+Once the vehicle reaches a stable position — distance reading stationary within a tolerance of ±2 cm for `parked_stable_seconds` (provisional: 10 s) — the system enters a cooldown phase. The indicator continues to display the current state for `parked_cooldown_seconds` (provisional: 30 s), then fades (strip) or extinguishes (tower light).
 
-This handles the realistic end-of-parking sequence: driver stops at their preferred position, puts the vehicle in park, strip confirms `parked` for a beat, then fades. If the driver adjusts mid-cooldown (see Reverse Motion below), the stable-position timer resets and the cooldown is cancelled.
+This handles the realistic end-of-parking sequence: driver stops at their preferred position, puts the vehicle in park, indicator confirms `parked` for a beat, then turns off. If the driver adjusts mid-cooldown (see Reverse Motion below), the stable-position timer resets and the cooldown is cancelled.
 
 **Timer parameters (provisional):**
 
 | Parameter | Value | Purpose |
 |-----------|-------|---------|
 | `parked_stable_seconds` | 10 s | Duration of stationary distance reading (±2 cm) required to declare "parked" |
-| `parked_cooldown_seconds` | 30 s | Duration after stable declaration before strip fades to off |
-| `fade_seconds` | 1 s | Fade-out duration at end of cooldown |
+| `parked_cooldown_seconds` | 30 s | Duration after stable declaration before indicator turns off |
+| `fade_seconds` | 1 s | Fade-out duration (strip only; tower light extinguishes instantly) |
 
-All three parameters are ESPHome YAML values, adjustable without firmware infrastructure changes.
+All parameters are ESPHome YAML values, adjustable without firmware infrastructure changes.
 
 ### Reverse Motion
 
-When the vehicle exits the bay (distance reading increases across band boundaries), the strip runs the color cascade in reverse — red during close proximity, transitioning through yellow to green as the vehicle moves away. This is factually accurate even though it is not informationally useful during exit.
+When the vehicle exits the bay (distance reading increases across band boundaries), the indicator runs the state progression in reverse — red during close proximity, transitioning through yellow to green as the vehicle moves away. This is factually accurate even though it is not informationally useful during exit.
 
 **Reverse cascade is kept deliberately.** Two reasons:
 
-1. **Minor in-parking adjustments require it.** A driver who has just parked and wants to reverse a few inches to center themselves or create more clearance is effectively re-approaching backwards. The strip should remain lit and informative during those adjustments, which means it must stay active during reverse motion.
-2. **Door-gated activation already bounds it.** The strip only runs when the door is open. A full exit coincides with the door being open, so the reverse cascade plays during departure. This is a minor aesthetic oddity, not a functional problem — the lights are still factually correct about distance.
+1. **Minor in-parking adjustments require it.** A driver who has just parked and wants to reverse a few inches to center themselves or create more clearance is effectively re-approaching backwards. The indicator should remain lit and informative during those adjustments, which means it must stay active during reverse motion.
+2. **Door-gated activation already bounds it.** The indicator only runs when the door is open. A full exit coincides with the door being open, so the reverse cascade plays during departure. This is a minor aesthetic oddity, not a functional problem — the signals are still factually correct about distance.
 
 Building dedicated "approach-only" logic would introduce corner cases around the in-parking-adjustment scenario without meaningful benefit. The decision is to accept the reverse cascade as-is.
 
-### Future: Strip as General-Purpose Indicator
+### Future: Indicator as General-Purpose Signal
 
-Future enhancements may repurpose the strip as a passive indicator for other house events when the garage door is closed — notification relay for events elsewhere in the house, weather alerts, etc. Nothing concrete is planned for Phase 1; the strip is dark whenever the door is closed for parking-assist purposes. If other consumers want to drive the strip at other times, they would publish to a dedicated command topic rather than affecting the parking-assist logic itself.
+Future enhancements may repurpose the indicator as a passive signal for other house events when the garage door is closed — notification relay for events elsewhere in the house, weather alerts, etc. Nothing concrete is planned for Phase 1; the indicator is dark whenever the door is closed for parking-assist purposes. If other consumers want to drive it at other times, they would publish to a dedicated command topic rather than affecting the parking-assist logic itself.
+
+**Repurposing favors the strip.** The LED strip's full RGB addressability makes it a more capable general-purpose indicator than the tower light's three-color-plus-buzzer vocabulary. If general-purpose reuse is a weighted consideration, the strip wins; if it's speculative and not likely to materialize, this factor doesn't change the decision.
 
 ---
 
-## Strip States
+## Indicator States (High-Level)
 
-Beyond the distance band color mapping, the strip has a few higher-level states worth calling out explicitly:
+Beyond the distance-band state mapping, the indicator has a few higher-level states worth calling out explicitly:
 
-| Strip State | Trigger | Behavior |
-|-------------|---------|----------|
-| **Inactive** | Door closed, OR door open with no target within 200 cm | Strip fully off |
-| **Active** | Door open, target within 200 cm | Strip displays color per current distance band |
-| **Cooldown** | Stable-parked timer elapsed | Strip continues displaying current band; fade-out pending |
-| **Fading** | Cooldown timer elapsed | 1 s fade to off |
+| Indicator State | Trigger | Behavior |
+|-----------------|---------|----------|
+| **Inactive** | Door closed, OR door open with no target within 300 cm | Indicator fully off |
+| **Active** | Door open, target within 300 cm | Indicator displays per current distance band |
+| **Cooldown** | Stable-parked timer elapsed | Indicator continues displaying current state; turn-off pending |
+| **Fading / Off** | Cooldown timer elapsed | Strip fades over 1 s; tower light extinguishes instantly |
 
 State transitions are evaluated on each 10 Hz sample. Timers reset whenever distance changes more than 2 cm between samples.
 
 ### Power-On Behavior
 
-On ESPHome boot, the strip initializes to **off** and remains off until the first valid ultrasonic reading plus the activation conditions are evaluated. Between power-on and first sample (~100 ms), no LED output occurs. This prevents any visual flicker or garbage output during the controller's initial I²C handshake with the Ultrasonic Unit.
+On ESPHome boot, the indicator initializes to **off** and remains off until the first valid ultrasonic reading plus the activation conditions are evaluated. Between power-on and first sample (~100 ms), no output occurs. This prevents any visual flicker or garbage output during the controller's initial I²C handshake with the Ultrasonic Unit.
 
 ### Wi-Fi Disconnect Behavior
 
-If the AtomS3 Lite loses Wi-Fi, the local distance-band logic continues running — ESPHome executes local automations independently of network state. The strip responds to distance bands as normal; the only impact is that MQTT publishing pauses during the disconnect. On reconnection, retained state topics are published to catch up any consumers.
+If the AtomS3 Lite loses Wi-Fi, the local distance-band logic continues running — ESPHome executes local automations independently of network state. The indicator responds to distance bands as normal; the only impact is that MQTT publishing pauses during the disconnect. On reconnection, retained state topics are published to catch up any consumers.
 
-Door state consumption requires Wi-Fi to be functioning; if disconnected, the strip cannot gate on door state and defaults to displaying distance bands whenever a target is present. This is acceptable degradation — parking assist still works locally, the only missing behavior is the door-gated suppression.
+Door state consumption requires Wi-Fi to be functioning; if disconnected, the indicator cannot gate on door state and defaults to displaying distance bands whenever a target is present. This is acceptable degradation — parking assist still works locally, the only missing behavior is the door-gated suppression.
 
 ---
 
@@ -298,9 +422,9 @@ The AtomS3 Lite's onboard programmable button is assigned a single function: **r
 4. ESPHome reads the current distance, sets it as the center of the `parked` band (with the band extending symmetrically around it per the current width), and persists the value to flash.
 5. ESPHome publishes `highland/event/garage/bay_{N}/parking_calibrate` with the new band values for logging.
 
-The other bands (`approaching`, `close`, `too_close`) shift relative to the new `parked` center, preserving their widths.
+The other bands (`approaching`, `close`, `very_close`, `overshot`) shift relative to the new `parked` center, preserving their widths.
 
-**Why put this on the button rather than in a dashboard.** The physical button at the sensor lets the driver calibrate while the car is actually in the parked position — no need to GPS the phone to a dashboard, no trip back to the car to verify alignment. One physical action, one step. HA dashboard exposure of calibration is still possible as a Phase 2 enhancement if the button workflow proves awkward, but the button is the primary UX.
+**Why put this on the button rather than in a dashboard.** The physical button at the sensor lets the driver calibrate while the car is actually in the parked position — no need to access a dashboard, no trip back to the car to verify alignment. One physical action, one step. HA dashboard exposure of calibration is still possible as a Phase 2 enhancement if the button workflow proves awkward, but the button is the primary UX.
 
 **Safety against accidental presses.** The button is on the AtomS3 Lite's face inside the sensor enclosure — not easily hit by accident. If the enclosure's mounting exposes the button, a long-press (~3 s) requirement can be added in ESPHome to prevent brush-bys from triggering recalibration.
 
@@ -322,7 +446,7 @@ All state topics publish JSON per Highland's MQTT conventions.
 ```json
 {
     "distance_cm": 47.3,
-    "since": "2026-04-20T14:32:18Z"
+    "since": "2026-04-21T14:32:18Z"
 }
 ```
 
@@ -335,15 +459,15 @@ All state topics publish JSON per Highland's MQTT conventions.
 {
     "state": "close",
     "distance_cm": 47.3,
-    "since": "2026-04-20T14:32:18Z",
+    "since": "2026-04-21T14:32:18Z",
     "bands": {
-        "parked_center_cm": 12.5,
-        "parked_half_width_cm": 7.5
+        "parked_center_cm": 7.5,
+        "parked_half_width_cm": 2.5
     }
 }
 ```
 
-- `state`: categorical (`clear` | `approaching` | `close` | `parked` | `too_close`)
+- `state`: categorical (`clear` | `approaching` | `close` | `very_close` | `parked` | `overshot`)
 - `distance_cm`: distance at the moment of the latest state transition (may be slightly stale compared to the `vehicle_distance_cm` topic)
 - `since`: ISO8601 UTC timestamp of when this state was entered
 - `bands.parked_center_cm`: current calibrated `parked` band center (for consumer reference / dashboard display)
@@ -359,9 +483,9 @@ All state topics publish JSON per Highland's MQTT conventions.
 
 ```json
 {
-    "parked_center_cm": 12.5,
-    "parked_half_width_cm": 7.5,
-    "since": "2026-04-20T14:32:18Z"
+    "parked_center_cm": 7.5,
+    "parked_half_width_cm": 2.5,
+    "since": "2026-04-21T14:32:18Z"
 }
 ```
 
@@ -394,7 +518,7 @@ The `parking_state` signal is primarily consumed by Highland's garage door subsy
 
 **Suggested future consumers (not Phase 1):**
 
-- **Garage door:** Notify if door is open and bay is `too_close` for more than N seconds (probably someone hit the wall; worth verifying).
+- **Garage door:** Notify if door is open and bay is `overshot` for more than N seconds (probably someone hit the wall; worth verifying).
 - **Garage door:** Notify if door is closed but bay is `clear` unexpectedly (car was removed without door operation — e.g., forgot, or unauthorized).
 - **Security / away mode:** Cross-reference `parking_state` with away mode to confirm all vehicles are present when house is supposed to be occupied.
 - **Daily Digest:** Summary of bay occupancy patterns if that proves interesting.
@@ -408,18 +532,19 @@ These are captured here for awareness. Implementation belongs in the consuming s
 ### Phase 1 — Core Subsystem (This Design)
 
 - One AtomS3 Lite + RS485 Base + U098-B1 sensor node per bay
-- 0.5 m WS2812B strip per bay, driven directly from AtomS3 Lite GPIO
+- One indicator per bay — either 0.5 m WS2812B strip (Candidate A) or tower light with MOSFET breakout (Candidate B); decision pending
 - 12V/2A wall-wart per bay
-- ESPHome firmware with distance-band logic and MQTT publishing
+- ESPHome firmware with six-state distance-band FSM and MQTT publishing
 - Button-based calibration
 - HA Discovery read-only sensor entities
 - MQTT state topics for cross-subsystem consumption
 
 ### Phase 2 — Enhancements
 
-- **Garage door integration** — wire `parking_state` into garage door notification logic (too-close alerts, unexpected absence alerts).
+- **Garage door integration** — wire `parking_state` into garage door notification logic (overshot alerts, unexpected absence alerts).
 - **Dashboard calibration override** — HA number entity to directly set `parked_center_cm` if the physical button workflow proves awkward.
 - **Temperature-compensated range** — pull garage ambient temp from an existing sensor (if one's added) into the ESPHome YAML for slightly better accuracy across seasonal temp swings. The RCWL-9620 already has built-in temperature compensation via an onboard thermistor; this is refinement, not necessity.
+- **Strip general-purpose reuse** (Candidate A only) — command topic for driving the strip as a notification indicator for non-parking events when the door is closed.
 
 ### Phase 3 — Speculative
 
@@ -429,15 +554,18 @@ These are captured here for awareness. Implementation belongs in the consuming s
 
 ## Open Questions
 
+- [ ] **Indicator hardware decision: LED strip (Candidate A) vs. tower light (Candidate B).** The buzzer's value on `overshot`, aesthetic fit with the garage, and general-purpose-reuse potential are the main decision factors.
 - [ ] Confirm bumper-height mounting clears stored garage items (bikes, shelving, tool chests) in both bays — may require repositioning clutter prior to install
 - [ ] Calibrate initial `parked` bands per vehicle at commissioning; document per-bay values
 - [ ] Determine whether long-press (~3 s) is needed on the button to guard against accidental calibration, or whether enclosure placement is sufficient
-- [ ] Decide ESPHome `light` component specifics for the strip (FastLED platform, data GPIO choice, power-on behavior)
+- [ ] Decide ESPHome `light` component specifics for the strip (FastLED platform, data GPIO choice, power-on behavior) — Candidate A only
+- [ ] Source the 4-channel MOSFET breakout for driving the tower light — Candidate B only
 - [ ] Validate RCWL-9620 reading stability against matte-plastic bumpers vs. chrome-heavy front ends (e.g., older trucks) at bench or first-install — confirm ±2% accuracy spec holds in practice
 - [ ] Decide whether to share a single wall-wart across both bays (if electrically convenient) or use one per bay (simpler, more resilient to failures)
 - [ ] Tune `parked_stable_seconds` and `parked_cooldown_seconds` values against observed parking behavior (first-install)
 - [ ] Confirm garage door state topic path matches what the garage door subsystem actually publishes at integration time
-- [ ] Determine whether the `clear` band should actually light the strip at 10% dim white as a passive "system is alive" indicator, or stay fully dark
+- [ ] Decide whether the `clear` band should show any "system alive" indication (dim white on strip, brief startup blink on tower, or fully dark)
+- [ ] Tune `overshot` buzzer pattern (duty cycle, duration) to be clearly attention-grabbing without being painful — Candidate B only
 
 ---
 

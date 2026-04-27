@@ -5,6 +5,9 @@ secrets.yaml
 *.key
 *.pem
 
+# Scripts with embedded credentials
+scripts/
+
 # Environment files
 .env
 .env.*
@@ -46,3 +49,6 @@ logs/
 # Backups (stored elsewhere)
 *.tar.gz
 backups/
+
+# Scripts
+./scripts/hub

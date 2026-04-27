@@ -1060,7 +1060,7 @@
         "z": "utility-backup",
         "g": "c2af89794b79b105",
         "name": "Format Log Event",
-        "func": "const host = msg.payload.host || 'unknown';\nconst status = msg.payload.status;\nconst level = msg.payload.status === 'completed' ? 'INFO' : 'WARN';;\n\nlet message;\nif (host === 'ha') {\n    const hours = msg.payload.elapsed_hours;\n    message = status === 'completed'\n        ? `Backup check passed: ha (${hours}h ago)`\n        : `Backup stale: ha — ${hours}h since last backup`;\n} else if (status === 'completed') {\n    message = `Backup completed: ${host}`;\n} else {\n    const error = msg.payload.error || 'unknown error';\n    message = `Backup failed: ${host} — ${error}`;\n}\n\nmsg.payload = {\n    timestamp: new Date().toISOString(),\n    system: 'node_red',\n    source: 'backup',\n    level,\n    message,\n    context: { host }\n};\nmsg.topic = 'highland/event/log';\nreturn msg;",
+        "func": "const host = msg.payload.host || 'unknown';\nconst isCompleted = msg.topic === 'highland/event/backup/completed';\nconst status = isCompleted ? 'completed' : 'failed';\nconst level = isCompleted ? 'INFO' : 'WARN';\n\nlet message;\nif (host === 'ha') {\n    const hours = msg.payload.elapsed_hours;\n    message = status === 'completed'\n        ? `Backup check passed: ha (${hours}h ago)`\n        : `Backup stale: ha — ${hours}h since last backup`;\n} else if (status === 'completed') {\n    message = `Backup completed: ${host}`;\n} else {\n    const error = msg.payload.error || 'unknown error';\n    message = `Backup failed: ${host} — ${error}`;\n}\n\nmsg.payload = {\n    timestamp: new Date().toISOString(),\n    system: 'node_red',\n    source: 'backup',\n    level,\n    message,\n    context: { host }\n};\nmsg.topic = 'highland/event/log';\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -1178,7 +1178,7 @@
         "enableGlobalContextStore": false
     },
     {
-        "id": "fe57e7407d2495b0",
+        "id": "0e77dd2cf15ef9f8",
         "type": "global-config",
         "env": [],
         "modules": {

@@ -1,0 +1,852 @@
+[
+    {
+        "id": "utility-deliveries",
+        "type": "tab",
+        "label": "Utility: Deliveries",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "6f769580dac5f8bb",
+        "type": "group",
+        "z": "utility-deliveries",
+        "name": "USPS Parser",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "a9ac8ca9d004936e",
+            "6584a0015cc0be1d",
+            "a1bfd1189b8f307b",
+            "d10a1a84ce739a3e",
+            "fb7e5058d1b714de",
+            "f0f085a2186fa132",
+            "ccad82cfa1fd3785",
+            "4f2a8a97b6461b19",
+            "ac8c8730cce54837",
+            "faef0e312f91e6c3",
+            "0cb0515d81d0da14",
+            "78dd39ed9142e1eb",
+            "8dcaf5c35ca21c25",
+            "f2db7fc7dc4238e2",
+            "14a9311c3491118b",
+            "916bc2601502ec26",
+            "15dfa948291b144f",
+            "39f5c0a75b47a217",
+            "e79cb62232b7469a",
+            "e157f5b079d42a2f",
+            "64028927f9819f9b",
+            "655b391ecba96410",
+            "f44b3305831ffac2",
+            "081c43232ac912a5",
+            "7548a3523c06255e"
+        ],
+        "x": 54,
+        "y": 199,
+        "w": 822,
+        "h": 662
+    },
+    {
+        "id": "7f3ee5152db4e26e",
+        "type": "group",
+        "z": "utility-deliveries",
+        "name": "Error Handling",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "9cfaf709659d570b",
+            "e95a32f4a6a5a8f7"
+        ],
+        "x": 54,
+        "y": 1079,
+        "w": 352,
+        "h": 82
+    },
+    {
+        "id": "1e1ccb4bd37ef602",
+        "type": "group",
+        "z": "utility-deliveries",
+        "name": "Delivery Pipeline",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "7b4fb34bbc3cf32f",
+            "9d09c0a312a89a2f",
+            "83344be94f039c15",
+            "5dce9533827eda19",
+            "9e99901d4f8fa310",
+            "a3d7145e946798f9"
+        ],
+        "x": 54,
+        "y": 19,
+        "w": 1092,
+        "h": 142
+    },
+    {
+        "id": "f4e7d4683880d6f4",
+        "type": "group",
+        "z": "utility-deliveries",
+        "name": "Notification Pipeline",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "189edd6c614ffa2a",
+            "f6cf90b75f2a7294",
+            "e5b61f92b0604bac",
+            "68b230040fd0cbf5"
+        ],
+        "x": 54,
+        "y": 899,
+        "w": 552,
+        "h": 142
+    },
+    {
+        "id": "7b4fb34bbc3cf32f",
+        "type": "mqtt in",
+        "z": "utility-deliveries",
+        "g": "1e1ccb4bd37ef602",
+        "name": "Delivery Email",
+        "topic": "highland/event/email/deliveries/+/received",
+        "qos": "1",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 60,
+        "wires": [
+            [
+                "9d09c0a312a89a2f"
+            ]
+        ]
+    },
+    {
+        "id": "9d09c0a312a89a2f",
+        "type": "function",
+        "z": "utility-deliveries",
+        "g": "1e1ccb4bd37ef602",
+        "name": "Route By Source",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst topic = msg.topic || '';\nconst parts = topic.split('/');\n// Expected: highland/event/email/deliveries/<source>/received\nif (parts.length !== 6 || parts[5] !== 'received') {\n    node.warn(`Unexpected topic shape: ${topic}`);\n    node.status({ fill: 'red', shape: 'ring', text: formatStatus('Bad topic') });\n    return null;\n}\nconst source = parts[4];\n\n// Extract message_id for ACK correlation\nconst messageId = msg.payload?.message_id;\nif (!messageId) {\n    node.warn(`Message missing message_id: ${topic}`);\n    node.status({ fill: 'red', shape: 'ring', text: formatStatus('No message_id') });\n    return null;\n}\n\n// Stash the source on the message for downstream visibility\nmsg.source = source;\n\n// Route\nif (source === 'usps') {\n    msg.target = 'USPS Parser';\n    node.status({ fill: 'green', shape: 'dot', text: formatStatus(`Routed: ${source}`) });\n    return [msg, null];\n}\n\n// Unrecognized source — emit rejection ACK\nnode.status({ fill: 'yellow', shape: 'dot', text: formatStatus(`Rejected: ${source}`) });\nconst ackMsg = {\n    topic: 'highland/ack/email',\n    payload: {\n        message_id: messageId,\n        consumer: 'utility_deliveries',\n        status: 'rejected',\n        processed_at: new Date().toISOString(),\n        reason: `Unknown delivery source: ${source}`\n    }\n};\n\nreturn [null, ackMsg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 60,
+        "wires": [
+            [
+                "83344be94f039c15"
+            ],
+            [
+                "9e99901d4f8fa310"
+            ]
+        ]
+    },
+    {
+        "id": "a9ac8ca9d004936e",
+        "type": "link in",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "USPS Parser",
+        "links": [],
+        "x": 150,
+        "y": 240,
+        "wires": [
+            [
+                "fb7e5058d1b714de"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "83344be94f039c15",
+        "type": "link call",
+        "z": "utility-deliveries",
+        "g": "1e1ccb4bd37ef602",
+        "name": "Dispatch To Parser",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "30",
+        "x": 610,
+        "y": 60,
+        "wires": [
+            [
+                "a3d7145e946798f9"
+            ]
+        ]
+    },
+    {
+        "id": "6584a0015cc0be1d",
+        "type": "function",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Unmatched",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst messageId = msg.payload?.message_id;\n\nconst ackMsg = {\n    topic: 'highland/ack/email',\n    payload: {\n        message_id: messageId,\n        consumer: 'utility_deliveries',\n        status: 'ok',\n        processed_at: new Date().toISOString()\n    }\n};\n\nnode.status({ fill: 'grey', shape: 'dot', text: formatStatus('Acked & dropped') });\nreturn [msg, ackMsg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 530,
+        "y": 300,
+        "wires": [
+            [
+                "a1bfd1189b8f307b"
+            ],
+            [
+                "d10a1a84ce739a3e"
+            ]
+        ]
+    },
+    {
+        "id": "a1bfd1189b8f307b",
+        "type": "link out",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "USPS Parser Return",
+        "mode": "return",
+        "links": [],
+        "x": 675,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "5dce9533827eda19",
+        "type": "debug",
+        "z": "utility-deliveries",
+        "g": "1e1ccb4bd37ef602",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1050,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "d10a1a84ce739a3e",
+        "type": "mqtt out",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Publish ACK",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 730,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "9cfaf709659d570b",
+        "type": "catch",
+        "z": "utility-deliveries",
+        "g": "7f3ee5152db4e26e",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 140,
+        "y": 1120,
+        "wires": [
+            [
+                "e95a32f4a6a5a8f7"
+            ]
+        ]
+    },
+    {
+        "id": "e95a32f4a6a5a8f7",
+        "type": "debug",
+        "z": "utility-deliveries",
+        "g": "7f3ee5152db4e26e",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 310,
+        "y": 1120,
+        "wires": []
+    },
+    {
+        "id": "9e99901d4f8fa310",
+        "type": "mqtt out",
+        "z": "utility-deliveries",
+        "g": "1e1ccb4bd37ef602",
+        "name": "Publish ACK",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 590,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "fb7e5058d1b714de",
+        "type": "function",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Classify",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst subject = msg.payload?.subject || '';\n\nif (subject.startsWith('Your Daily Digest for ')) {\n    msg.target = 'Parse USPS Digest';\n    msg.subject_type = 'digest';\n    node.status({ fill: 'green', shape: 'dot', text: formatStatus('Digest') });\n    return [msg, null];\n}\n\nif (subject.startsWith('Your Mail Was Delivered ')) {\n    msg.target = 'Parse USPS Delivered';\n    msg.subject_type = 'mail_delivered';\n    node.status({ fill: 'green', shape: 'dot', text: formatStatus('Mail Delivered') });\n    return [msg, null];\n}\n\n// Unrecognized subject — ACK ok and drop. M2 will route OFD and Item Delivered here.\nconst truncated = subject.length > 30 ? subject.slice(0, 27) + '...' : subject;\nnode.status({ fill: 'yellow', shape: 'dot', text: formatStatus(`Unmatched: ${truncated}`) });\n\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 240,
+        "wires": [
+            [
+                "4f2a8a97b6461b19"
+            ],
+            [
+                "6584a0015cc0be1d"
+            ]
+        ]
+    },
+    {
+        "id": "f0f085a2186fa132",
+        "type": "link in",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Parse USPS Digest",
+        "links": [],
+        "x": 210,
+        "y": 560,
+        "wires": [
+            [
+                "faef0e312f91e6c3"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "ccad82cfa1fd3785",
+        "type": "link in",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Parse USPS Delivered",
+        "links": [],
+        "x": 220,
+        "y": 700,
+        "wires": [
+            [
+                "ac8c8730cce54837"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "4f2a8a97b6461b19",
+        "type": "link call",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Dispatch Classified",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "30",
+        "x": 550,
+        "y": 240,
+        "wires": [
+            [
+                "0cb0515d81d0da14"
+            ]
+        ]
+    },
+    {
+        "id": "ac8c8730cce54837",
+        "type": "function",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Parse",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst messageId = msg.payload?.message_id;\nconst deliveredAt = msg.payload?.received_at;  // canonical timestamp per § Confirmed parse signals\n\nif (!deliveredAt) {\n    node.status({ fill: 'red', shape: 'ring', text: formatStatus('No received_at') });\n    node.warn(`Mail Delivered missing received_at for ${messageId}`);\n    const ackMsg = {\n        topic: 'highland/ack/email',\n        payload: {\n            message_id: messageId,\n            consumer: 'utility_deliveries',\n            status: 'parse_error',\n            processed_at: new Date().toISOString(),\n            reason: 'Mail Delivered missing received_at'\n        }\n    };\n    return [msg, ackMsg];\n}\n\nmsg.payload = {\n    type: 'mail_delivered',\n    delivered_at: deliveredAt\n};\nmsg.topic = 'sm/letter_mail';\n\nconst ackMsg = {\n    topic: 'highland/ack/email',\n    payload: {\n        message_id: messageId,\n        consumer: 'utility_deliveries',\n        status: 'ok',\n        processed_at: new Date().toISOString()\n    }\n};\n\nnode.status({ fill: 'green', shape: 'dot', text: formatStatus('Mail delivered') });\nreturn [msg, ackMsg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 700,
+        "wires": [
+            [
+                "e79cb62232b7469a"
+            ],
+            [
+                "78dd39ed9142e1eb"
+            ]
+        ]
+    },
+    {
+        "id": "faef0e312f91e6c3",
+        "type": "function",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Parse",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\n// Capture identifiers BEFORE we replace msg.payload with the typed signal\nconst messageId = msg.payload?.message_id;\nconst digestReceivedAt = msg.payload?.received_at;  // already Z-form UTC from Email Ingress\nconst html = msg.payload?.body_html || '';\n\nconst match = html.match(/You have (\\d+) mailpiece\\(s\\) and (\\d+) inbound package\\(s\\)/);\n\nif (!match) {\n    node.status({ fill: 'red', shape: 'ring', text: formatStatus('Count line not found') });\n    node.warn(`Digest count line not found in HTML body for ${messageId}`);\n    const ackMsg = {\n        topic: 'highland/ack/email',\n        payload: {\n            message_id: messageId,\n            consumer: 'utility_deliveries',\n            status: 'parse_error',\n            processed_at: new Date().toISOString(),\n            reason: 'Digest count line not found in HTML body'\n        }\n    };\n    // No signal to the SM on parse_error — return msg untouched for link-call control flow only\n    return [msg, ackMsg];\n}\n\nconst pieceCount = parseInt(match[1], 10);\n// match[2] = package count from digest; intentionally discarded per design\n\n// Replace payload with the typed SM signal; _linkSource is preserved on msg\nmsg.payload = {\n    type: 'digest_parsed',\n    piece_count: pieceCount,\n    digest_received_at: digestReceivedAt\n};\nmsg.topic = 'sm/letter_mail';\n\nconst ackMsg = {\n    topic: 'highland/ack/email',\n    payload: {\n        message_id: messageId,\n        consumer: 'utility_deliveries',\n        status: 'ok',\n        processed_at: new Date().toISOString()\n    }\n};\n\nnode.status({\n    fill: 'green',\n    shape: 'dot',\n    text: formatStatus(`Digest: ${pieceCount} piece${pieceCount === 1 ? '' : 's'}`)\n});\nreturn [msg, ackMsg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 560,
+        "wires": [
+            [
+                "39f5c0a75b47a217"
+            ],
+            [
+                "14a9311c3491118b"
+            ]
+        ]
+    },
+    {
+        "id": "0cb0515d81d0da14",
+        "type": "link out",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "USPS Parser Return",
+        "mode": "return",
+        "links": [],
+        "x": 715,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "78dd39ed9142e1eb",
+        "type": "mqtt out",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Publish ACK",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 610,
+        "y": 760,
+        "wires": []
+    },
+    {
+        "id": "8dcaf5c35ca21c25",
+        "type": "link out",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Parse Delivered Return",
+        "mode": "return",
+        "links": [],
+        "x": 805,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "f2db7fc7dc4238e2",
+        "type": "link out",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Parse Digest Return",
+        "mode": "return",
+        "links": [],
+        "x": 795,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "14a9311c3491118b",
+        "type": "mqtt out",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Publish ACK",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 590,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "916bc2601502ec26",
+        "type": "link in",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Manage USPS State",
+        "links": [],
+        "x": 210,
+        "y": 440,
+        "wires": [
+            [
+                "e157f5b079d42a2f"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "15dfa948291b144f",
+        "type": "link out",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Manage USPS State Return",
+        "mode": "return",
+        "links": [],
+        "x": 835,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "39f5c0a75b47a217",
+        "type": "link call",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "",
+        "links": [
+            "916bc2601502ec26"
+        ],
+        "linkType": "static",
+        "timeout": "30",
+        "x": 620,
+        "y": 560,
+        "wires": [
+            [
+                "f2db7fc7dc4238e2"
+            ]
+        ]
+    },
+    {
+        "id": "e79cb62232b7469a",
+        "type": "link call",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "",
+        "links": [
+            "916bc2601502ec26"
+        ],
+        "linkType": "static",
+        "timeout": "30",
+        "x": 640,
+        "y": 700,
+        "wires": [
+            [
+                "8dcaf5c35ca21c25"
+            ]
+        ]
+    },
+    {
+        "id": "e157f5b079d42a2f",
+        "type": "function",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Apply Transition",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst sig = msg.payload || {};\nconst type = sig.type;\nconst now = new Date().toISOString();\n\n// Read current state from flow context (default store, persists across deploys)\nlet state = flow.get('usps_mail_state') || {\n    state: 'NOT_EXPECTING',\n    expected_pieces: null,\n    digest_received_at: null,\n    delivered_at: null,\n    timestamp: now\n};\n\nlet stateChanged = false;\nlet eventTopic = null;\nlet eventPayload = null;\n\nswitch (type) {\n    case 'digest_parsed': {\n        if (sig.piece_count > 0) {\n            state = {\n                ...state,\n                state: 'EXPECTING',\n                expected_pieces: sig.piece_count,\n                digest_received_at: sig.digest_received_at,\n                timestamp: now\n            };\n            stateChanged = true;\n            eventTopic = 'highland/event/deliveries/letter_mail/expected';\n            eventPayload = {\n                piece_count: sig.piece_count,\n                timestamp: now\n            };\n            node.status({\n                fill: 'green',\n                shape: 'dot',\n                text: formatStatus(`EXPECTING (${sig.piece_count})`)\n            });\n        } else {\n            // piece_count === 0 → package-only digest; no state transition\n            node.status({\n                fill: 'grey',\n                shape: 'dot',\n                text: formatStatus('Digest 0 pieces — no-op')\n            });\n        }\n        break;\n    }\n\n    case 'mail_delivered': {\n        state = {\n            ...state,\n            state: 'DELIVERED',\n            delivered_at: sig.delivered_at,\n            timestamp: now\n        };\n        stateChanged = true;\n        eventTopic = 'highland/event/deliveries/letter_mail/delivered';\n        eventPayload = { timestamp: now };\n        msg.notification_hint = 'mail_delivered';\n        node.status({\n            fill: 'green',\n            shape: 'dot',\n            text: formatStatus(`DELIVERED (from ${flow.get('usps_mail_state')?.state || 'NOT_EXPECTING'})`)\n        });\n        break;\n    }\n\n    case 'exception_check': {\n        if (state.state === 'EXPECTING') {\n            state = {\n                ...state,\n                state: 'EXCEPTION',\n                timestamp: now\n            };\n            stateChanged = true;\n            eventTopic = 'highland/event/deliveries/letter_mail/exception';\n            eventPayload = {\n                expected_pieces: state.expected_pieces,\n                digest_received_at: state.digest_received_at,\n                timestamp: now\n            };\n            msg.notification_hint = 'mail_exception';\n            node.status({\n                fill: 'yellow',\n                shape: 'dot',\n                text: formatStatus('EXCEPTION')\n            });\n        } else {\n            node.status({\n                fill: 'grey',\n                shape: 'dot',\n                text: formatStatus(`Exception check: ${state.state} — no-op`)\n            });\n        }\n        break;\n    }\n\n    case 'midnight_rollover': {\n        state = {\n            state: 'NOT_EXPECTING',\n            expected_pieces: null,\n            digest_received_at: null,\n            delivered_at: null,\n            timestamp: now\n        };\n        stateChanged = true;\n        // No event for rollover per design — only the state republish\n        node.status({\n            fill: 'blue',\n            shape: 'dot',\n            text: formatStatus('NOT_EXPECTING (rollover)')\n        });\n        break;\n    }\n\n    default: {\n        node.warn(`Unknown signal type: ${type}`);\n        break;\n    }\n}\n\nif (stateChanged) {\n    flow.set('usps_mail_state', state);\n\n    const stateMsg = {\n        topic: 'highland/state/deliveries/letter_mail',\n        payload: { ...state, source: 'informed_delivery' },\n        retain: true,\n        qos: 1\n    };\n    node.send([null, stateMsg]);\n\n    if (eventTopic) {\n        const eventMsg = {\n            topic: eventTopic,\n            payload: eventPayload,\n            retain: false,\n            qos: 1\n        };\n        node.send([null, eventMsg]);\n    }\n}\n\n// Always return msg on output 1 so the link-call chain unwinds cleanly,\n// regardless of whether a transition occurred.\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 440,
+        "wires": [
+            [
+                "7548a3523c06255e"
+            ],
+            [
+                "64028927f9819f9b"
+            ]
+        ]
+    },
+    {
+        "id": "64028927f9819f9b",
+        "type": "mqtt out",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Publish",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 640,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "655b391ecba96410",
+        "type": "cronplus",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Scheduler",
+        "outputField": "payload",
+        "timeZone": "",
+        "storeName": "",
+        "commandResponseMsgOutput": "output2",
+        "defaultLocation": "",
+        "defaultLocationType": "default",
+        "outputs": 2,
+        "options": [
+            {
+                "name": "Exception Check",
+                "topic": "exception-check",
+                "payloadType": "default",
+                "payload": "",
+                "expressionType": "cron",
+                "expression": "0 0 20 * * *",
+                "location": "",
+                "offset": "0",
+                "solarType": "all",
+                "solarEvents": "sunrise,sunset"
+            },
+            {
+                "name": "Midnight Rollover",
+                "topic": "midnight-rollover",
+                "payloadType": "default",
+                "payload": "",
+                "expressionType": "cron",
+                "expression": "0 0 0 * * *",
+                "location": "",
+                "offset": "0",
+                "solarType": "all",
+                "solarEvents": "sunrise,sunset"
+            }
+        ],
+        "x": 180,
+        "y": 820,
+        "wires": [
+            [
+                "f44b3305831ffac2"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "f44b3305831ffac2",
+        "type": "function",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Build Signal",
+        "func": "switch (msg.topic) {\n    case 'exception-check':\n        msg.payload = { type: 'exception_check' };\n        msg.topic = 'sm/letter_mail';\n        break;\n    case 'midnight-rollover':\n        msg.payload = { type: 'midnight_rollover' };\n        msg.topic = 'sm/letter_mail';\n        break;\n    default:\n        node.warn(`Unknown schedule: ${msg.topic}`);\n        return null;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 820,
+        "wires": [
+            [
+                "081c43232ac912a5"
+            ]
+        ]
+    },
+    {
+        "id": "081c43232ac912a5",
+        "type": "link call",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "",
+        "links": [
+            "916bc2601502ec26"
+        ],
+        "linkType": "static",
+        "timeout": "30",
+        "x": 600,
+        "y": 820,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "7548a3523c06255e",
+        "type": "function",
+        "z": "utility-deliveries",
+        "g": "6f769580dac5f8bb",
+        "name": "Build Notification",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst hint = msg.notification_hint;\nif (!hint) {\n    node.status({});\n    return msg;  // no notification produced for this transition\n}\n\n// Strip the hint immediately — it's a transient signal, doesn't leave the group\ndelete msg.notification_hint;\n\n// Reach into flow context for the freshly-persisted state, since msg.payload is\n// still the inbound parser-signal at this point in the synchronous return path\nconst state = flow.get('usps_mail_state') || {};\nconst now = state.timestamp || new Date().toISOString();\n\nlet notification;\nswitch (hint) {\n    case 'mail_delivered': {\n        const piece = state.expected_pieces;\n        const message = (piece && piece > 0)\n            ? `Your mail (${piece} piece${piece === 1 ? '' : 's'}) has been delivered.`\n            : 'Mail has been delivered.';\n        notification = {\n            notification_id: 'usps.mail_delivered',\n            timestamp: now,\n            source: 'deliveries.usps',\n            correlation_id: 'usps_mail',\n            title: 'Mail delivered',\n            largeIcon: 'mdi:email',\n            smallIcon: 'mdi:check-circle',\n            smallIconColor: '#00CC00',\n            message\n        };\n        break;\n    }\n    case 'mail_exception': {\n        const expected = state.expected_pieces;\n        const pieceText = expected\n            ? `${expected} piece${expected === 1 ? '' : 's'} expected`\n            : 'mail expected';\n        notification = {\n            notification_id: 'usps.mail_exception',\n            timestamp: now,\n            source: 'deliveries.usps',\n            correlation_id: 'usps_mail',\n            title: 'Mail running late',\n            largeIcon: 'mdi:email',\n            smallIcon: 'mdi:alert-circle',\n            smallIconColor: '#CC0000',\n            message: `${pieceText} from today's digest hasn't been delivered yet.`\n        };\n        break;\n    }\n    default: {\n        node.warn(`Unknown notification_hint: ${hint}`);\n        node.status({ fill: 'red', shape: 'ring', text: formatStatus(`Bad hint: ${hint}`) });\n        return msg;\n    }\n}\n\nmsg.notification = notification;\nnode.status({ fill: 'blue', shape: 'dot', text: formatStatus(`Built: ${hint}`) });\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 670,
+        "y": 440,
+        "wires": [
+            [
+                "15dfa948291b144f"
+            ]
+        ]
+    },
+    {
+        "id": "189edd6c614ffa2a",
+        "type": "link in",
+        "z": "utility-deliveries",
+        "g": "f4e7d4683880d6f4",
+        "name": "Send Notification",
+        "links": [],
+        "x": 160,
+        "y": 940,
+        "wires": [
+            [
+                "e5b61f92b0604bac"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "f6cf90b75f2a7294",
+        "type": "link out",
+        "z": "utility-deliveries",
+        "g": "f4e7d4683880d6f4",
+        "name": "Send Notification Return",
+        "mode": "return",
+        "links": [],
+        "x": 495,
+        "y": 940,
+        "wires": []
+    },
+    {
+        "id": "e5b61f92b0604bac",
+        "type": "function",
+        "z": "utility-deliveries",
+        "g": "f4e7d4683880d6f4",
+        "name": "Dispatch",
+        "func": "const formatStatus = global.get('utils.formatStatus', 'initializers') || (t => t);\n\nconst notification = msg.notification;\nif (!notification) {\n    node.status({});\n    return [msg, null];\n}\n\n// Strip the envelope before continuing the return path\ndelete msg.notification;\n\nconst notifyMsg = {\n    topic: 'highland/event/notify',\n    payload: notification,\n    retain: false,\n    qos: 1\n};\n\nnode.status({\n    fill: 'blue',\n    shape: 'dot',\n    text: formatStatus(`Notify: ${notification.notification_id}`)\n});\n\nreturn [msg, notifyMsg];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 940,
+        "wires": [
+            [
+                "f6cf90b75f2a7294"
+            ],
+            [
+                "68b230040fd0cbf5"
+            ]
+        ]
+    },
+    {
+        "id": "68b230040fd0cbf5",
+        "type": "mqtt out",
+        "z": "utility-deliveries",
+        "g": "f4e7d4683880d6f4",
+        "name": "Notify",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 530,
+        "y": 1000,
+        "wires": []
+    },
+    {
+        "id": "a3d7145e946798f9",
+        "type": "link call",
+        "z": "utility-deliveries",
+        "g": "1e1ccb4bd37ef602",
+        "name": "",
+        "links": [
+            "189edd6c614ffa2a"
+        ],
+        "linkType": "static",
+        "timeout": "30",
+        "x": 850,
+        "y": 60,
+        "wires": [
+            [
+                "5dce9533827eda19"
+            ]
+        ]
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "91d93fb90f68fc85",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-cron-plus": "2.2.4"
+        }
+    }
+]

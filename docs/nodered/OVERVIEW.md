@@ -72,6 +72,57 @@ Link nodes connect groups to avoid cross-boundary wires. They are preferred over
 
 Each group is a logical unit with a clear purpose. Link nodes connect groups without spaghetti wires. Flows read top-to-bottom or left-to-right in sections.
 
+### Link Call as Callable Subroutine
+
+Node-RED's `link call` node (paired with a matching `link in` and a `link out` in return mode) provides a callable-subroutine pattern. Use this when:
+
+- A flow needs to dispatch to one of several similar processors based on some discriminator (source, type, label, etc.)
+- Each processor is functionally self-contained with a clear input shape and an implicit "return when done" exit
+- Fanning out to multiple outputs would create a wide dispatcher with one branch per processor type
+
+The pattern looks like:
+
+```
+Dispatcher Side                       Processor Side
+
+  ┌─────────────┐                       ┌─────────────────┐
+  │ Decide      │                       │ Link In         │
+  │ which       │                       │ named e.g.      │
+  │ processor   │                       │ "USPS Parser"   │
+  └─────┬───────┘                       └─────┬───────────┘
+        │                                     │
+        ▼                                     ▼
+  ┌─────────────┐  ─── invokes ──▶      ┌─────────────────┐
+  │ Link Call   │                       │ Process         │
+  │ to named    │                       │ message         │
+  │ link in     │                       └─────┬───────────┘
+  └─────┬───────┘                             │
+        │                                     ▼
+        │                                ┌─────────────────┐
+        │   ◀── returns when done ───   │ Link Out        │
+        ▼                                │ (mode: return)  │
+  ┌─────────────┐                        └─────────────────┘
+  │ Continue    │
+  │ pipeline    │
+  └─────────────┘
+```
+
+**Key properties:**
+
+- The `link out` in return mode hands flow control back to whatever's wired downstream of the `link call`, not to a fixed destination. Multiple dispatchers can call the same processor and each receives its own return.
+- Adding a new processor type = add a new `link in` (named for the type) and another `link call` invocation in the dispatcher. No restructuring needed.
+- The `msg` object carries hidden `_linkSource` metadata while inside a link-call subroutine. **Function nodes inside the subroutine that build new payloads must not replace `msg` entirely** — doing so strips `_linkSource` and the return won't route. The standard pattern is two outputs: one for the new payload (ACK, side-effect, etc.), one for the original `msg` to flow back through `link out`.
+
+**Example in the codebase:** `Utility: Deliveries` uses link-call to dispatch from a single source-router function to per-carrier parsers. See `subsystems/DELIVERIES.md § Source dispatch via link-call`.
+
+**When NOT to use link-call:**
+
+- The processor naturally fans out to multiple downstream destinations rather than "returning" to a single point
+- The processors are conceptually different enough that a unified return contract would be artificial
+- The dispatcher is simple enough that a single switch node with two or three outputs is clearer
+
+Reserve link-call for the case where "call this thing, get flow control back when it's done" is genuinely the right mental model.
+
 ---
 
 ## Node Naming
@@ -242,4 +293,4 @@ On device removal: update the flow's registration boilerplate and redeploy. The 
 
 ---
 
-*Last Updated: 2026-03-26*
+*Last Updated: 2026-04-29*

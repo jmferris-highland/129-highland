@@ -109,7 +109,7 @@ Other Package Status Updates (picked up, in-transit, hub traversal, unable to de
 
 The digest arrival **does not by itself mean letter mail is coming today**. It could contain only future-package tracking information with no letter mail. The parser must extract each signal independently and only act on the letter-mail portion.
 
-- **Letter mail for today** → piece count, scan images (usually one image per piece) — promotes letter-mail state machine to `EXPECTING`
+- **Letter mail for today** → piece count (parsed from the HTML body's "You have N mailpiece(s)..." line — see § Confirmed parse signals) — promotes letter-mail state machine to `EXPECTING`
 - **Package information** → parsed for debugging/observability but not used to drive state
 
 Because digests can arrive on no-mail days (Sundays, holidays) when only a future package is tracked, "digest received today" is not a synonym for "mail day." Letter-mail state only promotes on explicit letter-mail content in the digest.
@@ -125,7 +125,7 @@ Deferring to OFD (rather than the digest's today-listing) avoids the slippage pr
 
 ### 3. Mail Delivered — letter-mail terminal signal
 
-The Mail Delivered email is the load-bearing signal for the letter-mail state machine's `EXPECTING → DELIVERED` transition. It covers first-class letter mail only — parcels and packages generate Item Delivered emails instead.
+The Mail Delivered email is the load-bearing signal for the letter-mail state machine's `EXPECTING → DELIVERED` transition. It covers first-class letter mail only — parcels and packages generate Item Delivered emails instead. The email's `Date:` header is the canonical delivery timestamp — USPS sends the notification at or within a few minutes of actual delivery — preferred over scraping a date out of the body.
 
 Typical delivery timing at this address: primary 3–5pm window, tail extending to ~7:30pm (observed latest in ~8 months of historical data).
 
@@ -158,6 +158,40 @@ Informed Delivery has known gaps. It covers **first-class mail** (captured by US
 The first gap is the notable one: bulk mail is a regular occurrence that produces real physical deliveries with no corresponding email signal. On days where Highland's state otherwise shows nothing mailbox-bound expected, bulk mail can still arrive. Phase 1 is informational-only and isn't affected — it simply reports what USPS told us. Phase 3 is where the gap manifests as a blind spot in mailbox-contents reasoning (see Phase 3 § Known blind spot: bulk-mail-only deliveries).
 
 This is not a bug to fix — it's an honest limitation of an email-driven design. Our model of reality is bounded by what USPS reports to us.
+
+### Confirmed parse signals
+
+These are empirically verified from real digest and Mail Delivered emails. OFD and Item Delivered patterns will be added once samples are observed.
+
+**Sender (all email types observed so far):**
+
+- Address: `USPSInformeddelivery@email.informeddelivery.usps.com`
+- Display name: `USPS Informed Delivery`
+- Recommended Gmail filter match: the domain `@email.informeddelivery.usps.com` rather than the full local-part-sensitive address
+
+**Subject prefixes — load-bearing for sub-routing inside the USPS Parser:**
+
+- Daily Digest: starts with `Your Daily Digest for ` (followed by day-of-week, `M/D`, ` is ready to view`)
+- Mail Delivered: starts with `Your Mail Was Delivered ` (followed by day-of-week, abbreviated month, day)
+
+The day/date in the subject is informational only — the `Date:` header is authoritative for timing.
+
+**Daily Digest body content:**
+
+- The plain text part is boilerplate-only (dashboard URL, unsubscribe URL, copyright) — identical between mail-day and no-mail-day digests except for the date string. **Not usable for parsing.**
+- The HTML body contains a count line in visible text matching `/You have (\d+) mailpiece\(s\) and (\d+) inbound package\(s\) arriving soon\./`. The first capture group is the authoritative letter-mail piece count for state-machine promotion. The second capture group (digest's package-section count) is intentionally discarded per § Why this matters for the design.
+- The phrase appears twice in the rendered HTML (mobile and desktop layouts); first match is sufficient.
+
+**Daily Digest MIME structure:**
+
+- Mail-day digest: `multipart/related` containing `multipart/alternative` plus inline `image/jpeg` parts.
+- No-mail-day digest: `multipart/alternative` only — zero image parts.
+- **The inline image count is not a reliable piece count.** USPS-promoted mailer images appear alongside actual scans, individual mailpieces can lack scans entirely, and other variations occur. The Email Ingress payload's `attachment_count` is useful only as a coarse "had images / didn't" sanity check, never as a count.
+
+**Mail Delivered body and timing:**
+
+- Single-part `text/html`. No plain text alternative, no attachments.
+- The email's `Date:` header is the canonical delivery timestamp — USPS sends the notification at or within a few minutes of actual delivery. Body content confirms the date but adds no precision over the header.
 
 ---
 
@@ -259,7 +293,7 @@ Both lists live in flow context (`packages_expected_today`, `packages_delivered_
 ```json
 {
   "tracking_number": "9400111899220000000001",
-  "ofd_at": "2026-04-22T10:02:00-04:00",
+  "ofd_at": "2026-04-22T14:02:00Z",
   "source": "informed_delivery"
 }
 ```
@@ -269,7 +303,7 @@ Both lists live in flow context (`packages_expected_today`, `packages_delivered_
 ```json
 {
   "tracking_number": "9400111899220000000002",
-  "delivered_at": "2026-04-22T14:30:00-04:00",
+  "delivered_at": "2026-04-22T18:30:00Z",
   "delivered_to": "mailbox",
   "source": "informed_delivery"
 }
@@ -314,12 +348,12 @@ Flow context (`default` store) also survives same-day restart and is used for wi
 
 ```json
 {
-  "timestamp": "2026-04-21T14:15:00-04:00",
+  "timestamp": "2026-04-21T18:15:00Z",
   "source": "informed_delivery",
   "state": "DELIVERED",
   "expected_pieces": 3,
-  "digest_received_at": "2026-04-21T07:15:00-04:00",
-  "delivered_at": "2026-04-21T14:15:00-04:00"
+  "digest_received_at": "2026-04-21T11:15:00Z",
+  "delivered_at": "2026-04-21T18:15:00Z"
 }
 ```
 
@@ -329,7 +363,7 @@ Flow context (`default` store) also survives same-day restart and is used for wi
 
 ```json
 {
-  "timestamp": "2026-04-22T14:30:00-04:00",
+  "timestamp": "2026-04-22T18:30:00Z",
   "source": "informed_delivery",
   "expected_count": 0,
   "delivered_count": 2,
@@ -337,13 +371,13 @@ Flow context (`default` store) also survives same-day restart and is used for wi
   "delivered": [
     {
       "tracking_number": "9400111899220000000001",
-      "delivered_at": "2026-04-22T14:28:00-04:00",
+      "delivered_at": "2026-04-22T18:28:00Z",
       "delivered_to": "mailbox",
       "source": "informed_delivery"
     },
     {
       "tracking_number": "9400111899220000000002",
-      "delivered_at": "2026-04-22T14:30:00-04:00",
+      "delivered_at": "2026-04-22T18:30:00Z",
       "delivered_to": "front_door",
       "source": "informed_delivery"
     }
@@ -371,19 +405,40 @@ Published on every state change (OFD arrival, Item Delivered arrival, midnight c
 
 Per `nodered/OVERVIEW.md` conventions: groups are the primary organizing unit; link nodes connect groups; no node has more than two outputs.
 
+#### Source dispatch via link-call
+
+The ingress source-routing layer dispatches to per-source parsers using Node-RED's `link call` node, treating each parser as a callable subroutine. The Source Router invokes the appropriate parser (e.g., `link call` → `USPS Parser`); the parser's `link out` in return mode hands flow control back to the caller. See `nodered/OVERVIEW.md § Link Call as Callable Subroutine` for the general pattern.
+
+This is preferred over fan-out-by-output for source dispatch because:
+
+- The dispatcher stays single-output-per-decision (link-call invocation, plus a separate path for unknown sources) rather than fanning to one branch per carrier
+- Each parser is self-contained: a `link in` named for the source, processing nodes, and a `link out` in return mode
+- Adding Phase 2 carriers means adding their `link in` nodes and another `link call` invocation; no restructuring of the dispatcher
+
+Parsers publish their own ACKs directly to a shared `Publish ACK` MQTT out node — ACK responsibility belongs with the node that knows whether processing was `ok`, `parse_error`, or `rejected`. The link-call return path carries the original `msg` (with its `_linkSource` metadata intact) so the link call's downstream wires receive flow control after the parser completes. This means parser function nodes typically have **two outputs**: one for the ACK (to `Publish ACK`) and one for the return `msg` (to the parser's `link out` in return mode).
+
+#### Groups
+
 **Group 1 — Ingress Subscription**
 - MQTT In on `highland/event/email/deliveries/+/received`
-- Route by source (extracted from topic) → USPS parser (Phase 1); other-carrier parsers (Phase 2)
-- On unrecognized source: publish `highland/ack/email` with `status: "rejected"` and log
+- `Route By Source` function: extract source from topic (segment 4 in `highland/event/email/deliveries/<source>/received`); validate `message_id` is present
+- For known sources (currently `usps`): invoke parser via `link call`
+- For unknown sources: build rejection ACK with `status: "rejected"` and emit to `Publish ACK` MQTT out
+- For malformed messages (missing `message_id`, bad topic shape): set status indicator, return without ACK; the catch handler covers any thrown errors
 
-**Group 2 — USPS Parser**
+**Group 2 — USPS Parser** *(callable subroutine)*
+
+Entered via `link in` named `USPS Parser`; exits via `link out` in return mode.
+
 - Sub-route by subject/body pattern → Digest path / Mail Delivered path / Item Delivered path / Package Status Update path
 - **Digest path:** extract letter-mail content (piece count, has-images heuristic). Link-out to Letter-Mail State Machine if pieces present. Package content in the digest is ignored by design.
 - **Mail Delivered path:** confirm sender and subject, timestamp, link-out to Letter-Mail State Machine.
 - **Item Delivered path:** extract tracking number from body, parse delivery location, link-out to Today's Packages.
-- **Package Status Update path:** identify status from subject/body. If OFD, extract tracking number, link-out to Today's Packages. For all other statuses, ACK `ok` and terminate.
-- On any parser success: publish `highland/ack/email` with `status: "ok"`.
-- On parser failure (including unparseable tracking number): publish `highland/ack/email` with `status: "parse_error"` and log the failing structure.
+- **Package Status Update path:** identify status from subject/body. If OFD, extract tracking number, link-out to Today's Packages. For all other statuses, ACK `ok` and terminate (no downstream processing).
+- On any parser success: build `ok` ACK, emit on output 1 to `Publish ACK`; emit original `msg` on output 2 to the return `link out`.
+- On parser failure (including unparseable tracking number): build `parse_error` ACK, same dual-output pattern; log the failing structure.
+
+The two-output pattern preserves `_linkSource` on the return path so the link-call dispatcher's downstream wires fire correctly. Replacing `msg` with the ACK payload would strip the link-call metadata and cause a return timeout.
 
 **Group 3 — Letter-Mail State Machine**
 - Reads flow context for current state, applies transition rules, emits new state.
@@ -411,8 +466,34 @@ Packages:
 - `sensor.packages_expected_today` (int — count currently in expected list)
 - `sensor.packages_delivered_today` (int — count currently in delivered list)
 
-### Configuration
+### Consumer Surface
 
+Letter mail and packages share a single dispatch path: when a transition warrants a notification, the producing parser group attaches `msg.notification` to the synchronous return-path message; a tab-level Notification Pipeline group invoked by the main Delivery Pipeline checks for this envelope and publishes to `highland/event/notify` if present. This separates notification *content* (carrier-specific, owned by the parser group) from notification *delivery* (carrier-agnostic, owned by the dispatch group). Future carriers and packages plug in by attaching their own `msg.notification` from inside their own parser groups; the dispatch logic does not change.
+
+#### Letter-mail notifications (Phase 1)
+
+| Transition | `notification_id` | Severity | Title | Notes |
+|------------|-------------------|----------|-------|-------|
+| `→ DELIVERED` | `usps.mail_delivered` | `low` | Mail delivered | Includes piece count when `EXPECTING`-derived; surprise-delivery framing otherwise |
+| `→ EXCEPTION` | `usps.mail_exception` | `medium` | Mail running late | Includes `expected_pieces` and `digest_received_at` |
+
+`expected` transitions deliberately do not produce notifications — mid-day "mail is coming" is low-signal noise.
+
+Both notifications share the correlation_id `usps_mail`. This is intentional: today's delivered notification replaces yesterday's via the HA tag mechanism (day-over-day replacement); a `DELIVERED` transition that follows an earlier `EXCEPTION` on the same day replaces the stale exception notification (same-day supersession). The user always sees a single Highland letter-mail notification reflecting the latest state, never a stack of progressively-outdated alerts.
+
+Different carriers' mail-equivalent notifications (if any ever exist) use separate correlation_ids and do not replace each other.
+
+#### `notification_id` naming convention
+
+Follows `{carrier}.{thing}_{event}`. Carrier is a meaningful axis here — different carriers produce different kinds of events with different failure modes, and may warrant carrier-differentiated routing in the future. This differs from single-axis subscription keys elsewhere in Highland (e.g., `dishwasher.cycle_finished`) where the manufacturer is implementation detail; for deliveries, the carrier is part of the action itself.
+
+Within a carrier namespace the `_thing` qualifier disambiguates (`mail` vs. `package`). Across carriers the carrier prefix disambiguates. `letter_mail_*` would be redundant in the same way `package_parcel_*` would be — the carrier already implies the domain.
+
+#### Other consumers
+
+Dashboard cards, automation flows, and other consumers may subscribe directly to `highland/state/deliveries/*` and `highland/event/deliveries/*` topics. The retained-state topic is the appropriate subscription for current-status displays; the event topics are appropriate for transition-driven automations. The notification surface above is a parallel consumer of the same transitions; subscribing to it directly would duplicate routing already handled by `Utility: Notifications`.
+
+### Configuration
 Delivery-specific tunables only. All IMAP/folder/retention concerns live in `config/email_ingress.json`.
 
 ```json
@@ -476,7 +557,7 @@ Package deliveries to `front_door`/`other` locations do not go into this queue �
 ```json
 {
   "type": "letter_mail",
-  "delivered_at": "2026-04-19T15:20:00-04:00",
+  "delivered_at": "2026-04-19T19:20:00Z",
   "piece_count": 2,
   "source": "informed_delivery"
 }
@@ -487,7 +568,7 @@ or
 ```json
 {
   "type": "package",
-  "delivered_at": "2026-04-20T16:05:00-04:00",
+  "delivered_at": "2026-04-20T20:05:00Z",
   "tracking_number": "9400111899220000000002",
   "source": "informed_delivery"
 }
@@ -502,17 +583,17 @@ Aggregate payload shape (provisional):
 
 ```json
 {
-  "timestamp": "2026-04-21T19:15:00-04:00",
+  "timestamp": "2026-04-21T23:15:00Z",
   "source": "deliveries_synthesis",
   "count": 3,
   "letter_mail_pieces": 2,
   "mailbox_packages": 1,
-  "oldest_delivered_at": "2026-04-19T15:20:00-04:00",
+  "oldest_delivered_at": "2026-04-19T19:20:00Z",
   "oldest_age_hours": 52.0,
   "confidence": "high",
   "pending": [
-    { "type": "letter_mail", "delivered_at": "2026-04-19T15:20:00-04:00", "piece_count": 2, "source": "informed_delivery" },
-    { "type": "package", "delivered_at": "2026-04-20T16:05:00-04:00", "tracking_number": "9400111899220000000002", "source": "informed_delivery" }
+    { "type": "letter_mail", "delivered_at": "2026-04-19T19:20:00Z", "piece_count": 2, "source": "informed_delivery" },
+    { "type": "package", "delivered_at": "2026-04-20T20:05:00Z", "tracking_number": "9400111899220000000002", "source": "informed_delivery" }
   ]
 }
 ```
@@ -737,8 +818,8 @@ Additional inputs (future vehicle detection, other-carrier deliveries in Phase 2
 
 **Phase 1 — USPS Informed Delivery (calibrate after PIN verification and real emails arrive):**
 
-- [ ] Confirm exact sender address format for each email type — may differ between digest, status updates, and delivery confirmations. Affects Gmail filter configuration.
-- [ ] Validate digest parser against real structure: letter-mail piece count extraction, correct handling of package-only digests (must not promote letter-mail state)
+- [ ] Confirm exact sender address format for each email type — may differ between digest, status updates, and delivery confirmations. Affects Gmail filter configuration. *(2026-04-30: Daily Digest and Mail Delivered both confirmed at `USPSInformeddelivery@email.informeddelivery.usps.com`; OFD and Item Delivered still TBD.)*
+- [ ] Validate digest parser against real structure: letter-mail piece count extraction, correct handling of package-only digests (must not promote letter-mail state). *(2026-04-30: HTML count-line parse anchor confirmed; package-only Sunday digest case verified — see § Confirmed parse signals.)*
 - [ ] Confirm OFD Status Update email subject/body pattern for reliable classification as OFD vs. other status updates
 - [ ] Confirm `letter_mail_exception_time: "20:00"` against longer-term observation
 - [ ] Map canonical `delivered_to` values from real Item Delivered email bodies (expected: `mailbox`, `front_door`, `other`; refine on observation)
@@ -753,7 +834,7 @@ Additional inputs (future vehicle detection, other-carrier deliveries in Phase 2
 - [ ] Define behavior for door-open in `NOT_EXPECTING` letter-mail with empty `expected_today` — almost certainly retrieval, but worth validating
 - [ ] **Empirical frequency of bulk-mail-only delivery days.** How often does the known blind spot (door-open with no email signal, silently classified as retrieval) actually occur? Helps calibrate whether Phase 3b vehicle detection is a nice-to-have or genuinely needed.
 - [ ] **Empirical frequency of outbound-mail-caused false clears.** How often does outbound mail actually corrupt queue state (outbound deposit + non-empty pending queue + no consolidating retrieval)? If frequent enough to matter, consider mailbox-flag sensor as a future hardware enhancement. If rare, accept as a known limitation.
-- [ ] Decide whether entering `EXCEPTION` state should fire an operator notification
+- [x] Decide whether entering `EXCEPTION` state should fire an operator notification *(yes — fires `usps.mail_exception` notification at severity `medium`. See § Consumer Surface.)*
 - [ ] Calibrate confidence thresholds empirically
 - [ ] Decide HA surface for manual override — voice intent, dashboard button, both?
 
@@ -763,4 +844,4 @@ Additional inputs (future vehicle detection, other-carrier deliveries in Phase 2
 
 ---
 
-*Last Updated: 2026-04-24*
+*Last Updated: 2026-05-01*

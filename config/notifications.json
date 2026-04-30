@@ -46,6 +46,14 @@
       "targets": ["people.joseph.ha_companion", "areas.*.tv"],
       "severity": "low"
     },
+    "usps.mail_delivered": {
+      "targets": ["people.joseph.ha_companion", "areas.*.tv"],
+      "severity": "low"
+    },
+    "usps.mail_exception": {
+        "targets": ["people.joseph.ha_companion", "areas.*.tv"],
+        "severity": "medium"
+    },
     "weather.alert": {
       "targets": ["people.joseph.ha_companion"],
       "severity": "low"

@@ -1,8 +1,8 @@
 # Landroid Integration
 
-Integration of Worx Landroid Vision robotic mower into Highland via MQTT bridge.
+Integration of Worx Landroid Vision robotic mower into Highland.
 
-**Status:** 📋 Planned — hardware in-hand, base not yet sited. MQTT bridge and camera implementation deferred until first mow season.
+**Status:** 📋 Phase 1 planned — hardware in-hand, base sited. `landroid_cloud` integration and dashboard card are the immediate next step.
 
 ---
 
@@ -13,7 +13,8 @@ Integration of Worx Landroid Vision robotic mower into Highland via MQTT bridge.
 - Wire-free boundary detection via camera/AI (no perimeter wire required)
 - Built-in WiFi; communicates exclusively via Worx cloud (AWS IoT Core)
 - No local API
-- Planned location: side yard (late afternoon direct sun only)
+- Sited: side yard (late afternoon direct sun only)
+- Zones mapped: side yard (0.02 acres), rear yard (0.09 acres); front yard (est. 0.25–0.30 acres) mapping in progress
 
 **Reolink Argus Eco Ultra + Solar Panel** *(to be purchased)*
 
@@ -26,97 +27,146 @@ Integration of Worx Landroid Vision robotic mower into Highland via MQTT bridge.
 
 ## Integration Philosophy
 
-Connectivity is **additive nicety, not a requirement.** The mower functions fully as a standalone appliance without any Highland integration. If the bridge breaks temporarily or permanently, the mower keeps mowing on its own schedule. This shapes every integration decision — keep it thin, keep it optional, don't build dependencies on it.
+Connectivity is **additive nicety, not a requirement.** The mower functions fully as a standalone appliance without any Highland integration. If the integration breaks temporarily or permanently, the mower continues to operate on its own schedule with its own onboard rain sensor — exactly as most users run their mower. This shapes every integration decision: keep it thin, keep it optional, don't build dependencies on it.
+
+This also drives the phasing decision. The mower is an **informational device** from Highland's perspective, not a critical automation surface. Building a custom MQTT bridge before establishing baseline infrastructure is not a good use of time. Phase 1 uses the existing `landroid_cloud` community integration to get visibility and a control surface quickly. Phase 2, if warranted, migrates to a custom bridge for deeper Node-RED integration.
 
 ---
 
-## Architecture
+## Mowing Schedule
 
-### How Worx MQTT Works
+| Day | Zone |
+|-----|------|
+| Monday | Front |
+| Tuesday | Rear + Side |
+| Wednesday | Front |
+| Thursday | Rear + Side |
+| Friday | Front |
+| Saturday | Rear + Side |
+| Sunday | Off |
 
-The mower communicates exclusively with AWS IoT Core (MQTT over TLS, port 8883). Worx's REST API (`api.worxlandroid.com`) provides:
-
-- Authentication
-- Per-account TLS certificate (valid through 2050, same cert for all clients)
-- AWS IoT endpoint hostname
-- Device serial number and topic prefix
-
-The mower publishes status payloads to `<prefix>/<serial>/commandOut` and receives command payloads on `<prefix>/<serial>/commandIn`. Status is published on a ~10-minute heartbeat and immediately in response to any inbound command.
-
-### Bridge Approach: Mosquitto Bridge
-
-The preferred integration path is a **Mosquitto bridge** on the Communication Hub — an additional bridge config that connects the existing Mosquitto instance to Worx's AWS IoT endpoint. No new services, no new containers.
-
-```
-Mower ──► AWS IoT Core ──► Mosquitto Bridge ──► highland/state/landroid/#
-                                             ◄── highland/command/landroid/#
-```
-
-The bridge subscribes to `<prefix>/<serial>/commandOut` from AWS and republishes locally. Commands flow in reverse. From Node-RED's perspective, the mower is just another MQTT device.
-
-**Setup requirements (one-time):**
-1. Authenticate against the Worx REST API to retrieve the TLS cert and AWS endpoint
-2. Write a `landroid-bridge.conf` for Mosquitto (additional bridge, not modifying the main config)
-3. Cert files live in `/etc/mosquitto/certs/landroid/` on the Communication Hub
-
-**Known fragility:** Worx has historically rotated certs or changed API responses without notice. If the bridge goes silent, the cert retrieval step may need to be re-run. This is acceptable given the "additive nicety" posture.
-
-### Alternative: `pyworxcloud` Python Bridge
-
-`pyworxcloud` is a reverse-engineered Python library (used by the HACS HA integration) that handles auth and AWS MQTT, republishing to a local broker via a thin script. More portable than the Mosquitto bridge approach but adds a Python runtime dependency. Only pursue this if the Mosquitto bridge proves unworkable.
-
-### Camera Integration Path
-
-```
-Argus Eco Ultra (WiFi) ──► RLN16-410 NVR ──► RTSP ──► Highland video pipeline
-```
-
-The NVR is the integration point. WiFi cameras connect to the NVR over the network; the NVR exposes RTSP streams identically for both WiFi and PoE cameras. The Argus Eco Ultra is a fully first-class participant in the video pipeline — no Home Hub, no separate handling, no special cases.
+Front yard gets 3 sessions per week given its larger size (est. 0.25–0.30 acres) and visibility. Rear and side run together; the side yard is small enough (0.02 acres) that it adds negligible time to a rear session. Schedule configured in the Worx app; Highland does not own scheduling in Phase 1.
 
 ---
 
-## MQTT Topics
+## Phase 1: `landroid_cloud` HA Integration
 
-| Topic | Direction | Retained | Notes |
-|-------|-----------|----------|-------|
-| `highland/state/landroid/status` | Publish | Yes | Normalized mower state |
-| `highland/event/landroid/error` | Publish | No | Error state changes |
-| `highland/command/landroid/control` | Subscribe | No | Start / stop / return to base |
+### Approach
 
-Raw AWS topics (`<prefix>/<serial>/commandOut`) are consumed by the bridge and never exposed directly on the Highland namespace.
+Install the `landroid_cloud` HACS custom component. It handles all AWS MQTT complexity internally via `pyworxcloud`, creates well-formed HA entities automatically, and requires no custom infrastructure. This is the right starting point for an informational device — low setup cost, immediately useful, and the fallback behavior (mower runs autonomously) is acceptable.
+
+### Installation
+
+1. Install `landroid_cloud` via HACS
+2. Restart Home Assistant
+3. Add the integration via Settings → Devices & Services using Worx app credentials
+4. Install `landroid-card` via HACS for the dashboard
+
+### Entities Created
+
+| Entity | Type | Notes |
+|--------|------|-------|
+| Lawn mower | `lawn_mower` | Primary control entity |
+| GPS tracker | `device_tracker` | Disabled by default; expected to provide real-time position on WR344 given built-in RTK Cloud positioning — validate after install |
+| Next schedule | Sensor | Timestamp + schedule details as attributes |
+| Battery | Sensor | Charge level |
+| Error state | Sensor | Current error code |
+| Rain delay | Sensor | Active/inactive + remaining time |
+
+**Supported mower states:** mowing, docked, returning, error, edge cut, starting, rain delayed, escaped digital fence
+
+**Vision-series limitation:** Zones and schedules are read-only via this integration — they can be read from the mower but not modified from HA. This is acceptable; schedule management stays in the Worx app.
+
+### Available HA Actions
+
+- `lawn_mower.start_mowing` — send mower out
+- `lawn_mower.dock` — stop and return to base
+- `lawn_mower.pause` — stop in place
+- `landroid_cloud.ots` — one-time schedule (start with runtime parameter)
+
+### Dashboard
+
+Install `landroid-card` (by Barma-lej, available via HACS) for a purpose-built mower dashboard card. Displays mower state, battery, error status, and control buttons in a single card.
+
+### Known Fragility
+
+- Depends on Worx cloud API remaining stable and accessible
+- A March 2025 release caused excessive API retries that locked up HA — resolved since, but worth noting as a precedent for fragility
+- `pyworxcloud` is reverse-engineered; Worx API changes can break it without notice
+
+These risks are acceptable given the "additive nicety" posture. If the integration breaks, the mower continues to operate autonomously.
 
 ---
 
-## Normalized State
+## Phase 1 Automations
 
-The raw Worx MQTT payload is JSON and contains a large number of fields. A Node-RED normalization node extracts the relevant subset:
+All automations in Phase 1 live in HA (YAML automations), not Node-RED. This is consistent with the principle of not building custom Node-RED subsystems for informational devices before baseline infrastructure is complete.
 
-| Field | Source | Notes |
-|-------|--------|-------|
-| `state` | `dat.ls` | See state code map below |
-| `error` | `dat.le` | Error code; 0 = no error |
-| `locked` | `dat.lk` | 1 = lock enabled |
-| `battery_pct` | `dat.bt.p` | 0–100 |
-| `battery_charging` | `dat.bt.c` | Boolean |
-| `rain_delay_active` | `dat.rain.s` | Boolean |
-| `rain_delay_remaining_min` | `dat.rain.cnt` | Minutes |
-| `last_seen` | derived | Timestamp of last received payload |
+### Rain Suppression
 
-**State codes (`dat.ls`):**
+If the mower starts a mow session and conditions indicate it should not be running, send `lawn_mower.dock` to return it to base. Conditions evaluated:
 
-| Code | Meaning |
-|------|---------|
-| 1 | Home / Idle |
-| 2 | Error |
-| 3 | Mowing |
-| 4 | Leaving base |
-| 5 | Going home |
-| 7 | Charging |
-| 8 | Searching wire |
-| 32 | Cutting edge |
-| 33 | Searching home |
+- **Active rainfall** — Tempest rainfall rate above threshold
+- **Recent accumulation** — Tempest accumulated rainfall in the last N hours above threshold (ground saturation)
+- **Imminent rain** — NWS precipitation probability within the session window above threshold
 
-*These are known codes from community reverse engineering. Validate against observed payloads once hardware is in-hand.*
+The mower's own onboard rain sensor handles the obvious cases. HA automation supplements with Tempest and NWS data for the cases the onboard sensor cannot see — primarily recent accumulation and forecast-based suppression.
+
+Thresholds cannot be set meaningfully before a full mow season of observed Tempest data. Start conservative and tune based on actual ground conditions and observed mower behavior.
+
+**Design note:** This is reactive, not predictive. The mower starts on its own schedule; HA evaluates conditions and sends it home if warranted. There is no way to suppress a scheduled start preemptively without taking scheduling away from the Worx app entirely, which is not a Phase 1 goal.
+
+### Error Notification
+
+When `sensor.vision_cloud_4wd_error` transitions away from `no_error`, send a notification. The sensor returns human-readable string values from a fixed map in `landroid_cloud` — routing logic matches directly against these strings.
+
+**Error state map and notification tiering:**
+
+| State value | Meaning | Routing |
+|-------------|---------|---------|
+| `lifted` | Mower lifted unexpectedly | 📺 TV + mobile (urgent — primary theft signal) |
+| `trapped` | Mower stuck | 📺 TV + mobile (urgent — needs intervention) |
+| `trapped_timeout` | Stuck for extended period | 📺 TV + mobile (urgent) |
+| `upside_down` | Mower fell over | 📺 TV + mobile (urgent — blades may have been running) |
+| `outside_wire` | Escaped the mowing zone | 📺 TV + mobile (urgent) |
+| `excessive_slope` | Reached terrain it can't handle | 📺 TV + mobile (urgent) |
+| `unreachable_charging_station` | Cannot return to base | 📺 TV + mobile (urgent — won't recover on its own) |
+| `blade_motor_blocked` | Blade obstruction | 📱 Mobile only |
+| `wheel_motor_blocked` | Wheel obstruction | 📱 Mobile only |
+| `charge_error` | Charging fault | 📱 Mobile only |
+| `battery_temperature_error` | Battery thermal fault | 📱 Mobile only |
+| `map_error` | Navigation map failure | 📱 Mobile only |
+| `mapping_exploration_failed` | Could not complete mapping | 📱 Mobile only |
+| `camera_error` | Vision AI camera fault | 📱 Mobile only |
+| `missing_charging_station` | Cannot locate base | 📱 Mobile only |
+| `timeout_finding_home` | Timed out returning to base | 📱 Mobile only |
+| `close_door_to_mow` | User action required to start | 📱 Mobile only |
+| `close_door_to_go_home` | User action required to return | 📱 Mobile only |
+| `charging_station_docking_error` | Docking fault | 📱 Mobile only |
+| `insufficient_sensor_data` | Sensor fusion failure | 📱 Mobile only |
+| `training_start_disallowed` | Training blocked | 📱 Mobile only |
+| `mapping_exploration_required` | Mapping required before mowing | 📱 Mobile only |
+| `blade_height_adjustment_blocked` | Height adjustment fault | 📱 Mobile only |
+| `unknown` | Unrecognized error code | 📱 Mobile only |
+| `rain_delay` | Rain delay active | 📋 Daily Digest only |
+| `battery_low` | Low battery | 📋 Daily Digest only (mower self-recovers) |
+| `locked` | Mower is locked | 📋 Daily Digest only (deliberate state) |
+| `battery_trunk_open_timeout` | Battery compartment issue | 📋 Daily Digest only |
+| `wire_missing` | Wire not detected | 🔇 Log only (wire-based error; should not fire on WR344) |
+| `reverse_wire` | Wire polarity error | 🔇 Log only (wire-based error; should not fire on WR344) |
+| `wire_sync` | Wire synchronization error | 🔇 Log only (wire-based error; should not fire on WR344) |
+| `ota_error` | Firmware update failed | 🔇 Log only (not user-actionable) |
+| `hbi_error` | Hardware bus error | 🔇 Log only (contact support) |
+| `rfid_reader_error` | RFID reader fault | 🔇 Log only (contact support) |
+| `headlight_error` | FiatLux headlight fault | 🔇 Log only (contact support) |
+
+**Wire-based error codes** (`wire_missing`, `reverse_wire`, `wire_sync`) should not fire on the WR344 which has no perimeter wire. If they do appear, log them and investigate — they may indicate something unexpected in Vision firmware behavior.
+
+**TV notification** uses the existing Android TV notification infrastructure (HA Companion `notify.mobile_app_*` with `androidtv` target). Include a concise title and the friendly error description. The existing `largeIcon`, `smallIcon`, and `smallIconColor` fields apply.
+
+### Daily Digest Contribution
+
+Expose mower state, last mow timestamp, battery level, and any active errors or rain delay as HA sensor data. Node-RED Daily Digest flow consumes these via HA state for inclusion in the morning digest.
 
 ---
 
@@ -138,107 +188,89 @@ The mower has built-in security independent of any Highland integration:
 
 - **Lift sensor** — physical tilt/lift sensor always active when powered on; stops blades immediately on lift regardless of mowing state
 - **Security PIN** — locks the mower; wrong PIN triggers audible alarm
-- **Lock function** — when enabled, triggers an audible alarm if the mower is lifted and carried outside the yard perimeter (GPS/geofence-based on Vision models, not wire-based)
+- **Lock function** — when enabled, triggers an audible alarm if the mower is lifted and carried outside the yard perimeter (GPS/geofence-based on Vision models)
 - **WiFi kill** — mower stops operating after three consecutive days outside WiFi coverage
-
-The WA0865 alarm module (sold separately) adds a dedicated high-decibel alarm with its own backup battery, ensuring the alarm fires even during charging when the main battery could theoretically be removed.
-
-### MQTT Signal: `dat.le` (Lift Error)
-
-The lift sensor populates `dat.le` (error code field) with a non-zero value when the mower is lifted unexpectedly. This fires in both theft vectors — the sensor is always active when the unit is powered on.
-
-**Critical limitation for the docked-theft vector:** The mower heartbeats to AWS approximately every 10 minutes. While actively mowing it communicates more frequently and an error state likely triggers an immediate publish. While docked and charging it may be in a lower-activity comms state, meaning the MQTT message could lag the physical lift event by up to ~10 minutes. Additionally, if the mower is carried out of WiFi range, it goes silent on MQTT immediately. The MQTT notification is therefore a **corroborating signal**, not a primary real-time alarm.
-
-**`dat.lk` (lock state)** is also worth monitoring — a transition to unlocked without a known authorized action is an additional signal.
-
-*Note: Community error code tables were reverse-engineered from wire-based models. The exact `dat.le` value for the lifted state on Vision-series hardware needs validation against observed WR344 payloads.*
 
 ### Dedicated Security Camera
 
-A **Reolink Argus Eco Ultra** pointed at the charging base serves as the primary real-time detection layer, directly addressing the MQTT timing gap for the docked-theft vector.
+A **Reolink Argus Eco Ultra** pointed at the charging base serves as the primary real-time detection layer. Camera is tree-mounted pointing directly at the dock; exact tree TBD once a suitable candidate is confirmed, but mount type and orientation are settled.
 
-**Why this works well for a fixed-asset use case:**
-
-The mower base is a fixed, known scene. Unlike general perimeter surveillance where the LLM must interpret an arbitrary scene, the camera here has a single binary question: *is a person interacting with the mower?* This makes analysis cheaper, faster, and higher-confidence.
+The mower base is a fixed, known scene. The camera has a single binary question to answer: *is a person interacting with the mower?* This makes analysis cheaper, faster, and higher-confidence than general perimeter surveillance.
 
 The prompt pattern:
 
 > *"This is a fixed camera pointed at a robotic lawn mower on its charging base. Does the image show a person approaching, touching, lifting, or otherwise interacting with the mower? The mower should be stationary and unattended. Answer yes/no and briefly describe what you see."*
 
-**Pipeline:**
-
-Fits directly into the existing video pipeline's three-stage ladder (see `subsystems/VIDEO_PIPELINE.md`):
-
-1. **CPAI triage** — person detection gate; no person in frame → discard immediately
+**Pipeline** (see `subsystems/VIDEO_PIPELINE.md`):
+1. **CPAI triage** — person detection gate; no person in frame → discard
 2. **Gemini snapshot analysis** — focused prompt above; yes → escalate
 3. **Notification** — immediate push via Utility: Notifications with keyframe attached
 
 **Two-signal confirmation:**
 
-| Signal | Covers Vector 1 (docked) | Covers Vector 2 (running) | Latency |
-|--------|--------------------------|---------------------------|---------|
+| Signal | Vector 1 (docked) | Vector 2 (running) | Latency |
+|--------|-------------------|--------------------|---------|
 | Camera (person detection) | ✅ | ✅ (if in frame) | Seconds |
-| `dat.le` MQTT lift error | ✅ (with delay caveat) | ✅ (likely immediate) | 0–10 min |
+| HA error state (lift error) | ✅ (with delay caveat) | ✅ | Seconds–minutes |
 
-Camera fires first; `dat.le` confirms the lift happened. Either signal alone warrants a notification; both together warrant an urgent alert.
+**Camera siting:**
 
-**Camera siting — to resolve once base is placed:**
+- Tree-mounted, pointing directly at the dock
+- Mount at roughly 6–8 feet; higher loses the human-object interaction geometry
+- FOV should cover a 10–15 foot approach radius, not just the base itself
+- Avoid pointing into late afternoon sun — if solar panel orientation and lens direction conflict, favor the lens angle; afternoon sun in this location is strong enough that an oblique panel angle still charges adequately
 
-- Mount at roughly 6–8 feet; higher than that and the camera is staring at the tops of heads rather than capturing the human-object interaction
-- Position at ~45° to the side of the base rather than directly in front or behind — gives visibility of both approach and the lift action as a coherent sequence
-- FOV should capture a 10–15 foot approach radius, not just the base itself — the goal is to detect someone walking toward the mower before they reach it
-- Avoid pointing into late afternoon sun (side yard context) — if solar panel orientation and lens direction conflict, favor the lens angle and accept slightly lower solar yield; afternoon sun in this location is strong enough that an oblique panel angle will still charge adequately
-- Strap mounts support tree or pole mounting where no fixed structure is available
-
-**Authorized interaction handling:**
-
-Accept false positives during legitimate maintenance rather than building suppression logic. Time-of-day context handles most of the ambiguity: a 3am alert is categorically different from a 2pm one.
+**Authorized interaction handling:** Accept false positives during legitimate maintenance. Time-of-day context handles most ambiguity — a 3am alert is categorically different from a 2pm one.
 
 ---
 
-## Planned Automations
+## Phase 2: Custom MQTT Bridge (If Warranted)
 
-### Rain Delay Awareness
+Phase 2 is only worth pursuing if one or more of the following is true:
 
-Node-RED monitors `rain_delay_active`. If a mow session was expected but rain delay is active, include in the Daily Digest or send a low-priority notification. No action required — informational only.
+- The `landroid_cloud` integration proves consistently unreliable
+- Automation needs grow beyond what HA can deliver (e.g., Node-RED-owned scheduling, zone targeting, deeper Tempest/NWS synthesis)
+- The "HA is consumer only" architectural principle becomes a friction point for the mower specifically
 
-### Error Notification
+### Approach
 
-When `error` transitions from 0 to non-zero, send a notification via Utility: Notifications. Include the error code and a human-readable description. Map known error codes to friendly strings; unknown codes fall through with the raw value.
+A **Mosquitto bridge** on the Communication Hub connects directly to Worx's AWS IoT Core endpoint, bypassing the `landroid_cloud` integration entirely. Node-RED becomes the normalization and automation engine; HA receives entities via MQTT Discovery.
 
-### Anti-Theft Alert
+```
+Mower ──► AWS IoT Core ──► Mosquitto Bridge ──► highland/state/landroid/#
+                                             ◄── highland/command/landroid/#
+```
 
-When the camera pipeline detects a person interacting with the mower base, send an urgent push notification with the keyframe. If `dat.le` also transitions to a lift error code within a configurable window (suggest 15 minutes), escalate to a second notification confirming the lift occurred. Single-signal (camera only) is informational; dual-signal is urgent.
+### Setup Requirements (One-Time)
 
-### Calendar Suppression
+1. Authenticate against the Worx REST API to retrieve TLS cert and AWS endpoint
+2. Write `landroid-bridge.conf` for Mosquitto (drop-in, does not modify main config)
+3. Cert files live in `/etc/mosquitto/certs/landroid/` on the Communication Hub
 
-If an active calendar suppression is in effect (guests, parties, etc.), send a pause command via `highland/command/landroid/control`. Resume when suppression clears. Low priority — the mower's built-in schedule handles most cases.
+**Known fragility:** Worx has historically rotated certs without notice. Re-running cert extraction resolves it. Acceptable given the additive nicety posture.
 
-### Daily Digest Integration
+### Reference Material
 
-Include mower status summary in the Daily Digest: last mow time, current state, battery level, any active errors or rain delay.
+Community reverse engineering sources, in order of usefulness:
+
+- **`virtualzone/landroid-bridge`** — original cert extraction and bridge documentation; read the source
+- **`pyworxcloud` (PyPI/GitHub)** — most up-to-date payload field mappings and command structures; `dump_mapping.py` decodes raw MQTT payloads into human-readable output
+- **`iobroker.worx`** — well-maintained ioBroker adapter; good secondary reference for payload structures
+- **HA Community forums** — search "Landroid MQTT bridge"; practical notes from people who've done it
+- **`roboter-forum.com`** — German robotic mower forum; raw payload samples posted; Google Translate sufficient
+
+**Critical caveat:** Virtually all community documentation is from wire-based models. Vision-series payload behavior needs validation against observed WR344 payloads. The first MQTT Explorer session watching a live mow cycle is primary research — WR344-specific payload documentation is sparse.
+
+### Phase 2 Validation Items
+
+Before building the Node-RED normalization flow, validate against observed WR344 payloads:
+
+- Exact topic prefix (community reports `PRM100` but may be model-dependent)
+- Exact `dat.le` error code for lifted state on Vision hardware
+- Whether `dat.le` fires immediately while docked or only during active mow
+- Whether position coordinates appear in `commandOut` payload (would enable live position on HA map card)
+- Whether zone targeting via `commandIn` works on Vision firmware (would enable Node-RED-owned scheduling)
 
 ---
 
-## Open Questions
-
-- Exact topic prefix for WR344 — confirm from actual API response (community reports `PRM100` but this may be model-dependent)
-- Whether Vision-series models use the same MQTT protocol as older Landroid models — needs validation once hardware is in-hand
-- Exact `dat.le` error code for the lifted state on WR344 — validate against observed payloads
-- Whether `dat.le` transitions immediately while docked, or only during active mow — validate once hardware is in-hand
-- Rain delay threshold strategy: defer to mower's own logic or supplement with NWS/Tempest forecast data?
-- Camera mount point — TBD once base is sited; tree/pole strap mount likely given side yard location
-
----
-
-## Implementation Notes
-
-- Do not implement the MQTT bridge until base is sited and at least one mow cycle has been observed
-- Run cert extraction manually first to validate before writing the Mosquitto bridge config
-- Camera siting should be decided concurrently with base placement — treat them as a paired decision
-- Treat the MQTT bridge as optional infrastructure — a failure here should never produce noise unless it's been working and then stops
-- The camera integrates via RLN16-410 NVR over WiFi; no special handling required beyond normal video pipeline onboarding
-
----
-
-*Last Updated: 2026-04-13*
+*Last Updated: 2026-05-04*

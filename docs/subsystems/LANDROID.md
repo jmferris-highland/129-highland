@@ -2,7 +2,7 @@
 
 Integration of Worx Landroid Vision robotic mower into Highland.
 
-**Status:** 📋 Phase 1 in progress — `landroid_cloud` installed, rain suppression state machine designed, Node-RED flow implementation pending.
+**Status:** 📋 Phase 1 in progress — `landroid_cloud` installed, schedule and rain suppression state machine designed, Node-RED flow implementation pending. Edge cut implementation blocked pending `landroid_cloud` fix for Vision hardware.
 
 ---
 
@@ -20,34 +20,37 @@ Integration of Worx Landroid Vision robotic mower into Highland.
 
 - 4K, 125° FOV, color night vision
 - Solar/battery powered, WiFi
-- Strap mounts included for both camera and solar panel — supports tree or pole mounting where no fixed structure is available
+- Strap mounts included — supports tree or pole mounting where no fixed structure is available
 - Connects to the RLN16-410 NVR over WiFi; NVR exposes RTSP stream to the Highland video pipeline identically to PoE cameras
 
 ---
 
 ## Integration Philosophy
 
-Connectivity is **additive nicety, not a requirement.** The mower functions fully as a standalone appliance without any Highland integration. If the integration breaks temporarily or permanently, the mower continues to operate on its own schedule. This shapes every integration decision: keep it thin, keep it optional, don't build dependencies on it.
+Connectivity is **additive nicety, not a requirement** for the mower's core function. If the Highland integration breaks temporarily or permanently, Mowen continues to sit safely on his dock. What is lost is automated scheduling and rain management — not catastrophic, but worth designing for reliability.
 
-This also drives the phasing decision. The mower is an **informational device** from Highland's perspective, not a critical automation surface. Phase 1 uses the existing `landroid_cloud` community integration to get visibility and a control surface quickly. Phase 2, if warranted, migrates to a custom bridge for deeper Node-RED integration.
+Node-RED owns **both** the schedule and rain management. The Worx app schedule is disabled entirely — no conflict, no race conditions, no intercepting a `starting` event the app triggered. This was chosen over a hybrid approach because:
+
+- The firmware's coverage queue naturally distributes work across zones without needing a rigid alternating zone schedule
+- Rain-interrupted sessions already break any predictable zone alternation anyway
+- Node-RED owning the schedule eliminates the `starting` intercept entirely — we simply don't send `start_mowing` if conditions are bad
+- The cleaner design outweighs the loss of the app schedule as a fallback
+
+**Failure mode:** If Node-RED is down, Mowen does not mow. This is the accepted tradeoff.
 
 ---
 
 ## Mowing Schedule
 
-| Day | Zone |
-|-----|------|
-| Monday | Front |
-| Tuesday | Rear + Side |
-| Wednesday | Front |
-| Thursday | Rear + Side |
-| Friday | Front |
-| Saturday | Rear + Side |
-| Sunday | Off |
+Node-RED issues commands at `schedule_start` each day (Monday through Saturday). The Worx app schedule is disabled entirely. Sunday is the only fixed day off.
 
-Front yard gets 3 sessions per week given its larger size (est. 0.25–0.30 acres) and visibility. Rear and side are mapped as a single combined L-shaped zone (open passage between them, ~20–25 feet at narrowest). Schedule configured in the Worx app; Highland does not own scheduling.
+**Start time: 9:00 AM** — late enough for dew to burn off (front yard slope receives early morning sun), early enough to complete before evening moisture accumulates.
 
-All sessions start at **9:00 AM** — late enough for dew to burn off (front yard slope receives early morning sun), early enough to complete before evening moisture accumulates.
+**Edge cut days: Wednesday and Sunday.** Community consensus for WR344 is twice weekly. On edge cut days, Node-RED issues `landroid_cloud.ots` with `boundary: true` first and waits for completion before sending `start_mowing`. Sunday edge cuts are followed by a normal mow session — Sunday is not a rest day.
+
+**Zone distribution:** No zone-specific schedule. Mowen's firmware coverage queue naturally prioritizes unmowed and partially-mowed areas across all zones. Observed behavior confirms the firmware distributes coverage intelligently — a rigid alternating zone schedule would be redundant complexity.
+
+**App configuration:** Schedule disabled in Worx app. "Mow When It Is Raining" = ON (disables onboard rain delay). Node-RED owns all start, stop, and rain management decisions.
 
 ---
 
@@ -58,21 +61,45 @@ Captured from live WR344 operation. Use this as the reference for flow design.
 ### Normal Mow Cycle
 
 ```
-starting → mowing → returning → docked → charging → mowing (resumes after charge)
+[NR sends start_mowing] → starting → mowing → returning → docked
+```
+
+### Normal Edge Cut Cycle
+
+```
+[NR sends ots boundary:true] → starting → edge_cut → returning → docked
 ```
 
 ### Low Battery Mid-Session
 
+The battery recharge signature applies equally to both mowing and edge cut sessions:
+
+**During coverage mowing:**
 ```
 mowing → [error: battery_low] → returning → docked → [error: no_error] → starting → mowing
 ```
 
+**During edge cut:**
+```
+edge_cut → [error: battery_low] → returning → docked → [error: no_error] → starting → edge_cut (expected — unconfirmed)
+```
+
 - `battery_low` error fires at the 10% discharge threshold
 - Error clears approximately 2.5 minutes after docking, once battery climbs back above 10%
-- Mower resumes mowing autonomously once sufficiently charged — `starting` fires without any external command
-- This sequence is the **battery recharge signature** — the presence of `battery_low` before `returning` distinguishes a recharge cycle from a natural session completion or a Node-RED-forced dock
-- `battery_low` followed by rising battery level is normal operational behavior — not a notification-worthy event
-- `battery_low` persisting without rising battery level indicates Mowen did not make it back to dock — escalate to mobile
+- Mower resumes autonomously once sufficiently charged — `starting` fires without any external command
+- Whether an interrupted edge cut resumes from where it left off (consistent with coverage mowing behavior) or restarts from scratch is **unconfirmed** — requires empirical observation once edge cut fix lands
+
+### The `returning` Disambiguation Problem
+
+`returning` alone is ambiguous — it means Mowen is heading home but does not indicate why. The reason must be inferred from what preceded it:
+
+| What preceded `returning` | Cause | Response |
+|---------------------------|-------|----------|
+| `battery_low` error was active (`battery_low_pending` = true) | Battery recharge mid-session | None — Mowen resumes autonomously |
+| Node-RED issued `lawn_mower.dock` | Forced dock (rain or end-of-day) | Monitor conditions; resume when appropriate |
+| Neither of the above | Natural session completion | Session done for today |
+
+**`battery_low_pending` flag** is the discriminator. It is set when `battery_low` error fires and cleared when the error returns to `no_error`. When `returning` is observed, this flag determines whether the return is a recharge cycle or a completion. This applies identically to both mowing and edge cut sessions.
 
 ### Rain Delay (Legacy — pre-Highland)
 
@@ -80,62 +107,42 @@ mowing → [error: battery_low] → returning → docked → [error: no_error] �
 mowing → [error: rain_delay] → returning → rain_delayed
 ```
 
-This state sequence applied when the Worx app's onboard rain delay feature was active. With "Mow When It Is Raining" enabled in the Worx app (rain delay permanently disabled for Highland operation), `rain_delayed` will no longer appear. Node-RED owns all rain management from that point. Documented here for reference only.
+This state sequence applied when the Worx app's onboard rain delay feature was active. With "Mow When It Is Raining" enabled in the Worx app (rain delay permanently disabled for Highland operation), `rain_delayed` will no longer appear. Node-RED owns all rain management. Documented here for reference only.
 
 **Why the onboard rain delay was disabled:**
 - The onboard rain sensor uses a cross-hatch plastic surface that holds water droplets via nucleation points, causing it to read "wet" for up to 7 hours after rain stops
 - The rain delay cannot be toggled programmatically via `landroid_cloud` — only manually in the app
-- When in `rain_delayed` state, `lawn_mower.start_mowing` is blocked — the sensor reading wet will immediately return Mowen to the dock
+- When in `rain_delayed` state, `lawn_mower.start_mowing` is blocked — the sensor reading wet immediately returns Mowen to the dock
+- `number.set_value` for the rain delay entity times out on Vision hardware — write path appears non-functional for this entity
 - These constraints make the onboard rain delay incompatible with Tempest-owned rain management
-
-### Three-Way Docking Distinction
-
-How Mowen comes to be in `docked` state determines the appropriate response:
-
-| Cause | Signal | `incomplete` flag | Action |
-|-------|--------|-------------------|--------|
-| Battery recharge | `battery_low` error precedes `returning` | No change | None — Mowen resumes autonomously |
-| Node-RED forced dock | We issued `lawn_mower.dock` while state was `mowing` or `starting` | Set to true | Resume when conditions allow |
-| Natural session completion | `docked` with no preceding `battery_low` AND no command from us | Clear to false | None — session done |
 
 ### Schedule Window End Behavior
 
-**Observed:** Mowen self-docks at the end of his schedule window even on a controlled day, even after manual overrides. If forced back out after the window has closed, he will start, mow briefly, and return to dock within minutes. The firmware enforces the schedule window end autonomously.
+**Observed:** Mowen self-docks at the end of his previous schedule window even after manual overrides. If forced back out after the window closed, he starts, mows briefly, and returns within minutes.
 
-Node-RED adds a **30-minute safety net** after `schedule_end` as belt-and-suspenders: if Mowen is not `docked` at that point, send `lawn_mower.dock`.
+**Important:** This behavior was confirmed while the app schedule was active. Whether it persists after the app schedule is disabled is unconfirmed — Node-RED's end-of-day safety net is the primary mechanism once the app schedule is gone.
+
+### Mid-Charge at Schedule End (Edge Case)
+
+If Mowen docks for a battery recharge mid-session and the schedule end time arrives while he is still charging, he will attempt to resume autonomously after charging via `starting`. Node-RED does not send `start_mowing` outside the schedule window, creating a gap.
+
+**Handling:**
+1. At `schedule_end`, if `battery_low_pending` is set: send `lawn_mower.dock` — whether this cancels the pending autonomous resume is **unconfirmed, requires empirical testing**
+2. **Narrow `starting` safety net** — if `starting` fires outside the schedule window, immediately send `lawn_mower.dock`. Scoped exclusively to post-schedule `starting` events.
+
+**Validation test:** Next time Mowen docks mid-session for battery, wait for charging to begin, then send `lawn_mower.dock`. Observe whether he resumes after charging or remains docked.
 
 ### Coverage Map Retention and Completion Priority
 
-The WR344 maintains a persistent coverage map across all mapped zones simultaneously. When a session is interrupted — whether by manual stop, rain delay, or end of schedule window — the firmware queues the incomplete coverage and resumes from the point of interruption on the next session, regardless of which zone the daily schedule calls for.
+The WR344 maintains a persistent coverage map across all mapped zones simultaneously. Interrupted sessions are queued and resumed from the point of interruption on the next session, regardless of zone.
 
-**Observed behavior:**
-- Rear yard session manually stopped mid-coverage, then resumed two days later from the exact point of interruption
-- Coverage map retention confirmed across rain delay interruptions
-- After being sent home mid rear-yard session and fully recharged, Mowen did not restart autonomously (Option A confirmed)
-- When `start_mowing` was sent externally, Mowen headed to the front yard — a different zone — to complete coverage interrupted by the previous day's rain delay, rather than continuing the scheduled rear yard session
-- Completion priority overrides the daily zone schedule: firmware works through all outstanding incomplete coverage before treating the current zone as fresh
+**Confirmed end-to-end:** Front yard (rain delay) completed before rear yard (manual dock), both from exact interruption points. Both zones, both interruption types confirmed.
 
-**The full completion priority behavior (confirmed):**
-
-Finish front yard incomplete coverage → finish rear yard incomplete coverage → resume normal schedule
-
-Observed end-to-end: front yard interrupted by rain delay and rear yard interrupted by manual dock were both queued simultaneously. External `start_mowing` caused Mowen to complete the front yard first (older interruption), then resume the rear yard from the exact point of interruption. Both zones, both interruption types, exact position resume confirmed across all.
-
-**Implication for rain suppression:**
-
-Node-RED does not need to track which zone was interrupted or in what order. The coverage prioritization is entirely Mowen's responsibility. Node-RED's role is purely: watch conditions, send `lawn_mower.dock` when conditions are bad, send `lawn_mower.start_mowing` when conditions clear. Mowen handles the rest.
-
-### Schedule Window Behavior After Interruption
-
-**Option A confirmed** — Mowen does not autonomously restart after being sent home mid-session. He docks, charges fully, and waits. No autonomous behavior occurs within the remaining schedule window. A `lawn_mower.start_mowing` command or the next scheduled session trigger is required to resume. Node-RED fully controls the resume decision.
+**Implication for scheduling:** Node-RED issues `start_mowing` without zone specification. Mowen determines where to go based on his coverage queue.
 
 ### Battery Voltage Profile
 
-`sensor.vision_cloud_4wd_battery_voltage` exposed by `landroid_cloud`. Precision set to two decimal places for trend detection.
-
-The WR344 does **not** trickle charge. The firmware uses a deliberate charge/discharge cycle to preserve lithium battery longevity — the charger runs to full, switches off, allows the battery to discharge to a lower threshold, then charges again. This is by design.
-
-**Observed voltage boundaries:**
+`sensor.vision_cloud_4wd_battery_voltage` — precision set to two decimal places for trend detection. The WR344 does **not** trickle charge; firmware uses a deliberate charge/discharge cycle.
 
 | Condition | Voltage |
 |-----------|--------|
@@ -143,19 +150,15 @@ The WR344 does **not** trickle charge. The firmware uses a deliberate charge/dis
 | Docked discharge lower threshold | ~17.0–17.3V |
 | Active mow discharge floor (at `battery_low`) | ~17V or below |
 
-**`binary_sensor.vision_cloud_4wd_charging` is non-functional** — it does not reflect actual charging state. Use voltage trend derived from `battery_voltage` instead.
-
-**Inferred charging state heuristic:**
+`binary_sensor.vision_cloud_4wd_charging` is **non-functional**. Use voltage trend instead.
 
 | Condition | Inferred state |
 |-----------|---------------|
 | Voltage < 20V and rising between polls | Charging |
-| Voltage ≥ 20V | Fully charged / at ceiling |
+| Voltage ≥ 20V | Fully charged |
 | Voltage < 20V and falling between polls | Discharging |
 
-Implementation: store previous voltage reading in context, compare to current reading on each update. Require two consecutive deltas in the same direction before committing to a state — a single flat or ambiguous reading between polls should not trigger a state change.
-
-Mowing sessions are distinguishable from docked discharge cycles by discharge rate — motor load during mowing draws significantly more current than standby electronics, producing a visibly steeper voltage drop.
+Require two consecutive deltas in the same direction before committing to a state.
 
 ### `battery_low` Error Payload Structure
 
@@ -170,9 +173,7 @@ Mowing sessions are distinguishable from docked discharge cycles by discharge ra
 }
 ```
 
-- `msg.payload` contains the error string directly — use this as the routing key in switch nodes
-- `msg.data.old_state.state` provides the previous state for transition validation
-- `msg.data.new_state.last_changed` provides ISO timestamp of the transition
+`msg.payload` contains the error string directly — use as routing key in switch nodes.
 
 ---
 
@@ -180,287 +181,362 @@ Mowing sessions are distinguishable from docked discharge cycles by discharge ra
 
 ### Blade Runtime Sensors
 
-Two blade runtime sensors are exposed by `landroid_cloud`:
-
 | Entity | Purpose |
 |--------|---------|
-| `sensor.vision_cloud_4wd_blade_runtime_total` | Odometer — cumulative lifetime hours on the blade disc; never resets; useful for disc replacement decisions and asset history |
-| `sensor.vision_cloud_4wd_blade_runtime_since_reset` | Trip meter — hours since last blade replacement; resets when blade replacement is logged in the Worx app; use this as the maintenance trigger |
+| `sensor.vision_cloud_4wd_blade_runtime_total` | Odometer — cumulative lifetime hours; never resets |
+| `sensor.vision_cloud_4wd_blade_runtime_since_reset` | Trip meter — hours since last replacement logged in Worx app |
 
-**Workflow:**
-1. Replace blades
-2. Log the replacement in the Worx app — this resets `blade_runtime_since_reset` to zero
-3. Highland watches `blade_runtime_since_reset` and sends a notification when it crosses the replacement threshold
-4. Repeat
+**Threshold:** 150 hours based on WR344 community consensus. Adjust at first replacement.
 
-**Threshold:** Community consensus for the WR344 specifically is 150–200 hours of blade runtime between replacements — meaningfully higher than Worx's generic 1–3 month guidance, which applies across the broader Landroid lineup. At the current schedule across ~0.4 acres total, this works out to roughly 3–4 months during active mowing season. Set the initial notification threshold at 150 hours and adjust based on observed blade condition at first replacement.
+**Workflow:** Replace blades → log in Worx app → Highland notifies at threshold → repeat.
 
 ### Regular Maintenance Schedule
 
-**After every few sessions (visual check, ~5 minutes):**
-- Clear grass and debris from the cutting disc area — buildup impedes airflow and cutting quality
-- Check the Vision AI camera lenses — dirt, spider webs, and water spots degrade obstacle detection
-- Inspect wheels for wrapped debris (string, hair, grass around axles)
-- Check dock charging contacts on both mower and base — debris or oxidation causes docking errors
+**After every few sessions:** Clear debris from cutting disc, check camera lenses, inspect wheels, check dock contacts.
 
-**Monthly:**
-- Full undercarriage cleaning — compressed air or stiff brush; accumulated soil affects cutting height consistency
-- Inspect the bumper sensor — front bumper is a physical contact sensor; must move freely
-- Check blade disc bolts are tight
-- Inspect the camera housing for cracks or moisture ingress
-- Check blade condition visually; replace if visibly worn regardless of runtime hours
+**Monthly:** Full undercarriage clean, inspect bumper sensor, check blade disc bolts, inspect camera housing.
 
-**Pre-season:**
-- Full inspection and clean
-- Fresh blades
-- Verify charging base is level — unlevel base is a common cause of `charging_station_docking_error`
-- Confirm dock charging contacts are clean
+**Pre-season:** Full inspection, fresh blades, verify base level, clean contacts.
 
-**Post-season / winter storage:**
-- Full clean including undercarriage
-- Remove battery if storing in a sub-freezing environment — lithium battery degradation accelerates below freezing
-- Store Mowen and the base indoors or in a protected location
-- The Landroid Vision Garage provides UV and weather protection during the season, reducing seasonal wear
+**Post-season / winter storage:** Full clean, remove battery if sub-freezing storage, store indoors.
 
 ### Blade Replacement Notification
 
-HA automation watches `sensor.vision_cloud_4wd_blade_runtime_since_reset`. When it crosses the configured threshold, send a mobile notification prompting blade inspection and replacement. This is a reminder, not an urgent alert — route through the standard mobile notification channel, not TV.
-
-After replacing blades, log the replacement in the Worx app to reset `blade_runtime_since_reset`. If the reset does not happen within 24 hours of the notification, send a follow-up reminder — the sensor is only useful if the reset discipline is maintained.
+Watch `sensor.vision_cloud_4wd_blade_runtime_since_reset`. At 150 hours → mobile notification. No reset within 24 hours → follow-up reminder.
 
 ---
 
 ## Phase 1: `landroid_cloud` HA Integration
 
-### Approach
-
-Install the `landroid_cloud` HACS custom component. It handles all AWS MQTT complexity internally via `pyworxcloud`, creates well-formed HA entities automatically, and requires no custom infrastructure. This is the right starting point for an informational device — low setup cost, immediately useful, and the fallback behavior (mower runs autonomously) is acceptable.
-
 ### Installation
 
 1. Install `landroid_cloud` via HACS
 2. Restart Home Assistant
-3. Add the integration via Settings → Devices & Services using Worx app credentials
-4. Set "Mow When It Is Raining" to **ON** in the Worx app (disables onboard rain delay — see Rain Suppression)
-5. Install `landroid-card` via HACS for the dashboard
+3. Add integration via Settings → Devices & Services using Worx credentials
+4. **Disable schedule entirely in Worx app**
+5. Set "Mow When It Is Raining" to **ON** (disables onboard rain delay)
+6. Install `landroid-card` via HACS for the dashboard
 
-### Entities Created
+### Entities
 
 | Entity | Type | Notes |
 |--------|------|-------|
 | Lawn mower | `lawn_mower` | Primary control entity |
-| GPS tracker | `device_tracker` | State is permanently `away` — lat/lon coordinates are in attributes, not state; poll attributes directly if position data is needed |
-| Next schedule | Sensor | Timestamp + schedule details as attributes |
+| GPS tracker | `device_tracker` | State permanently `away` — lat/lon in attributes only |
 | Battery | Sensor | Charge level |
-| Battery voltage | Sensor | Raw voltage — precision set to two decimal places; used for charging state inference |
+| Battery voltage | Sensor | Precision set to two decimal places |
 | Error state | Sensor | Current error code string |
-| Rain delay | Sensor | No longer meaningful once rain delay is disabled; retained for reference |
-| Zone | `select` | Current zone — read-only on Vision hardware |
-| Blade runtime since reset | Sensor | Hours since last blade replacement logged in Worx app |
-| Blade runtime total | Sensor | Cumulative lifetime blade disc hours |
+| Zone | `select` | Read-only on Vision hardware |
+| Blade runtime since reset | Sensor | Hours since last replacement |
+| Blade runtime total | Sensor | Cumulative lifetime hours |
 
 **Supported mower states:** `mowing`, `docked`, `returning`, `error`, `edge_cut`, `starting`, `escaped_digital_fence`
 
-**Note:** `rain_delayed` will no longer appear once "Mow When It Is Raining" is enabled in the Worx app.
-
-**Vision-series limitation:** Zones and schedules are read-only via this integration — they can be read from the mower but not modified from HA. This is acceptable; schedule management stays in the Worx app.
-
 ### Available HA Actions
 
-- `lawn_mower.start_mowing` — send mower out; resumes from coverage map position (confirmed via observed behavior)
+- `lawn_mower.start_mowing` — send mower out; resumes from coverage map position (confirmed)
 - `lawn_mower.dock` — stop and return to base
 - `lawn_mower.pause` — stop in place
-- `landroid_cloud.ots` — one-time schedule (start with runtime parameter)
+- `landroid_cloud.ots` — one-time schedule; `boundary: true` triggers dedicated edge cut (confirmed); `runtime` parameter purpose for edge cuts is unclear — test once fix lands
 
-### Dashboard
+### Edge Cut — Current Status
 
-Install `landroid-card` (by Barma-lej, available via HACS) for a purpose-built mower dashboard card. Displays mower state, battery, error status, and control buttons in a single card.
+`landroid_cloud.ots` with `boundary: true` triggers a dedicated edge cut on Vision hardware. However, a bug in `landroid_cloud` currently causes a "This device does not support Edgecut-on-demand" error on Vision models. A fix is in beta (see [GitHub issue #1253](https://github.com/MTrab/landroid_cloud/issues/1253)) and is expected in the next general release. Edge cut scheduling in Node-RED is designed but not yet implementable.
 
 ### Known Fragility
 
-- Depends on Worx cloud API remaining stable and accessible
-- A March 2025 release caused excessive API retries that locked up HA — resolved since, but worth noting as a precedent for fragility
+- Depends on Worx cloud API remaining stable
+- March 2025 release caused excessive API retries locking up HA — resolved, but noted
 - `pyworxcloud` is reverse-engineered; Worx API changes can break it without notice
-
-These risks are acceptable given the "additive nicety" posture. If the integration breaks, the mower continues to operate autonomously — though without rain protection if Highland is down (see Rain Suppression failure mode).
+- **If Node-RED is down, Mowen does not mow** — no fallback schedule exists
 
 ---
 
 ## Phase 1 Automations
 
-Error notification and blade replacement reminder live in HA (YAML automations). Rain suppression is complex enough to belong in Node-RED (`Utility: Landroid`) — the Tempest data, NWS minutely forecast, and stateful flag management are already there.
+### Schedule, Edge Cuts, and Rain Suppression
 
-### Rain Suppression
-
-Rain suppression is owned entirely by Node-RED. The onboard rain delay feature is permanently disabled in the Worx app ("Mow When It Is Raining" = ON). Node-RED monitors the Tempest 24/7 and manages all rain-related dock and resume decisions.
-
-**Failure mode:** If Highland is down, Mowen has no rain protection and will mow in precipitation. This is an acceptable tradeoff given the "additive nicety" posture — a wet mow is suboptimal but not a safety issue.
-
-**App configuration:**
-- "Mow When It Is Raining" = ON (permanently disables onboard rain delay)
-- Rain delay duration: 30 minutes retained in app as fallback — not normally used
+Owned entirely by Node-RED (`Utility: Landroid`). Implemented as two independent FSMs within the flow, each with a distinct responsibility.
 
 ---
 
-#### `incomplete` Flag
+#### Architecture: Two FSMs
 
-The central state variable for rain suppression. Tracks whether Node-RED has interrupted a session and a resume is expected.
+```
+ Tempest MQTT ──► Rain Monitor FSM ──► mow_ready (global context) ──► Session Manager FSM
+                       │
+                       ├── binary_sensor: Rain Delay Active
+                       ├── sensor: Cooldown End Time
+                       ├── sensor: Event Accumulation
+                       ├── sensor: Rain Tier
+                       └── sensor: Rain Monitor State
 
-- **Set** when: Node-RED sends `lawn_mower.dock` AND prior mower state was `mowing` or `starting`
-- **Cleared** when: natural session completion detected (see Three-Way Docking Distinction) OR end-of-day reset
-- **Not changed** when: Mowen docks autonomously for battery recharge (battery recharge signature present)
-- **Persists overnight** if a rain event is not fully resolved before the next day's schedule
+                  Session Manager FSM
+                       │
+                       └── sensor: Next Mow Time
+```
+
+**Rain Monitor** runs continuously 24/7. Owns all weather observation, accumulation tracking, and cooldown logic. Exposes a single inter-FSM signal (`mow_ready`) to the Session Manager and publishes operational state as HA entities.
+
+**Session Manager** runs within the schedule window. Owns the daily session lifecycle, edge cut sequencing, and completion detection. Consumes `mow_ready` from the Rain Monitor but has no knowledge of rainfall, accumulation, or cooldown internals.
+
+**Communication surface between FSMs:**
+
+| Signal | Type | Direction | Purpose |
+|--------|------|-----------|----------|
+| `mow_ready` | bool | Rain Monitor → Session Manager | OK to send mow/edge cut commands right now |
+| `cooldown_end_time` | timestamp \| null | Rain Monitor → Session Manager | Raw cooldown end; null if no delay; used by Session Manager to compute Next Mow Time |
+
+The interface is deliberately thin. The Session Manager never knows how much it rained, which tier was selected, or how long the cooldown is. It only knows whether it can mow right now, and when it will be able to.
+
+**HA entities published:**
+
+| Entity | Publisher | Type | Notes |
+|--------|-----------|------|-------|
+| Rain Delay Active | Rain Monitor | `binary_sensor` | On during RAINING and COOLDOWN states |
+| Cooldown End Time | Rain Monitor | `sensor` | Timestamp when delay ends; null/unavailable when DRY |
+| Event Accumulation | Rain Monitor | `sensor` | Inches accumulated in current or most recent rain event |
+| Rain Tier | Rain Monitor | `sensor` | Trace / Light / Moderate / Heavy / Significant |
+| Rain Monitor State | Rain Monitor | `sensor` | DRY / RAINING / COOLDOWN |
+| Next Mow Time | Session Manager | `sensor` | Always populated; accounts for both cooldown and schedule window — the human-facing answer to "when will Mowen next mow?" |
+
+**Next Mow Time** is the key display entity. It combines Rain Monitor's `cooldown_end_time` with the schedule config:
+- No delay, within schedule window → next `schedule_start` or immediately
+- Delay clears before `schedule_end - resume_cutoff_minutes` → today at `cooldown_end_time`
+- Delay clears after schedule window → tomorrow at `schedule_start`
+- Significant rain (skip day) → tomorrow at `schedule_start`
+
+The Rain Monitor does not compute this — it requires schedule knowledge that belongs to the Session Manager.
 
 ---
 
-#### `starting` Intercept (Universal)
+#### Context Variables
 
-The `starting` state transition is intercepted on every occurrence — schedule start, post-battery-charge autonomous start, post-resume start. The condition is always the same:
+| Variable | Type | Purpose |
+|----------|------|---------|
+| `battery_low_pending` | bool | Set when `battery_low` error fires; cleared when error returns to `no_error`. The key discriminator for `returning` disambiguation — applies to both mowing and edge cut sessions |
+| `edge_cut_pending` | bool | Set when an edge cut day passes without a completed edge cut. Carries forward until conditions allow completion |
+| `last_rain_end` | timestamp | When Tempest last reported precipitation stopping |
 
-```
-active_precipitation OR (now < last_rain_end + cooldown_minutes)
-```
+---
 
-If true → send `lawn_mower.dock` immediately. `starting` is a brief transient state; the dock command must be sent without delay.
+#### Completion Detection
 
-**Flag handling on intercept:**
-- First schedule start of the day → set `incomplete`
-- Post-battery-charge start → `incomplete` already set, no change
-- Post-resume start (we sent `start_mowing`) → `incomplete` already set, no change
+Completion is detected differently depending on whether `battery_low_pending` is set:
+
+**Natural completion** (either mowing or edge cut):
+- `returning` fires AND `battery_low_pending` is false AND Node-RED did not issue the dock command → session complete
+
+**Battery recharge mid-session:**
+- `returning` fires AND `battery_low_pending` is true → recharge cycle; Mowen resumes autonomously; do not treat as completion
+
+**Node-RED forced dock:**
+- Node-RED issued `lawn_mower.dock` → forced return; not a completion
 
 ---
 
 #### State Machine
 
-**IDLE**
-No active rain management. Mowen running per schedule or docked normally. `incomplete` = false. Monitor Tempest continuously.
+**WAITING**
+Before `schedule_start`. Monitoring Tempest continuously.
 
 Transitions:
-- Tempest detects precipitation AND mower state is `mowing` → send `dock`, set `incomplete` → **INTERRUPTED**
-- Mower transitions to `starting` AND intercept condition true → send `dock`, set `incomplete` → **INTERCEPTED**
+- `schedule_start` reached AND today is edge cut day (or `edge_cut_pending`) AND conditions good → send `landroid_cloud.ots` with `boundary: true` → **EDGE_CUTTING**
+- `schedule_start` reached AND no edge cut due AND conditions good → send `lawn_mower.start_mowing` → **MOWING**
+- `schedule_start` reached AND conditions bad → **COOLDOWN**
 
 ---
 
-**INTERCEPTED / INTERRUPTED**
-Node-RED has sent `dock`. `incomplete` = true. Mowen is docked or returning. Monitoring for resume conditions.
-
-These are functionally identical from a state management perspective — whether Mowen was caught at `starting` or mid-`mowing`, the outcome is the same.
+**EDGE_CUTTING**
+Node-RED sent OTS edge cut. Mowen is running the perimeter. Monitoring continuously.
 
 Transitions:
-- Active precipitation ends → **COOLDOWN**
-- (If Mowen docks for battery during this state — battery recharge signature present → do not change state or flag; Mowen will resume autonomously via `starting`, which will be intercepted again if conditions still bad)
+- `battery_low` error fires → set `battery_low_pending`; no state change — recharge cycle; Mowen resumes autonomously; when `starting` fires after charge cycle, watch for `edge_cut` state to confirm resume
+- `returning` fires AND `battery_low_pending` false AND no dock command → edge cut complete → clear `edge_cut_pending` → **EDGE_CUT_COMPLETE**
+- `returning` fires AND `battery_low_pending` true → recharge; stay in EDGE_CUTTING; clear `battery_low_pending` when error clears
+- Rain detected → send `lawn_mower.dock` → `edge_cut_pending` remains set → **COOLDOWN**
+
+---
+
+**EDGE_CUT_COMPLETE**
+Edge cut finished. Evaluating whether time remains for mowing.
+
+Transitions:
+- Time remaining >= `min_edge_cut_window_minutes` → send `lawn_mower.start_mowing` → **MOWING**
+- Time remaining < `min_edge_cut_window_minutes` → **DONE**
+
+---
+
+**MOWING**
+Node-RED sent `start_mowing`. Mowen is cutting. Monitoring continuously.
+
+Transitions:
+- `battery_low` error fires → set `battery_low_pending`; no state change — recharge cycle; Mowen resumes autonomously
+- `returning` fires AND `battery_low_pending` false AND no dock command → natural completion → **DONE**
+- `returning` fires AND `battery_low_pending` true → recharge; stay in MOWING; clear `battery_low_pending` when error clears
+- Rain detected → send `lawn_mower.dock` → **COOLDOWN**
 
 ---
 
 **COOLDOWN**
-Rain has stopped. Waiting for conditions to clear sufficiently before resuming.
+Rain stopped or conditions not yet met at schedule start. Waiting.
 
 Resume conditions (all must be met):
-1. No active precipitation (Tempest precipitation rate = 0)
+1. No active precipitation
 2. `now >= last_rain_end + cooldown_minutes`
-3. NWS minutely forecast clear for at least `forecast_clear_minutes` ahead
-4. `now <= schedule_end - resume_cutoff_minutes` (enough time remaining in the day)
+3. NWS minutely forecast clear for `forecast_clear_minutes` ahead
+4. `now <= schedule_end - resume_cutoff_minutes`
 
-All conditions met → send `lawn_mower.start_mowing` → **RESUMED**
-Conditions met but outside schedule window → clear `incomplete`, return to **IDLE** (tomorrow's schedule handles the outstanding coverage)
+All met AND edge cut pending → time gate: `now <= schedule_end - min_edge_cut_window_minutes` → send OTS → **EDGE_CUTTING**
+All met AND no edge cut pending → send `lawn_mower.start_mowing` → **MOWING**
+Conditions met but past all time gates → **DONE**
 
 ---
 
-**RESUMED**
-Node-RED has sent `start_mowing`. Mowen is out. `incomplete` = true. Monitoring for rain return or completion.
+**DONE**
+Day complete.
 
-Transitions:
-- Tempest detects precipitation → send `dock` → **INTERRUPTED** (cooldown restarts)
-- Battery recharge signature observed (`battery_low` → `returning` → `docked`) → no state change; Mowen resumes autonomously; `starting` will be intercepted if conditions still bad
-- Natural completion dock (no `battery_low`, no command from us) → clear `incomplete` → **IDLE**
-- Schedule end reached → Mowen self-docks; clear `incomplete` → **IDLE**
+Actions on entry:
+- If today was an edge cut day AND `edge_cut_pending` is still set (edge cut did not complete) → retain `edge_cut_pending` for tomorrow
+- If edge cut completed today → `edge_cut_pending` already cleared
+- Clear `battery_low_pending`
+- Return to **WAITING** at next `schedule_start`
 
 ---
 
 #### End-of-Day Handling
 
-Mowen self-enforces his schedule window end — observed behavior confirms he docks himself when the window closes, even on a controlled day. The `incomplete` flag clears when natural completion dock is detected.
+**Safety net:** At `schedule_end + end_of_day_safety_minutes`, if mower state is not `docked` → send `lawn_mower.dock` → **DONE**.
 
-**Safety net:** At `schedule_end + end_of_day_safety_minutes`, if mower state is not `docked` → send `lawn_mower.dock`. Clear `incomplete`. Return to IDLE.
+**Mid-charge edge case:** If `battery_low_pending` is set at `schedule_end`:
+- Send `lawn_mower.dock` — whether this cancels pending autonomous resume is unconfirmed
+- **Narrow `starting` safety net:** if `starting` fires outside schedule window → immediately send `lawn_mower.dock`
 
 ---
 
-#### Config
+#### Dynamic Cooldown — Rainfall Accumulation Tiers
+
+Rather than a fixed cooldown, Node-RED tracks rainfall accumulation during each rain event and calculates a dynamic cooldown when rain stops. Tiers are based on cool-season grass on clay-heavy soil (Hudson Valley typical) — clay drains significantly slower than sandy or loamy soil, and wheel traffic on saturated clay causes root zone compaction that is slow to recover.
+
+**Precipitation floor:**
+
+The Rain Monitor does not react to every non-zero `rain_accumulated` reading. A minimum intensity floor filters out trace precipitation and drizzle that would evaporate before meaningfully wetting the ground. Initial value: **0.0017 in/min** (approximately 0.10 in/hour — the lower boundary of light rain). This is a single tunable config value; a full season of observation will establish the right threshold for this property.
+
+Trigger condition: `precipitation_type != 'None'` AND `rain_accumulated >= precipitation_floor`
+
+**Accumulation tracking:**
+
+Node-RED subscribes to `highland/state/weather/station` (retained, ~1-minute updates). The `rain_accumulated` field is the rainfall in the last report interval (inches per minute). While `precipitation_type != 'None'`, each observation adds `rain_accumulated` to `event_accumulation`. When `precipitation_type` returns to `None`, the tier lookup fires and `event_accumulation` resets.
+
+**Tier table:**
+
+| Accumulation | Tier | Cooldown | Rationale |
+|---|---|---|---|
+| < 0.05 in | Trace | 30 min | Surface moisture only; drains quickly |
+| 0.05 – 0.15 in | Light | 60 min | Light wetting; clay needs time but surface recovers within an hour |
+| 0.15 – 0.50 in | Moderate | 180 min | Meaningful saturation in clay; 3 hours minimum before mowing safely |
+| 0.50 – 1.00 in | Heavy | 360 min | Significant saturation; 6 hours to allow drainage and avoid compaction |
+| > 1.00 in | Significant | Skip day | Genuine saturation; transition to DONE and let tomorrow's schedule fire fresh |
+
+The **Significant** tier does not use a numeric cooldown. Node-RED transitions directly to DONE for the day. Tomorrow's `schedule_start` fires normally with a fresh conditions check — if the ground has recovered by 9am, mowing proceeds; if not, the standard conditions check (NWS, Tempest) catches it.
+
+**All tier values are tunable config.** A full mow season of observation will establish what thresholds actually work at this property. Factors that affect actual recovery time beyond accumulation: ambient temperature, cloud cover, and which zone (the front yard slope drains faster than the flatter rear and side yards).
+
+**The cooldown is a floor, not a ceiling.** During the cooldown period, the NWS minutely forecast check continues to run. If more precipitation is forecast before the cooldown would elapse, the resume is deferred regardless of the tier value. The tier sets the minimum; conditions checks govern the actual resume decision.
+
+**Config:**
 
 ```json
-"rain_suppression": {
-    "schedule_start": "09:00",
-    "schedule_end": "18:00",
-    "resume_cutoff_minutes": 15,
-    "cooldown_minutes": 30,
-    "forecast_clear_minutes": 30,
-    "end_of_day_safety_minutes": 30
-}
+"rain_accumulation_tiers": [
+    { "max_inches": 0.05, "cooldown_minutes": 30 },
+    { "max_inches": 0.15, "cooldown_minutes": 60 },
+    { "max_inches": 0.50, "cooldown_minutes": 180 },
+    { "max_inches": 1.00, "cooldown_minutes": 360 },
+    { "max_inches": null, "cooldown_minutes": null, "skip_day": true }
+]
 ```
 
-All values are tunable. Thresholds cannot be finalized before a full mow season of observed Tempest data — start conservative and adjust based on actual ground conditions.
+**Full config block:**
+
+```json
+"schedule": {
+    "schedule_start": "09:00",
+    "schedule_end": "18:00",
+    "edge_cut_days": ["wednesday", "sunday"],
+    "min_edge_cut_window_minutes": 90
+},
+"rain_suppression": {
+    "precipitation_floor_in_per_min": 0.0017,
+    "forecast_clear_minutes": 30,
+    "resume_cutoff_minutes": 15,
+    "end_of_day_safety_minutes": 30
+},
+"rain_accumulation_tiers": [
+    { "max_inches": 0.05, "cooldown_minutes": 30 },
+    { "max_inches": 0.15, "cooldown_minutes": 60 },
+    { "max_inches": 0.50, "cooldown_minutes": 180 },
+    { "max_inches": 1.00, "cooldown_minutes": 360 },
+    { "max_inches": null, "cooldown_minutes": null, "skip_day": true }
+]
+```
+
+`min_edge_cut_window_minutes` is a placeholder — set once actual edge cut duration is observed.
 
 ---
 
 ### Error Notification
 
-When `sensor.vision_cloud_4wd_error` transitions away from `no_error`, route the notification based on error string value. `msg.payload` from the state-changed node contains the error string directly and is used as the routing key.
+When `sensor.vision_cloud_4wd_error` transitions away from `no_error`, route based on `msg.payload` string value.
 
-**Maintenance mode:** An `input_boolean.landroid_maintenance_mode` helper suppresses the urgent notification tier when active. Toggle on before picking up Mowen for any intentional interaction; toggle off when done. Auto-timeout after 60 minutes to prevent accidentally leaving suppression active. Dashboard visibility for maintenance mode state is required — must be obvious when it is active.
-
-**Error state map and notification tiering:**
+**Maintenance mode:** `input_boolean.landroid_maintenance_mode` suppresses urgent tier. Auto-timeout 60 minutes. Dashboard indicator required.
 
 | State value | Meaning | Routing |
 |-------------|---------|---------|
 | `lifted` | Mower lifted unexpectedly | 📺 TV + mobile — suppressed if maintenance mode active |
-| `trapped` | Mower stuck | 📺 TV + mobile (urgent — needs intervention) |
-| `trapped_timeout` | Stuck for extended period | 📺 TV + mobile (urgent) |
-| `upside_down` | Mower fell over | 📺 TV + mobile (urgent — blades may have been running) |
-| `outside_wire` | Escaped the mowing zone | 📺 TV + mobile (urgent) |
-| `excessive_slope` | Reached terrain it can't handle | 📺 TV + mobile (urgent) |
-| `unreachable_charging_station` | Cannot return to base | 📺 TV + mobile (urgent — won't recover on its own) |
+| `trapped` | Mower stuck | 📺 TV + mobile (urgent) |
+| `trapped_timeout` | Stuck extended period | 📺 TV + mobile (urgent) |
+| `upside_down` | Mower fell over | 📺 TV + mobile (urgent) |
+| `outside_wire` | Escaped mowing zone | 📺 TV + mobile (urgent) |
+| `excessive_slope` | Terrain it can't handle | 📺 TV + mobile (urgent) |
+| `unreachable_charging_station` | Cannot return to base | 📺 TV + mobile (urgent) |
 | `blade_motor_blocked` | Blade obstruction | 📱 Mobile only |
 | `wheel_motor_blocked` | Wheel obstruction | 📱 Mobile only |
 | `charge_error` | Charging fault | 📱 Mobile only |
 | `battery_temperature_error` | Battery thermal fault | 📱 Mobile only |
 | `map_error` | Navigation map failure | 📱 Mobile only |
-| `mapping_exploration_failed` | Could not complete mapping | 📱 Mobile only |
+| `mapping_exploration_failed` | Mapping failed | 📱 Mobile only |
 | `camera_error` | Vision AI camera fault | 📱 Mobile only |
 | `missing_charging_station` | Cannot locate base | 📱 Mobile only |
-| `timeout_finding_home` | Timed out returning to base | 📱 Mobile only |
-| `close_door_to_mow` | User action required to start | 📱 Mobile only |
-| `close_door_to_go_home` | User action required to return | 📱 Mobile only |
+| `timeout_finding_home` | Timed out returning | 📱 Mobile only |
+| `close_door_to_mow` | User action required | 📱 Mobile only |
+| `close_door_to_go_home` | User action required | 📱 Mobile only |
 | `charging_station_docking_error` | Docking fault | 📱 Mobile only |
 | `insufficient_sensor_data` | Sensor fusion failure | 📱 Mobile only |
-| `mapping_exploration_required` | Mapping required before mowing | 📱 Mobile only |
+| `mapping_exploration_required` | Mapping required | 📱 Mobile only |
 | `blade_height_adjustment_blocked` | Height adjustment fault | 📱 Mobile only |
-| `unknown` | Unrecognized error code | 📱 Mobile only |
-| `rain_delay` | Rain delay active | 📋 Daily Digest only (should not appear once rain delay is disabled) |
-| `battery_low` | Low battery | 📋 Daily Digest only — fires at 10% discharge threshold, self-clears ~2.5 minutes after docking once battery rises above 10%; escalate to mobile only if active AND battery level is not rising |
-| `locked` | Mower is locked | 📋 Daily Digest only (deliberate state) |
+| `unknown` | Unrecognized error | 📱 Mobile only |
+| `rain_delay` | Rain delay active | 📋 Daily Digest only (should not appear once rain delay disabled) |
+| `battery_low` | Low battery | 📋 Daily Digest only — set `battery_low_pending` flag; escalate to mobile only if active AND battery not rising |
+| `locked` | Mower locked | 📋 Daily Digest only |
 | `battery_trunk_open_timeout` | Battery compartment issue | 📋 Daily Digest only |
-| `training_start_disallowed` | Training blocked | 🔇 Log only (user-initiated; fires when cancelling a mapping operation) |
-| `wire_missing` | Wire not detected | 🔇 Log only (wire-based error; should not fire on WR344) |
-| `reverse_wire` | Wire polarity error | 🔇 Log only (wire-based error; should not fire on WR344) |
-| `wire_sync` | Wire synchronization error | 🔇 Log only (wire-based error; should not fire on WR344) |
-| `ota_error` | Firmware update failed | 🔇 Log only (not user-actionable) |
+| `training_start_disallowed` | Training blocked | 🔇 Log only (user-initiated) |
+| `wire_missing` | Wire not detected | 🔇 Log only (should not fire on WR344) |
+| `reverse_wire` | Wire polarity error | 🔇 Log only (should not fire on WR344) |
+| `wire_sync` | Wire sync error | 🔇 Log only (should not fire on WR344) |
+| `ota_error` | Firmware update failed | 🔇 Log only |
 | `hbi_error` | Hardware bus error | 🔇 Log only (contact support) |
 | `rfid_reader_error` | RFID reader fault | 🔇 Log only (contact support) |
-| `headlight_error` | FiatLux headlight fault | 🔇 Log only (contact support) |
+| `headlight_error` | Headlight fault | 🔇 Log only (contact support) |
 
-**Wire-based error codes** (`wire_missing`, `reverse_wire`, `wire_sync`) should not fire on the WR344 which has no perimeter wire. If they do appear, log them and investigate — they may indicate something unexpected in Vision firmware behavior.
-
-**TV notification** uses the existing Android TV notification infrastructure. Include a concise title and the friendly error description.
+**Note:** `battery_low` has a dual role — it triggers the Daily Digest notification AND sets `battery_low_pending` in the scheduling state machine. Both must be handled in the flow.
 
 ### Blade Replacement Reminder
 
-Watch `sensor.vision_cloud_4wd_blade_runtime_since_reset`. When it crosses the configured threshold (initial value: 150 hours — based on WR344 community consensus; adjust based on observed blade condition at first replacement), send a mobile notification prompting blade inspection and replacement.
-
-After replacing blades, log the replacement in the Worx app to reset the sensor. If the reset does not occur within 24 hours of the notification firing, send a follow-up reminder — the sensor is only useful if reset discipline is maintained.
+Watch `sensor.vision_cloud_4wd_blade_runtime_since_reset`. At 150 hours → mobile notification. No reset within 24 hours → follow-up reminder.
 
 ### Daily Digest Contribution
 
-Include in the morning digest: mower state, last mow timestamp, battery level, blade runtime since last reset, any active errors. Node-RED Daily Digest flow consumes these via HA state.
+Mower state, last mow timestamp, battery level, blade runtime since reset, any active errors.
 
 ---
 
@@ -468,113 +544,62 @@ Include in the morning digest: mower state, last mow timestamp, battery level, b
 
 ### Threat Model
 
-Two distinct theft vectors:
-
-**Vector 1 — Stolen from dock (mower charging/idle)**
-The mower is sitting on the base between mow sessions. Someone picks it up and walks off.
-
-**Vector 2 — Stolen while running (mower actively mowing)**
-Someone intercepts the mower mid-cycle in the yard.
+**Vector 1 — Stolen from dock:** Mower lifted from base while charging or idle.
+**Vector 2 — Stolen while running:** Mower intercepted mid-cycle in the yard.
 
 ### On-Device Defenses
 
-The mower has built-in security independent of any Highland integration:
-
-- **Lift sensor** — physical tilt/lift sensor always active when powered on; stops blades immediately on lift regardless of mowing state
-- **Security PIN** — locks the mower; wrong PIN triggers audible alarm
-- **Lock function** — when enabled, triggers an audible alarm if the mower is lifted and carried outside the yard perimeter (GPS/geofence-based on Vision models)
-- **WiFi kill** — mower stops operating after three consecutive days outside WiFi coverage
+- **Lift sensor** — always active when powered; stops blades immediately on lift
+- **Security PIN** — wrong PIN triggers audible alarm
+- **Lock function** — alarm if mower lifted outside GPS/geofence perimeter
+- **WiFi kill** — stops operating after three consecutive days outside WiFi coverage
 
 ### Dedicated Security Camera
 
-A **Reolink Argus Eco Ultra** pointed at the charging base serves as the primary real-time detection layer. Camera is tree-mounted pointing directly at the dock; exact tree TBD once base installation is finalized.
+**Reolink Argus Eco Ultra** — tree-mounted, pointing directly at the dock. Exact tree TBD once base installation is finalized (leveling and brick edging pending).
 
-The mower base is a fixed, known scene. The camera has a single binary question to answer: *is a person interacting with the mower?* This makes analysis cheaper, faster, and higher-confidence than general perimeter surveillance.
-
-The prompt pattern:
-
+Prompt pattern:
 > *"This is a fixed camera pointed at a robotic lawn mower on its charging base. Does the image show a person approaching, touching, lifting, or otherwise interacting with the mower? The mower should be stationary and unattended. Answer yes/no and briefly describe what you see."*
 
-**Pipeline** (see `subsystems/VIDEO_PIPELINE.md`):
-1. **CPAI triage** — person detection gate; no person in frame → discard
-2. **Gemini snapshot analysis** — focused prompt above; yes → escalate
-3. **Notification** — immediate push via Utility: Notifications with keyframe attached
+**Pipeline:** CPAI person detection gate → Gemini snapshot analysis → Utility: Notifications with keyframe.
 
-**Two-signal confirmation:**
-
-| Signal | Vector 1 (docked) | Vector 2 (running) | Latency |
-|--------|-------------------|--------------------|---------|
+| Signal | Vector 1 | Vector 2 | Latency |
+|--------|----------|----------|---------|
 | Camera (person detection) | ✅ | ✅ (if in frame) | Seconds |
 | HA error state (lift error) | ✅ (with delay caveat) | ✅ | Seconds–minutes |
 
-**Camera siting:**
-
-- Tree-mounted, pointing directly at the dock
-- Mount at roughly 6–8 feet; higher loses the human-object interaction geometry
-- FOV should cover a 10–15 foot approach radius, not just the base itself
-- Avoid pointing into late afternoon sun — favor lens angle over panel angle if they conflict
-
-**Authorized interaction handling:** Accept false positives during legitimate maintenance. Maintenance mode suppresses the lifted notification tier. Time-of-day context handles residual ambiguity.
+**Camera siting:** 6–8 feet high, ~45° to side of base, 10–15 foot approach radius. Favor lens angle over panel angle if afternoon sun creates a conflict.
 
 ---
 
 ## Phase 2: Custom MQTT Bridge (If Warranted)
 
-Phase 2 is only worth pursuing if one or more of the following is true:
+Phase 2 is worth pursuing if `landroid_cloud` proves consistently unreliable, direct rain delay toggle is needed, or automation needs outgrow HA.
 
-- The `landroid_cloud` integration proves consistently unreliable
-- Automation needs grow beyond what HA can deliver (e.g., Node-RED-owned scheduling, zone targeting)
-- The "HA is consumer only" architectural principle becomes a friction point for the mower specifically
-
-### Approach
-
-A **Mosquitto bridge** on the Communication Hub connects directly to Worx's AWS IoT Core endpoint, bypassing the `landroid_cloud` integration entirely. Node-RED becomes the normalization and automation engine; HA receives entities via MQTT Discovery.
+Mosquitto bridge on Communication Hub replaces `landroid_cloud` entirely — must replace, not supplement (rate limiting risk).
 
 ```
 Mower ──► AWS IoT Core ──► Mosquitto Bridge ──► highland/state/landroid/#
                                              ◄── highland/command/landroid/#
 ```
 
-### Setup Requirements (One-Time)
+**Reference material:** `virtualzone/landroid-bridge` (cert extraction), `pyworxcloud` (`dump_mapping.py`), `iobroker.worx`, HA Community forums, `roboter-forum.com`. All from wire-based models — Vision behavior needs validation.
 
-1. Authenticate against the Worx REST API to retrieve TLS cert and AWS endpoint
-2. Write `landroid-bridge.conf` for Mosquitto (drop-in, does not modify main config)
-3. Cert files live in `/etc/mosquitto/certs/landroid/` on the Communication Hub
-
-**Known fragility:** Worx has historically rotated certs without notice. Re-running cert extraction resolves it. Acceptable given the additive nicety posture.
-
-**Important:** The Mosquitto bridge should **replace** `landroid_cloud` entirely rather than run alongside it. Running both simultaneously risks hitting Worx's API rate limits, which have caused temporary account blocks in the past.
-
-### Reference Material
-
-Community reverse engineering sources, in order of usefulness:
-
-- **`virtualzone/landroid-bridge`** — original cert extraction and bridge documentation; read the source
-- **`pyworxcloud` (PyPI/GitHub)** — most up-to-date payload field mappings and command structures; `dump_mapping.py` decodes raw MQTT payloads into human-readable output
-- **`iobroker.worx`** — well-maintained ioBroker adapter; good secondary reference for payload structures
-- **HA Community forums** — search "Landroid MQTT bridge"; practical notes from people who've done it
-- **`roboter-forum.com`** — German robotic mower forum; raw payload samples posted; Google Translate sufficient
-
-**Critical caveat:** Virtually all community documentation is from wire-based models. Vision-series payload behavior needs validation against observed WR344 payloads.
-
-### Phase 2 Validation Items
-
-Before building the Node-RED normalization flow, validate against observed WR344 payloads:
-
-- Exact topic prefix (community reports `PRM100` but may be model-dependent)
-- Exact `dat.le` error code for lifted state on Vision hardware
-- Whether `dat.le` fires immediately while docked or only during active mow
-- Whether position coordinates appear in `commandOut` payload (would enable live position on HA map card)
-- Whether zone targeting via `commandIn` works on Vision firmware (would enable Node-RED-owned scheduling)
+**Phase 2 validation items:** Topic prefix, `dat.le` for lifted on Vision, `dat.le` while docked vs mowing, position coordinates in `commandOut`, zone targeting via `commandIn`.
 
 ---
 
 ## Open Questions
 
-- Whether `lawn_mower.start_mowing` called from Node-RED behaves identically to the same call made manually from HA — expected yes given it is the same service call, but confirm empirically when rain suppression flow is first deployed
-- Rain suppression thresholds — requires observed Tempest precipitation data and ground condition observations over a full mow season; all config values are initial estimates
-- Camera mount point — exact tree TBD once base installation is finalized (leveling and brick edging pending)
+- **Edge cut fix general release** — `landroid_cloud` fix for Vision edge cut is in beta (issue #1253); implement edge cut scheduling once released and validated
+- **Edge cut duration** — observe actual runtime once fix lands; use to calibrate `min_edge_cut_window_minutes`
+- **Edge cut resume after battery recharge** — does an interrupted edge cut resume from where it left off (consistent with coverage mowing), or restart from scratch? Unconfirmed
+- **Dock-while-docked behavior** — does `lawn_mower.dock` while Mowen is mid-charge cancel his pending autonomous resume? Validate empirically
+- **App schedule disabled + schedule_end behavior** — confirmed while app schedule was active; unconfirmed after disable
+- **`lawn_mower.start_mowing` from Node-RED** — expected identical to manual HA call; confirm when flow is first deployed
+- Rain suppression thresholds — requires full mow season of Tempest data; all config values are initial estimates
+- Camera mount point — exact tree TBD once base installation is finalized
 
 ---
 
-*Last Updated: 2026-05-08*
+*Last Updated: 2026-05-11*

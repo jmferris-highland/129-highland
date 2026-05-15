@@ -1,0 +1,30 @@
+{
+    "schedule": {
+        "sunrise_buffer_minutes": 30,
+        "sunset_buffer_minutes": 30,
+        "min_edge_cut_window_minutes": 90,
+        "min_mow_window_minutes": 30,
+        "edge_cut_enabled": false
+    },
+    "mow_conditions": {
+        "min_temp_f": 45,
+        "dew_point_spread_threshold_f": 7,
+        "min_solar_radiation_wm2": 200
+    },
+    "rain_suppression": {
+        "precipitation_floor_in_per_min": 0.0017,
+        "forecast_clear_minutes": 30,
+        "resume_cutoff_minutes": 15,
+        "end_of_day_safety_minutes": 30
+    },
+    "rain_accumulation_tiers": [
+        { "max_inches": 0.05, "cooldown_minutes": 30 },
+        { "max_inches": 0.15, "cooldown_minutes": 60 },
+        { "max_inches": 0.50, "cooldown_minutes": 180 },
+        { "max_inches": 1.00, "cooldown_minutes": 360 },
+        { "max_inches": null, "cooldown_minutes": null, "skip_day": true }
+    ],
+    "maintenance": {
+        "blade_runtime_threshold_hours": 150
+    }
+}

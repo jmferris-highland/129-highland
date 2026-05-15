@@ -2,7 +2,7 @@
 
 Integration of Worx Landroid Vision robotic mower into Highland.
 
-**Status:** 📋 Phase 1 in progress — `landroid_cloud` installed, schedule and rain suppression state machine designed, Node-RED flow implementation pending. Edge cut implementation blocked pending `landroid_cloud` fix for Vision hardware.
+**Status:** 🔄 Phase 1 deployed — autonomous operation active. Rain Monitor and Session Manager FSMs running on workflow.local. Edge cut implementation blocked pending `landroid_cloud` fix for Vision hardware (issue #67).
 
 ---
 
@@ -14,7 +14,7 @@ Integration of Worx Landroid Vision robotic mower into Highland.
 - Built-in WiFi; communicates exclusively via Worx cloud (AWS IoT Core)
 - No local API
 - Sited: side yard (late afternoon direct sun only)
-- Zones mapped: side yard + rear yard combined as single L-shaped zone (0.12 acres); front yard (est. 0.25–0.30 acres) mapping in progress
+- Zones mapped: side yard + rear yard combined as single L-shaped zone (0.12 acres); front yard (0.21 acres); total mowed area: **0.33 acres**
 
 **Reolink Argus Eco Ultra + Solar Panel** *(to be purchased)*
 
@@ -42,11 +42,32 @@ Node-RED owns **both** the schedule and rain management. The Worx app schedule i
 
 ## Mowing Schedule
 
-Node-RED issues commands at `schedule_start` each day (Monday through Saturday). The Worx app schedule is disabled entirely. Sunday is the only fixed day off.
+Node-RED issues commands based on a solar-bounded dynamic window. The Worx app schedule is disabled entirely — no fixed days, no fixed times.
 
-**Start time: 9:00 AM** — late enough for dew to burn off (front yard slope receives early morning sun), early enough to complete before evening moisture accumulates.
+**Start time: Solar-bounded, adaptive.** The mowing window is bounded by sunrise and sunset with configurable buffers on each end. The Session Manager queries a Schedex node at midnight to get today's sunrise and sunset times, then computes:
 
-**Edge cut days: Wednesday and Sunday.** Community consensus for WR344 is twice weekly. On edge cut days, Node-RED issues `landroid_cloud.ots` with `boundary: true` first and waits for completion before sending `start_mowing`. Sunday edge cuts are followed by a normal mow session — Sunday is not a rest day.
+- `window_start = sunrise + sunrise_buffer_minutes` (30 min)
+- `window_end = sunset - sunset_buffer_minutes` (30 min)
+
+In mid-May at this location, that gives a potential window of approximately 6:10 AM to 7:36 PM — over 13 hours. The mow conditions gate the actual start within that window.
+
+**Schedex query timing:** The Schedex `info` query must occur at midnight (00:01) before sunrise, ensuring both `msg.payload.on` (sunrise) and `msg.payload.off` (sunset) return today's values rather than the next occurrence.
+
+**Mow conditions (all must be met before starting within the window):**
+
+- `air_temp >= min_temp_f` (45°F) — below this threshold grass is near-dormant; mowing stresses turf and provides no benefit
+- `(air_temp - dew_point) >= dew_point_spread_threshold_f` (7°F) **OR** `solar_radiation >= min_solar_radiation_wm2` (200 W/m²) — ensures surface moisture has cleared. The dew point spread gate catches humid mornings and post-rain conditions where the grass surface is wet. The solar radiation override handles hot humid summer afternoons where high ambient humidity doesn’t indicate wet grass — if the sun is actively shining at ≥200 W/m², the surface is dry regardless of humidity. Dew point is calculated from Tempest temperature and humidity; solar radiation is published directly by the Tempest.
+- `mow_ready = true` — Rain Monitor confirms no active precipitation and cooldown elapsed
+
+These conditions also gate the session naturally in shoulder seasons — Mowen stops running when temperatures consistently drop below 45°F and resumes when they reliably climb back above it. No separate seasonal scheduling needed.
+
+**Edge cut scheduling: completion-triggered.** Edge cuts are not tied to fixed days of the week. Instead, Node-RED detects when Mowen has completed a full mowing pass and transitions to an edge cut as the next session. After the edge cut completes, the cycle returns to mowing. This ensures edge cuts happen after genuine coverage completion rather than at arbitrary calendar points that may interrupt an incomplete pass.
+
+The alternating pattern: **full mowing pass → edge cut → full mowing pass → ...**
+
+- On natural completion: if time remains in the window, issue edge cut immediately (after confirming adequate charge — see Completion Detection). If no time remains, set `edge_cut_pending` for the next session start.
+- On a session start with `edge_cut_pending` set: issue edge cut first, then transition to mowing if time permits.
+- After edge cut completes: if time remains, start a new mowing pass immediately.
 
 **Zone distribution:** No zone-specific schedule. Mowen's firmware coverage queue naturally prioritizes unmowed and partially-mowed areas across all zones. Observed behavior confirms the firmware distributes coverage intelligently — a rigid alternating zone schedule would be redundant complexity.
 
@@ -69,6 +90,14 @@ Captured from live WR344 operation. Use this as the reference for flow design.
 ```
 [NR sends ots boundary:true] → starting → edge_cut → returning → docked
 ```
+
+### Zone Transition
+
+```
+mowing → starting → mowing
+```
+
+Occurs when Mowen transitions between mapped zones (e.g. rear yard → front yard). The firmware briefly enters `starting` state while re-establishing position in the new zone — shown as "Searching Zone" in the Worx app. Not an error, not a completion event. No FSM response required — the Session Manager FSM stays in MOWING state throughout.
 
 ### Low Battery Mid-Session
 
@@ -142,23 +171,29 @@ The WR344 maintains a persistent coverage map across all mapped zones simultaneo
 
 ### Battery Voltage Profile
 
-`sensor.vision_cloud_4wd_battery_voltage` — precision set to two decimal places for trend detection. The WR344 does **not** trickle charge; firmware uses a deliberate charge/discharge cycle.
+`sensor.vision_cloud_4wd_battery_voltage` — precision set to two decimal places for trend detection. The WR344 does **not** trickle charge; firmware uses a deliberate charge/discharge cycle. While docked, voltage cycles between ~18.5V and ~20.5V continuously — this is normal behavior, not indicative of any issue.
 
 | Condition | Voltage |
 |-----------|--------|
-| Full charge ceiling | ~20.0–20.5V |
-| Docked discharge lower threshold | ~17.0–17.3V |
+| Full charge ceiling | ~20.0–20.5V (degrades over battery lifetime) |
+| Docked discharge lower threshold | ~18.5–19.0V |
 | Active mow discharge floor (at `battery_low`) | ~17V or below |
 
 `binary_sensor.vision_cloud_4wd_charging` is **non-functional**. Use voltage trend instead.
 
+**Voltage trend states (two consecutive deltas required before committing):**
+
 | Condition | Inferred state |
 |-----------|---------------|
-| Voltage < 20V and rising between polls | Charging |
-| Voltage ≥ 20V | Fully charged |
-| Voltage < 20V and falling between polls | Discharging |
+| Voltage rising between polls AND `docked` | Actively charging |
+| Voltage falling between polls AND `docked` | Just passed charge peak — at current maximum capacity |
+| Voltage falling between polls AND `mowing` | Active mow discharge |
 
-Require two consecutive deltas in the same direction before committing to a state.
+**The rising-to-falling transition while `docked` is the "fully charged" signal** — it indicates Mowen just completed a charge cycle and is at his current maximum capacity. This signal is battery-degradation-proof: it detects the local peak relative to the current battery state rather than comparing against a fixed voltage threshold that becomes invalid as the battery ages.
+
+**Polling cadence note:** Battery voltage updates arrive on the same ~10-minute polling cadence as other sensor attributes. The rising-to-falling transition may be detected up to ~20 minutes after the actual peak. This is acceptable for the "ready to issue edge cut" use case.
+
+**Battery percentage sensor (`sensor.vision_cloud_4wd_battery`)** reports 0–100% relative to current capacity but rounds aggressively — the chart shows it sitting at 100% across the full docked charge/discharge cycle, making it useless for fine-grained charge state detection. Do not use for timing decisions; use voltage trend instead.
 
 ### `battery_low` Error Payload Structure
 
@@ -298,7 +333,7 @@ The interface is deliberately thin. The Session Manager never knows how much it 
 | Event Accumulation | Rain Monitor | `sensor` | Inches accumulated in current or most recent rain event |
 | Rain Tier | Rain Monitor | `sensor` | Trace / Light / Moderate / Heavy / Significant |
 | Rain Monitor State | Rain Monitor | `sensor` | DRY / RAINING / COOLDOWN |
-| Next Mow Time | Session Manager | `sensor` | Always populated; accounts for both cooldown and schedule window — the human-facing answer to "when will Mowen next mow?" |
+| Next Mow Time | Session Manager | `sensor` | Formatted string showing today's mowing window: `6:10 AM - 7:36 PM` |
 
 **Next Mow Time** is the key display entity. It combines Rain Monitor's `cooldown_end_time` with the schedule config:
 - No delay, within schedule window → next `schedule_start` or immediately
@@ -314,56 +349,76 @@ The Rain Monitor does not compute this — it requires schedule knowledge that b
 
 | Variable | Type | Purpose |
 |----------|------|---------|
-| `battery_low_pending` | bool | Set when `battery_low` error fires; cleared when error returns to `no_error`. The key discriminator for `returning` disambiguation — applies to both mowing and edge cut sessions |
-| `edge_cut_pending` | bool | Set when an edge cut day passes without a completed edge cut. Carries forward until conditions allow completion |
+| `session_phase` | `'MOWING'` \| `'EDGE_CUT'` | Which phase of the mow/edge cycle we are in; drives what happens after natural completion |
+| `battery_low_pending` | bool | Set when `battery_low` error fires; cleared when error returns to `no_error`. Primary discriminator for `returning` disambiguation |
+| `error_during_session` | bool | Set when any non-`no_error` state fires during a mowing or edge cut session; cleared when error clears. Used to flag ambiguous docking events |
+| `edge_cut_pending` | bool | Natural completion detected but no time for edge cut today; carry forward to next session start |
+| `awaiting_charge_peak` | bool | Set on natural completion dock; cleared when voltage rising-to-falling transition observed while `docked` |
+| `voltage_prev` | float | Previous voltage reading for trend detection |
+| `voltage_trend` | `'rising'` \| `'falling'` \| `null` | Current confirmed voltage trend (two consecutive deltas required) |
+| `conditions_validated` | bool | Set when Node-RED successfully issues the first `start_mowing` or OTS command of the day. Once set, subsequent same-day decisions skip the dew/solar check — only `mow_ready` and temperature gate further commands. Reset at midnight alongside other daily flags. |
 | `last_rain_end` | timestamp | When Tempest last reported precipitation stopping |
 
 ---
 
 #### Completion Detection
 
-Completion is detected differently depending on whether `battery_low_pending` is set:
+Completion inference is a two-stage process: first detect a natural dock, then confirm adequate charge before issuing the next command.
 
-**Natural completion** (either mowing or edge cut):
-- `returning` fires AND `battery_low_pending` is false AND Node-RED did not issue the dock command → session complete
+**Stage 1 — Natural dock detection:**
 
-**Battery recharge mid-session:**
-- `returning` fires AND `battery_low_pending` is true → recharge cycle; Mowen resumes autonomously; do not treat as completion
+`returning` fires AND `battery_low_pending` = false AND Node-RED did not issue `dock` command.
+
+If `error_during_session` is also false → high-confidence completion → set `awaiting_charge_peak = true`
+
+If `error_during_session` is true → ambiguous dock (error may have caused return) → set `awaiting_charge_peak = true` but treat as lower-confidence; clear `error_during_session`
+
+**Battery recharge mid-session (not completion):**
+`returning` fires AND `battery_low_pending` = true → recharge cycle; Mowen resumes autonomously; do not set `awaiting_charge_peak`
 
 **Node-RED forced dock:**
-- Node-RED issued `lawn_mower.dock` → forced return; not a completion
+Node-RED issued `lawn_mower.dock` → forced return; not a completion
+
+**Stage 2 — Charge peak confirmation:**
+
+Once `awaiting_charge_peak = true`, watch `sensor.vision_cloud_4wd_battery_voltage`:
+
+- Track voltage trend using two consecutive delta comparison
+- When trend transitions from `'rising'` to `'falling'` while mower state is `docked` → Mowen has just passed his charge peak and is at current maximum capacity
+- Clear `awaiting_charge_peak`
+- **Completion confirmed — evaluate next action:**
+  - `session_phase = 'MOWING'` → edge cut warranted; check time remaining
+    - Time permits → issue OTS edge cut, set `session_phase = 'EDGE_CUT'`
+    - No time → set `edge_cut_pending = true`, transition to DONE
+  - `session_phase = 'EDGE_CUT'` → edge cut just completed; set `session_phase = 'MOWING'`
+    - Time permits → issue `start_mowing`
+    - No time → transition to DONE
+
+**Why voltage trend, not battery percentage:**
+
+Battery percentage rounds aggressively and sits at 100% across the full docked charge/discharge cycle — it provides no useful timing signal. Voltage trend detects the actual charge peak regardless of absolute voltage level, making it robust to battery degradation over time.
 
 ---
 
 #### State Machine
 
 **WAITING**
-Before `schedule_start`. Monitoring Tempest continuously.
+Before `window_start`. Monitoring conditions continuously.
 
 Transitions:
-- `schedule_start` reached AND today is edge cut day (or `edge_cut_pending`) AND conditions good → send `landroid_cloud.ots` with `boundary: true` → **EDGE_CUTTING**
-- `schedule_start` reached AND no edge cut due AND conditions good → send `lawn_mower.start_mowing` → **MOWING**
-- `schedule_start` reached AND conditions bad → **COOLDOWN**
+- `window_start` reached AND `edge_cut_pending` AND conditions good → send OTS edge cut, set `session_phase = 'EDGE_CUT'`, set `conditions_validated = true` → **EDGE_CUTTING**
+- `window_start` reached AND no `edge_cut_pending` AND conditions good → send `start_mowing`, set `session_phase = 'MOWING'`, set `conditions_validated = true` → **MOWING**
+- `window_start` reached AND conditions not met → **CONDITIONS_WAIT**
 
 ---
 
-**EDGE_CUTTING**
-Node-RED sent OTS edge cut. Mowen is running the perimeter. Monitoring continuously.
+**CONDITIONS_WAIT**
+Within window but mow conditions not yet met (temp, dew point, solar, rain).
 
 Transitions:
-- `battery_low` error fires → set `battery_low_pending`; no state change — recharge cycle; Mowen resumes autonomously; when `starting` fires after charge cycle, watch for `edge_cut` state to confirm resume
-- `returning` fires AND `battery_low_pending` false AND no dock command → edge cut complete → clear `edge_cut_pending` → **EDGE_CUT_COMPLETE**
-- `returning` fires AND `battery_low_pending` true → recharge; stay in EDGE_CUTTING; clear `battery_low_pending` when error clears
-- Rain detected → send `lawn_mower.dock` → `edge_cut_pending` remains set → **COOLDOWN**
-
----
-
-**EDGE_CUT_COMPLETE**
-Edge cut finished. Evaluating whether time remains for mowing.
-
-Transitions:
-- Time remaining >= `min_edge_cut_window_minutes` → send `lawn_mower.start_mowing` → **MOWING**
-- Time remaining < `min_edge_cut_window_minutes` → **DONE**
+- Conditions met AND `edge_cut_pending` → send OTS edge cut, set `conditions_validated = true` → **EDGE_CUTTING**
+- Conditions met AND no `edge_cut_pending` → send `start_mowing`, set `conditions_validated = true` → **MOWING**
+- `window_end` reached → **DONE**
 
 ---
 
@@ -372,24 +427,62 @@ Node-RED sent `start_mowing`. Mowen is cutting. Monitoring continuously.
 
 Transitions:
 - `battery_low` error fires → set `battery_low_pending`; no state change — recharge cycle; Mowen resumes autonomously
-- `returning` fires AND `battery_low_pending` false AND no dock command → natural completion → **DONE**
-- `returning` fires AND `battery_low_pending` true → recharge; stay in MOWING; clear `battery_low_pending` when error clears
+- Any other error fires → set `error_during_session`; no state change
+- Error clears → clear `battery_low_pending` or `error_during_session` as appropriate
+- `returning` fires AND `battery_low_pending` false AND no dock command → natural dock detected → set `awaiting_charge_peak` → **CHARGE_WAIT**
+- `returning` fires AND `battery_low_pending` true → recharge; stay in MOWING
 - Rain detected → send `lawn_mower.dock` → **COOLDOWN**
 
 ---
 
+**EDGE_CUTTING**
+Node-RED sent OTS edge cut. Mowen is running the perimeter.
+
+Transitions:
+- `battery_low` error fires → set `battery_low_pending`; no state change — recharge cycle
+- `returning` fires AND `battery_low_pending` false AND no dock command → set `awaiting_charge_peak` → **CHARGE_WAIT**
+- `returning` fires AND `battery_low_pending` true → recharge; stay in EDGE_CUTTING
+- Rain detected → send `lawn_mower.dock` → set `edge_cut_pending` → **COOLDOWN**
+
+---
+
+**CHARGE_WAIT**
+Natural dock detected. Waiting for voltage rising-to-falling transition to confirm charge peak before issuing next command. Once charge peak confirmed, only `mow_ready` and temperature are re-evaluated before issuing the next command — dew/solar check is skipped since `conditions_validated` is already set.
+
+Transitions:
+- Voltage trend transitions `rising` → `falling` while state is `docked` → charge peak confirmed → evaluate:
+  - `session_phase = 'MOWING'` AND time remains (`now <= window_end - min_edge_cut_window_minutes`) → issue OTS edge cut, set `session_phase = 'EDGE_CUT'` → **EDGE_CUTTING**
+  - `session_phase = 'MOWING'` AND no time → set `edge_cut_pending` → **DONE**
+  - `session_phase = 'EDGE_CUT'` AND time remains (`now <= window_end - min_mow_window_minutes`) → issue `start_mowing`, set `session_phase = 'MOWING'` → **MOWING**
+  - `session_phase = 'EDGE_CUT'` AND no time → **DONE**
+- `window_end` reached while still waiting → set `edge_cut_pending` if `session_phase = 'MOWING'` → **DONE**
+- Rain detected while waiting → **COOLDOWN** (no dock needed, Mowen is already docked)
+
+---
+
 **COOLDOWN**
-Rain stopped or conditions not yet met at schedule start. Waiting.
+Rain active or conditions not met after a forced dock. Waiting.
 
 Resume conditions (all must be met):
 1. No active precipitation
 2. `now >= last_rain_end + cooldown_minutes`
 3. NWS minutely forecast clear for `forecast_clear_minutes` ahead
-4. `now <= schedule_end - resume_cutoff_minutes`
+4. Mow conditions met (temp, dew point)
+5. `now <= window_end - resume_cutoff_minutes`
 
-All met AND edge cut pending → time gate: `now <= schedule_end - min_edge_cut_window_minutes` → send OTS → **EDGE_CUTTING**
-All met AND no edge cut pending → send `lawn_mower.start_mowing` → **MOWING**
-Conditions met but past all time gates → **DONE**
+All met AND `edge_cut_pending` → send OTS edge cut → **EDGE_CUTTING**
+All met AND no `edge_cut_pending` → send `start_mowing` → **MOWING**
+Conditions met but past time gates → **DONE**
+
+---
+
+**PAUSED**
+Party Mode enabled. Session context fully preserved (`session_phase`, `edge_cut_pending`, `conditions_validated`). Mowen is docked.
+
+Transitions:
+- `party_mode: false` AND in window → **WAITING** (resume via next conditions check)
+- `party_mode: false` AND window closed → **DONE**
+- `window_close` → **DONE**
 
 ---
 
@@ -397,10 +490,9 @@ Conditions met but past all time gates → **DONE**
 Day complete.
 
 Actions on entry:
-- If today was an edge cut day AND `edge_cut_pending` is still set (edge cut did not complete) → retain `edge_cut_pending` for tomorrow
-- If edge cut completed today → `edge_cut_pending` already cleared
-- Clear `battery_low_pending`
-- Return to **WAITING** at next `schedule_start`
+- `edge_cut_pending` carries forward if set
+- Clear `battery_low_pending`, `error_during_session`, `awaiting_charge_peak`, `conditions_validated`
+- Return to **WAITING** at next `window_start`
 
 ---
 
@@ -460,10 +552,16 @@ The **Significant** tier does not use a numeric cooldown. Node-RED transitions d
 
 ```json
 "schedule": {
-    "schedule_start": "09:00",
-    "schedule_end": "18:00",
-    "edge_cut_days": ["wednesday", "sunday"],
-    "min_edge_cut_window_minutes": 90
+    "sunrise_buffer_minutes": 30,
+    "sunset_buffer_minutes": 30,
+    "min_edge_cut_window_minutes": 90,
+    "min_mow_window_minutes": 30,
+    "edge_cut_enabled": false
+},
+"mow_conditions": {
+    "min_temp_f": 45,
+    "dew_point_spread_threshold_f": 7,
+    "min_solar_radiation_wm2": 200
 },
 "rain_suppression": {
     "precipitation_floor_in_per_min": 0.0017,
@@ -505,7 +603,7 @@ When `sensor.vision_cloud_4wd_error` transitions away from `no_error`, route bas
 | `battery_temperature_error` | Battery thermal fault | 📱 Mobile only |
 | `map_error` | Navigation map failure | 📱 Mobile only |
 | `mapping_exploration_failed` | Mapping failed | 📱 Mobile only |
-| `camera_error` | Vision AI camera fault | 📱 Mobile only |
+| `camera_error` | Vision AI camera fault | 📱 Mobile only — occurs predictably in low-light conditions; known firmware issue; sunset-based `window_end` prevents this under normal operation |
 | `missing_charging_station` | Cannot locate base | 📱 Mobile only |
 | `timeout_finding_home` | Timed out returning | 📱 Mobile only |
 | `close_door_to_mow` | User action required | 📱 Mobile only |
@@ -533,6 +631,25 @@ When `sensor.vision_cloud_4wd_error` transitions away from `no_error`, route bas
 ### Blade Replacement Reminder
 
 Watch `sensor.vision_cloud_4wd_blade_runtime_since_reset`. At 150 hours → mobile notification. No reset within 24 hours → follow-up reminder.
+
+### Party Mode Integration
+
+`switch.vision_cloud_4wd_party_mode` is exposed by `landroid_cloud` and is reactive in both directions — toggles in the Worx app are reflected in HA, and HA service calls are reflected in the app.
+
+The Session Manager FSM watches this entity and transitions to a **PAUSED** state when Party Mode is enabled:
+
+- If Mowen is actively mowing or edge cutting → dock command issued, transition to PAUSED
+- If Mowen is already docked (any non-active state) → transition to PAUSED, no dock needed
+- When Party Mode is disabled → if time remains in the window and conditions allow, resume automatically via WAITING state; if window has closed, transition to DONE
+
+PAUSED preserves all session context (`session_phase`, `edge_cut_pending`, `conditions_validated`) so the session resumes seamlessly.
+
+**Two control paths, identical FSM behavior:**
+
+1. **Manual** — user toggles Party Mode in the Worx app
+2. **Automated** — Highland sets `switch.vision_cloud_4wd_party_mode` via HA service call based on calendar events, time-of-day rules, or other conditions
+
+The calendar integration already designed for camera suppression (`subsystems/CALENDAR_INTEGRATION.md`) is the natural home for automated Party Mode control. Scheduled events (gatherings, service visits, etc.) can suppress mowing automatically without manual intervention.
 
 ### Daily Digest Contribution
 
@@ -591,15 +708,14 @@ Mower ──► AWS IoT Core ──► Mosquitto Bridge ──► highland/state
 
 ## Open Questions
 
-- **Edge cut fix general release** — `landroid_cloud` fix for Vision edge cut is in beta (issue #1253); implement edge cut scheduling once released and validated
+- **Edge cut fix general release** — `landroid_cloud` fix for Vision edge cut is in beta (issue #1253); implement edge cut scheduling once released and validated (tracked: issue #67)
 - **Edge cut duration** — observe actual runtime once fix lands; use to calibrate `min_edge_cut_window_minutes`
 - **Edge cut resume after battery recharge** — does an interrupted edge cut resume from where it left off (consistent with coverage mowing), or restart from scratch? Unconfirmed
 - **Dock-while-docked behavior** — does `lawn_mower.dock` while Mowen is mid-charge cancel his pending autonomous resume? Validate empirically
-- **App schedule disabled + schedule_end behavior** — confirmed while app schedule was active; unconfirmed after disable
-- **`lawn_mower.start_mowing` from Node-RED** — expected identical to manual HA call; confirm when flow is first deployed
-- Rain suppression thresholds — requires full mow season of Tempest data; all config values are initial estimates
+- **`landroid_cloud.ots` runtime parameter** — unclear what `runtime: 90` actually controls for edge cuts (total runtime? boundary runtime?). Observe once fix lands.
+- Rain suppression thresholds — requires full mow season of Tempest data; all config values are initial estimates (tracked: issue #69)
 - Camera mount point — exact tree TBD once base installation is finalized
 
 ---
 
-*Last Updated: 2026-05-11*
+*Last Updated: 2026-05-15*

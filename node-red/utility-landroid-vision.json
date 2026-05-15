@@ -1,0 +1,2090 @@
+[
+    {
+        "id": "utility-landroid-vision",
+        "type": "tab",
+        "label": "Utility: Landroid Vision",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "b66e4efa46b09375",
+        "type": "group",
+        "z": "utility-landroid-vision",
+        "name": "Home Assistant Discovery",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "433896f8754d88b3",
+            "9f9829ee419f4409",
+            "346724f2dfae7141"
+        ],
+        "x": 54,
+        "y": 1839,
+        "w": 632,
+        "h": 82
+    },
+    {
+        "id": "9aca73a47055308e",
+        "type": "group",
+        "z": "utility-landroid-vision",
+        "name": "Manual Test Cases",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "25a961b96002fc67",
+            "9bdea75c7b7cc128",
+            "17bd5d2b88df4281",
+            "0a92b9c05c7f99ae",
+            "07abf2daee0c8840",
+            "b9b507d7af7e2cd1",
+            "80ecbcee8dd4f483",
+            "15365466daaf58a1"
+        ],
+        "x": 54,
+        "y": 1959,
+        "w": 552,
+        "h": 262
+    },
+    {
+        "id": "65079fe33def68d5",
+        "type": "group",
+        "z": "utility-landroid-vision",
+        "name": "Precipitation State Machine",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "417a6a94794f6418",
+            "82777a1a53ae6534",
+            "c10ed56bc53956b9",
+            "5f7ae0a2a7d00861",
+            "da435311e5bf4b95",
+            "85af4a60d81bbefe",
+            "a46fba53c4852c36",
+            "da6205715f528512",
+            "0134dd3948ec0dd2",
+            "b280ea3a89cac496",
+            "b287ca09aa0251f6"
+        ],
+        "x": 54,
+        "y": 939,
+        "w": 992,
+        "h": 262
+    },
+    {
+        "id": "6223e11b302db66a",
+        "type": "group",
+        "z": "utility-landroid-vision",
+        "name": "Error Handling",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "f7593f869dfca2e0",
+            "1fd07586f0b72a66"
+        ],
+        "x": 54,
+        "y": 2259,
+        "w": 352,
+        "h": 82
+    },
+    {
+        "id": "4a1380f15e4e5122",
+        "type": "group",
+        "z": "utility-landroid-vision",
+        "name": "Sinks",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "9bedf2fafcf9645f",
+            "f718c5ee1d87fbd0",
+            "228677595f7ddb57",
+            "6d7a88f8feca4e6e",
+            "39c217461fd6f01a",
+            "3a065125d4267dc6",
+            "4d306d410c930cc3",
+            "fbe10f51d2149c7c",
+            "d3b93a873eb26ca5",
+            "755778dc8a643b7b",
+            "aeb63d92d3b45fa5",
+            "75944f3566c5cbe7",
+            "d34e5593b04ca505"
+        ],
+        "x": 54,
+        "y": 1479,
+        "w": 692,
+        "h": 322
+    },
+    {
+        "id": "4409dfe1a4cd0d62",
+        "type": "group",
+        "z": "utility-landroid-vision",
+        "name": "Daily Scheduler",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "e0f832757ec73620",
+            "b60dba6260669b71",
+            "32fe38e559e5abae",
+            "b8cd456404d631a0",
+            "6ce2163d1279bd71"
+        ],
+        "x": 54,
+        "y": 1239,
+        "w": 972,
+        "h": 82
+    },
+    {
+        "id": "94657fae5d69d462",
+        "type": "group",
+        "z": "utility-landroid-vision",
+        "name": "Battery Monitor",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "434c98a5bc97c128",
+            "b2a747c75addc6e2",
+            "f629c6a9354c47f5"
+        ],
+        "x": 54,
+        "y": 1359,
+        "w": 612,
+        "h": 82
+    },
+    {
+        "id": "ac8c4f8210e9136d",
+        "type": "group",
+        "z": "utility-landroid-vision",
+        "name": "Mower Commands",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "2c9837190486e1c1",
+            "de52ac8b2d7c7bab",
+            "a810b20197f26112",
+            "8c154a5d2fd5d1a9",
+            "9533e0ec3153b82b",
+            "fd8fdbfd375dee31",
+            "a8359b91557f6f3c",
+            "4517b0340c06c78c",
+            "40b96db88f7b3b76",
+            "b8af70524cc90677",
+            "fc793513700a3053",
+            "c10a37c697d8b788"
+        ],
+        "x": 54,
+        "y": 39,
+        "w": 672,
+        "h": 382
+    },
+    {
+        "id": "46e54ddcd2ad382d",
+        "type": "group",
+        "z": "utility-landroid-vision",
+        "name": "Mower Action State Machine",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "33efa08d55aad1ee",
+            "937197f404b8e3d9",
+            "2777d2d5e81f729b",
+            "36f89273f6d27c56",
+            "deb47001fe9879aa",
+            "0d089a23cc618031",
+            "e60bfd57d5b47929",
+            "b76993ec79d6c021",
+            "dec4556afef22ebf",
+            "440281bf3da6b6e7",
+            "27b67e52658d481b",
+            "674ec67e16417b0e",
+            "4307cce5365842a7",
+            "9a4c0f0d4dce7fdb",
+            "b29d4a08e8a5d832",
+            "524bbd0c77050f52",
+            "b7553a87c83d7205",
+            "200a11fefc32de98",
+            "3de6bdf5ab60f7ad",
+            "eccbd5b2936ac17a"
+        ],
+        "x": 54,
+        "y": 459,
+        "w": 932,
+        "h": 442
+    },
+    {
+        "id": "433896f8754d88b3",
+        "type": "inject",
+        "z": "utility-landroid-vision",
+        "g": "b66e4efa46b09375",
+        "name": "On Startup",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "2",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 1880,
+        "wires": [
+            [
+                "9f9829ee419f4409"
+            ]
+        ]
+    },
+    {
+        "id": "9f9829ee419f4409",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "b66e4efa46b09375",
+        "name": "Build Entity Configs",
+        "func": "const device = {\n    identifiers: [\"highland_landroid\"],\n    name: \"Highland Landroid\",\n    model: \"Landroid Vision WR344\",\n    manufacturer: \"Worx\"\n};\n\nconst state_topic = \"highland/state/landroid/rain_monitor\";\nconst base = \"homeassistant/sensor/highland_landroid\";\nconst binary_base = \"homeassistant/binary_sensor/highland_landroid\";\nconst session_topic = \"highland/state/landroid/session\";\nconst conditions_topic = \"highland/state/landroid/conditions\";\n\nconst entities = [\n    {\n        config_topic: `${binary_base}/rain_delay_active/config`,\n        config: {\n            name: \"Rain Delay Active\",\n            unique_id: \"highland_landroid_rain_delay_active\",\n            object_id: \"landroid_rain_delay_active\",\n            state_topic,\n            value_template: \"{{ value_json.delay_active }}\",\n            payload_on: true,\n            payload_off: false,\n            icon: \"mdi:weather-rainy\"\n        }\n    },\n    {\n        config_topic: `${binary_base}/conditions_delay_active/config`,\n        config: {\n            name: \"Conditions Delay Active\",\n            unique_id: \"highland_landroid_conditions_delay_active\",\n            object_id: \"landroid_conditions_delay_active\",\n            state_topic: conditions_topic,\n            value_template: \"{{ value_json.conditions_delay_active }}\",\n            payload_on: true,\n            payload_off: false,\n            icon: \"mdi:thermometer-alert\"\n        }\n    },\n    {\n        config_topic: `${base}/conditions_status/config`,\n        config: {\n            name: \"Conditions Status\",\n            unique_id: \"highland_landroid_conditions_status\",\n            object_id: \"landroid_conditions_status\",\n            state_topic: conditions_topic,\n            value_template: \"{{ value_json.conditions_status }}\"\n        }\n    },\n    {\n        config_topic: `${base}/mowing_window/config`,\n        config: {\n            name: \"Mowing Window\",\n            unique_id: \"highland_landroid_mowing_window\",\n            object_id: \"landroid_mowing_window\",\n            state_topic: session_topic,\n            value_template: \"{{ value_json.mowing_window }}\"\n        }\n    },\n    {\n        config_topic: `${base}/rain_monitor_state/config`,\n        config: {\n            name: \"Rain Monitor State\",\n            unique_id: \"highland_landroid_rain_monitor_state\",\n            object_id: \"landroid_rain_monitor_state\",\n            state_topic,\n            value_template: \"{{ value_json.rain_monitor_state }}\"\n        }\n    },\n    {\n        config_topic: `${base}/event_accumulation/config`,\n        config: {\n            name: \"Rain Event Accumulation\",\n            unique_id: \"highland_landroid_event_accumulation\",\n            object_id: \"landroid_rain_event_accumulation\",\n            state_topic,\n            value_template: \"{{ value_json.event_accumulation_inches }}\",\n            unit_of_measurement: \"in\",\n            device_class: \"precipitation\",\n            state_class: \"measurement\"\n        }\n    },\n    {\n        config_topic: `${base}/rain_tier/config`,\n        config: {\n            name: \"Rain Tier\",\n            unique_id: \"highland_landroid_rain_tier\",\n            object_id: \"landroid_rain_tier\",\n            state_topic,\n            value_template: \"{{ value_json.rain_tier }}\"\n        }\n    },\n    {\n        config_topic: `${base}/cooldown_end_time/config`,\n        config: {\n            name: \"Cooldown End Time\",\n            unique_id: \"highland_landroid_cooldown_end_time\",\n            object_id: \"landroid_cooldown_end_time\",\n            state_topic,\n            value_template: \"{{ value_json.cooldown_end_time }}\",\n            device_class: \"timestamp\"\n        }\n    },\n    {\n        config_topic: `${binary_base}/battery_charge_state/config`,\n        config: {\n            name: \"Battery Charge State\",\n            unique_id: \"highland_landroid_battery_charge_state\",\n            object_id: \"landroid_battery_charge_state\",\n            state_topic: \"highland/state/landroid/battery_charge_state\",\n            device_class: \"battery_charging\",\n            payload_on: \"Charging\",\n            payload_off: \"Discharging\"\n        }\n    }\n];\n\nfor (const e of entities) {\n    node.send({\n        topic: e.config_topic,\n        payload: JSON.stringify({ ...e.config, device }),\n        retain: true\n    });\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 1880,
+        "wires": [
+            [
+                "346724f2dfae7141"
+            ]
+        ]
+    },
+    {
+        "id": "346724f2dfae7141",
+        "type": "mqtt out",
+        "z": "utility-landroid-vision",
+        "g": "b66e4efa46b09375",
+        "name": "Dispatch",
+        "topic": "",
+        "qos": "",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 600,
+        "y": 1880,
+        "wires": []
+    },
+    {
+        "id": "a46fba53c4852c36",
+        "type": "mqtt in",
+        "z": "utility-landroid-vision",
+        "g": "65079fe33def68d5",
+        "name": "Observation",
+        "topic": "highland/state/weather/station",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 1040,
+        "wires": [
+            [
+                "5f7ae0a2a7d00861"
+            ]
+        ]
+    },
+    {
+        "id": "5f7ae0a2a7d00861",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "65079fe33def68d5",
+        "name": "Build Signal",
+        "func": "const config = global.get('config').landroid;\n\nconst { precipitation_type, rain_accumulated } = msg.payload;\nconst precip_active = precipitation_type !== 'None'; \n\nif (msg.payload.temperature !== undefined) {\n    flow.set('latest_observation', {\n        temperature: msg.payload.temperature,\n        humidity: msg.payload.humidity,\n        solar_radiation: msg.payload.solar_radiation,\n        timestamp: msg.payload.timestamp\n    });\n}\n\nmsg.payload = {\n    source: 'observation',\n    precip_active,\n    intensity: rain_accumulated,\n    type: precipitation_type\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 1040,
+        "wires": [
+            [
+                "b280ea3a89cac496"
+            ]
+        ]
+    },
+    {
+        "id": "417a6a94794f6418",
+        "type": "mqtt in",
+        "z": "utility-landroid-vision",
+        "g": "65079fe33def68d5",
+        "name": "Precipitation Start",
+        "topic": "highland/event/weather/station/precipitation_start",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 980,
+        "wires": [
+            [
+                "82777a1a53ae6534"
+            ]
+        ]
+    },
+    {
+        "id": "82777a1a53ae6534",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "65079fe33def68d5",
+        "name": "Build Signal",
+        "func": "msg.payload = {\n    source: 'evt_precip',\n    precip_active: true,\n    intensity: null,\n    type: 'Rain'\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 980,
+        "wires": [
+            [
+                "0134dd3948ec0dd2"
+            ]
+        ]
+    },
+    {
+        "id": "c10ed56bc53956b9",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "65079fe33def68d5",
+        "name": "Process State",
+        "func": "const config = global.get('config').landroid;\n\n// Read current state from context\nlet rm = flow.get('rain_monitor') || {\n    state: 'DRY',\n    event_accumulation: 0,\n    cooldown_end_time: null,\n    last_rain_end: null\n};\n\nconst { source, precip_active, intensity } = msg.payload;\n\nnode.status({ fill: 'grey', shape: 'dot', text: `${rm.state} | acc: ${rm.event_accumulation.toFixed(4)}` });\n\nif (source === 'startup') {\n    msg.payload = rm;\n    return msg;\n}\n\nif (source === 'cooldown_check') {\n    if (rm.state !== 'COOLDOWN') {\n        return null;\n    }\n\n    const now = Date.now();\n    const cooldown_end = new Date(rm.cooldown_end_time).getTime();\n\n    if (now < cooldown_end) {\n        return null; // still waiting\n    }\n\n    // Cooldown elapsed — check NWS forecast\n    const minutely = global.get('weather_canonical')?.minutely || [];\n    const config = global.get('config').landroid;\n    const floorPerHr = config.rain_suppression.precipitation_floor_in_per_min * 60;\n    const clearMinutes = config.rain_suppression.forecast_clear_minutes;\n\n    const threat = minutely.slice(0, clearMinutes).some(m =>\n        (m.precip_probability >= 0.60) && (m.precip_intensity >= floorPerHr)\n    );\n\n    if (threat) {\n        // Extend cooldown\n        rm.cooldown_end_time = new Date(now + clearMinutes * 60 * 1000).toISOString();\n        flow.set('rain_monitor', rm, 'default');\n        msg.payload = rm;\n        return msg;\n    }\n\n    // Clear to mow\n    rm.state = 'DRY';\n    rm.cooldown_end_time = null;\n    flow.set('rain_monitor', rm, 'default');\n    msg.payload = rm;\n    return msg;\n}\n\n// --- Precipitation observation ---\nconst prev_state = rm.state;\n\nif (rm.state === 'DRY') {\n    if (precip_active) {\n        rm.state = 'RAINING';\n        rm.event_accumulation = intensity || 0;  // capture first observation\n    } else {\n        return null;\n    }\n}\nelse if (rm.state === 'RAINING') {\n    if (precip_active) {\n        if (intensity !== null) {\n            rm.event_accumulation += intensity;\n        }\n        // Only emit if accumulation changed meaningfully\n        if (Math.abs(rm.event_accumulation - (flow.get('rain_monitor')?.event_accumulation || 0)) < 0.005) {\n            flow.set('rain_monitor', rm);\n            return null;\n        }\n    } else {\n        // Rain stopped — transition to COOLDOWN\n        rm.state = 'COOLDOWN';\n        rm.last_rain_end = new Date().toISOString();\n\n        // Tier lookup\n        const tiers = config.rain_accumulation_tiers;\n        const acc = rm.event_accumulation;\n        let cooldown_minutes = 30; // fallback\n        let skip_day = false;\n\n        for (const tier of tiers) {\n            if (tier.max_inches === null || acc <= tier.max_inches) {\n                if (tier.skip_day) {\n                    skip_day = true;\n                } else {\n                    cooldown_minutes = tier.cooldown_minutes;\n                }\n                break;\n            }\n        }\n\n        if (skip_day) {\n            // Set cooldown_end_time to tomorrow at schedule_start\n            const [h, m] = config.schedule.earliest_start.split(':').map(Number);\n            const tomorrow = new Date();\n            tomorrow.setDate(tomorrow.getDate() + 1);\n            tomorrow.setHours(h, m, 0, 0);\n            rm.cooldown_end_time = tomorrow.toISOString();\n        } else {\n            rm.cooldown_end_time = new Date(Date.now() + cooldown_minutes * 60 * 1000).toISOString();\n        }\n    }\n}\nelse if (rm.state === 'COOLDOWN') {\n    if (precip_active) {\n        // Rain returned during cooldown\n        rm.state = 'RAINING';\n        rm.cooldown_end_time = null;\n        rm.event_accumulation += (intensity || 0);\n    } else {\n        return null; // still in cooldown, poller handles transition\n    }\n}\n\n// Persist state\nflow.set('rain_monitor', rm);\n\n// Only emit if state changed or accumulation updated\nmsg.payload = rm;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 1100,
+        "wires": [
+            [
+                "85af4a60d81bbefe"
+            ]
+        ]
+    },
+    {
+        "id": "85af4a60d81bbefe",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "65079fe33def68d5",
+        "name": "Build Current State",
+        "func": "const { state, event_accumulation, cooldown_end_time, last_rain_end } = msg.payload;\n\n// Derive tier label from accumulation\nconst tiers = global.get('config').landroid.rain_accumulation_tiers;\n\nlet tier_label = 'Inactive';\n\nif (state !== 'DRY') {\n    for (const tier of tiers) {\n        if (tier.max_inches === null || event_accumulation <= tier.max_inches) {\n            if (tier.skip_day) {\n                tier_label = 'Significant';\n            } else if (tier.max_inches <= 0.05) {\n                tier_label = 'Trace';\n            } else if (tier.max_inches <= 0.15) {\n                tier_label = 'Light';\n            } else if (tier.max_inches <= 0.50) {\n                tier_label = 'Moderate';\n            } else {\n                tier_label = 'Heavy';\n            }\n            break;\n        }\n    }\n}\n\nconst mow_ready = state === 'DRY';\n\n// Set flow context inline\nflow.set('mow_ready', mow_ready);\nflow.set('landroid_cooldown_end_time', cooldown_end_time);\n\n// Detect mow_ready transition for rain signal to Session Manager\nconst prev_mow_ready = flow.get('rain_monitor_prev_mow_ready');\nflow.set('rain_monitor_prev_mow_ready', mow_ready);\nconst rain_signal = (prev_mow_ready === true && mow_ready === false)\n    ? { payload: { type: 'rain' } }\n    : null;\n\nconst mqtt_msg = {\n    topic: 'highland/state/landroid/rain_monitor',\n    payload: JSON.stringify({\n        delay_active: !mow_ready,\n        rain_monitor_state: state,\n        event_accumulation_inches: state === 'DRY' ? 0 : Math.round(event_accumulation * 10000) / 10000,\n        rain_tier: tier_label,\n        cooldown_end_time: cooldown_end_time,\n        last_rain_end: last_rain_end,\n        mow_ready\n    }),\n    retain: true\n};\n\nreturn [mqtt_msg, rain_signal];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 670,
+        "y": 1100,
+        "wires": [
+            [
+                "da6205715f528512"
+            ],
+            [
+                "b287ca09aa0251f6"
+            ]
+        ]
+    },
+    {
+        "id": "da6205715f528512",
+        "type": "mqtt out",
+        "z": "utility-landroid-vision",
+        "g": "65079fe33def68d5",
+        "name": "Publish",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 880,
+        "y": 1100,
+        "wires": []
+    },
+    {
+        "id": "da435311e5bf4b95",
+        "type": "link in",
+        "z": "utility-landroid-vision",
+        "g": "65079fe33def68d5",
+        "name": "Calculate Rain State",
+        "links": [
+            "0a92b9c05c7f99ae",
+            "15365466daaf58a1",
+            "228677595f7ddb57",
+            "3a065125d4267dc6",
+            "9bdea75c7b7cc128",
+            "b9b507d7af7e2cd1",
+            "0134dd3948ec0dd2",
+            "b280ea3a89cac496"
+        ],
+        "x": 210,
+        "y": 1100,
+        "wires": [
+            [
+                "c10ed56bc53956b9"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "25a961b96002fc67",
+        "type": "inject",
+        "z": "utility-landroid-vision",
+        "g": "9aca73a47055308e",
+        "name": "Dry Observation",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"source\":\"observation\",\"precip_active\":false,\"intensity\":0,\"type\":\"None\"}",
+        "payloadType": "json",
+        "x": 180,
+        "y": 2000,
+        "wires": [
+            [
+                "9bdea75c7b7cc128"
+            ]
+        ]
+    },
+    {
+        "id": "9bdea75c7b7cc128",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "9aca73a47055308e",
+        "name": "Calculate Rain State",
+        "mode": "link",
+        "links": [
+            "da435311e5bf4b95"
+        ],
+        "x": 420,
+        "y": 2000,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "17bd5d2b88df4281",
+        "type": "inject",
+        "z": "utility-landroid-vision",
+        "g": "9aca73a47055308e",
+        "name": "Rain Observation",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{     \"source\": \"observation\",     \"precip_active\": true,     \"intensity\": 0.003,     \"type\": \"Rain\" }",
+        "payloadType": "json",
+        "x": 180,
+        "y": 2060,
+        "wires": [
+            [
+                "0a92b9c05c7f99ae"
+            ]
+        ]
+    },
+    {
+        "id": "0a92b9c05c7f99ae",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "9aca73a47055308e",
+        "name": "Calculate Rain State",
+        "mode": "link",
+        "links": [
+            "da435311e5bf4b95"
+        ],
+        "x": 420,
+        "y": 2060,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "07abf2daee0c8840",
+        "type": "inject",
+        "z": "utility-landroid-vision",
+        "g": "9aca73a47055308e",
+        "name": "Heavy Rain Observation",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{     \"source\": \"evt_precip\",     \"precip_active\": true,     \"intensity\": null,     \"type\": \"Rain\" }",
+        "payloadType": "json",
+        "x": 210,
+        "y": 2120,
+        "wires": [
+            [
+                "b9b507d7af7e2cd1"
+            ]
+        ]
+    },
+    {
+        "id": "b9b507d7af7e2cd1",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "9aca73a47055308e",
+        "name": "Calculate Rain State",
+        "mode": "link",
+        "links": [
+            "da435311e5bf4b95"
+        ],
+        "x": 480,
+        "y": 2120,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "80ecbcee8dd4f483",
+        "type": "inject",
+        "z": "utility-landroid-vision",
+        "g": "9aca73a47055308e",
+        "name": "Precipitation Start",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{     \"source\": \"evt_precip\",     \"precip_active\": true,     \"intensity\": null,     \"type\": \"Rain\" }",
+        "payloadType": "json",
+        "x": 190,
+        "y": 2180,
+        "wires": [
+            [
+                "15365466daaf58a1"
+            ]
+        ]
+    },
+    {
+        "id": "15365466daaf58a1",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "9aca73a47055308e",
+        "name": "Calculate Rain State",
+        "mode": "link",
+        "links": [
+            "da435311e5bf4b95"
+        ],
+        "x": 440,
+        "y": 2180,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "f7593f869dfca2e0",
+        "type": "catch",
+        "z": "utility-landroid-vision",
+        "g": "6223e11b302db66a",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 140,
+        "y": 2300,
+        "wires": [
+            [
+                "1fd07586f0b72a66"
+            ]
+        ]
+    },
+    {
+        "id": "1fd07586f0b72a66",
+        "type": "debug",
+        "z": "utility-landroid-vision",
+        "g": "6223e11b302db66a",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 310,
+        "y": 2300,
+        "wires": []
+    },
+    {
+        "id": "9bedf2fafcf9645f",
+        "type": "cronplus",
+        "z": "utility-landroid-vision",
+        "g": "4a1380f15e4e5122",
+        "name": "Cooldown Check",
+        "outputField": "payload",
+        "timeZone": "",
+        "storeName": "",
+        "commandResponseMsgOutput": "output2",
+        "defaultLocation": "",
+        "defaultLocationType": "default",
+        "outputs": 2,
+        "options": [
+            {
+                "name": "Every Minute",
+                "topic": "every-minute",
+                "payloadType": "default",
+                "payload": "",
+                "expressionType": "cron",
+                "expression": "0 * * * * * *",
+                "location": "",
+                "offset": "0",
+                "solarType": "all",
+                "solarEvents": "sunrise,sunset"
+            }
+        ],
+        "x": 190,
+        "y": 1520,
+        "wires": [
+            [
+                "f718c5ee1d87fbd0"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "f718c5ee1d87fbd0",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "4a1380f15e4e5122",
+        "name": "Evaluate",
+        "func": "const rm = flow.get('rain_monitor', 'default') || {};\n\nif (rm.state !== 'COOLDOWN') {\n    return null;\n}\n\nmsg.payload = {\n    source: 'cooldown_check'\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 1520,
+        "wires": [
+            [
+                "228677595f7ddb57"
+            ]
+        ]
+    },
+    {
+        "id": "228677595f7ddb57",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "4a1380f15e4e5122",
+        "name": "Calculate Rain State",
+        "mode": "link",
+        "links": [
+            "da435311e5bf4b95"
+        ],
+        "x": 620,
+        "y": 1520,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "6d7a88f8feca4e6e",
+        "type": "inject",
+        "z": "utility-landroid-vision",
+        "g": "4a1380f15e4e5122",
+        "name": "On Startup",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "3",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 170,
+        "y": 1760,
+        "wires": [
+            [
+                "39c217461fd6f01a"
+            ]
+        ]
+    },
+    {
+        "id": "39c217461fd6f01a",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "4a1380f15e4e5122",
+        "name": "Recover State",
+        "func": "let rm = flow.get('rain_monitor', 'default');\n\n// First run — no stored state\nif (!rm) {\n    rm = {\n        state: 'DRY',\n        event_accumulation: 0,\n        cooldown_end_time: null,\n        last_rain_end: null\n    };\n    flow.set('rain_monitor', rm, 'default');\n    msg.payload = rm;\n    return msg;\n}\n\nconst now = Date.now();\n\nif (rm.state === 'COOLDOWN') {\n    const cooldown_end = new Date(rm.cooldown_end_time).getTime();\n    if (now >= cooldown_end) {\n        // Cooldown elapsed during downtime — transition to DRY\n        rm.state = 'DRY';\n        rm.cooldown_end_time = null;\n        flow.set('rain_monitor', rm, 'default');\n    }\n    // If cooldown hasn't elapsed, leave as COOLDOWN\n    // Cooldown Poller will handle the transition when it fires\n}\n\nelse if (rm.state === 'RAINING') {\n    // We missed the rain stop event during restart\n    // Check current Tempest state\n    const observed = global.get('weather_canonical')?.observed || {};\n    const config = global.get('config').landroid;\n    const floor = config.rain_suppression.precipitation_floor_in_per_min;\n\n    const still_raining = observed.precip_type !== 'None' \n        && (observed.precip_intensity / 60) >= floor;\n\n    if (!still_raining) {\n        // Rain stopped while we were down — transition to COOLDOWN\n        rm.state = 'COOLDOWN';\n        rm.last_rain_end = new Date().toISOString();\n\n        const tiers = config.rain_accumulation_tiers;\n        const acc = rm.event_accumulation;\n        let skip_day = false;\n        let cooldown_minutes = 30;\n\n        for (const tier of tiers) {\n            if (tier.max_inches === null || acc <= tier.max_inches) {\n                if (tier.skip_day) {\n                    skip_day = true;\n                } else {\n                    cooldown_minutes = tier.cooldown_minutes;\n                }\n                break;\n            }\n        }\n\n        if (skip_day) {\n            const [h, m] = config.schedule.earliest_start.split(':').map(Number);\n            const tomorrow = new Date();\n            tomorrow.setDate(tomorrow.getDate() + 1);\n            tomorrow.setHours(h, m, 0, 0);\n            rm.cooldown_end_time = tomorrow.toISOString();\n        } else {\n            rm.cooldown_end_time = new Date(now + cooldown_minutes * 60 * 1000).toISOString();\n        }\n\n        flow.set('rain_monitor', rm, 'default');\n    }\n    // If still raining, leave as RAINING — next observation will handle it\n}\n\nmsg.payload = { ...rm, source: 'startup' };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 1760,
+        "wires": [
+            [
+                "3a065125d4267dc6"
+            ]
+        ]
+    },
+    {
+        "id": "3a065125d4267dc6",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "4a1380f15e4e5122",
+        "name": "Calculate Rain State",
+        "mode": "link",
+        "links": [
+            "da435311e5bf4b95"
+        ],
+        "x": 620,
+        "y": 1760,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "0134dd3948ec0dd2",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "65079fe33def68d5",
+        "name": "Calculate Rain State",
+        "mode": "link",
+        "links": [
+            "da435311e5bf4b95"
+        ],
+        "x": 620,
+        "y": 980,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "b280ea3a89cac496",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "65079fe33def68d5",
+        "name": "Calculate Rain State",
+        "mode": "link",
+        "links": [
+            "da435311e5bf4b95"
+        ],
+        "x": 580,
+        "y": 1040,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "e0f832757ec73620",
+        "type": "cronplus",
+        "z": "utility-landroid-vision",
+        "g": "4409dfe1a4cd0d62",
+        "name": "Scheduler",
+        "outputField": "payload",
+        "timeZone": "",
+        "storeName": "",
+        "commandResponseMsgOutput": "output2",
+        "defaultLocation": "",
+        "defaultLocationType": "default",
+        "outputs": 2,
+        "options": [
+            {
+                "name": "Daily",
+                "topic": "daily",
+                "payloadType": "default",
+                "payload": "",
+                "expressionType": "cron",
+                "expression": "1 0 * * *",
+                "location": "",
+                "offset": "0",
+                "solarType": "all",
+                "solarEvents": "sunrise,sunset"
+            }
+        ],
+        "x": 160,
+        "y": 1280,
+        "wires": [
+            [
+                "32fe38e559e5abae"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "b60dba6260669b71",
+        "type": "schedex",
+        "z": "utility-landroid-vision",
+        "g": "4409dfe1a4cd0d62",
+        "name": "Sun Events",
+        "passthroughunhandled": false,
+        "suspended": false,
+        "lat": "41.5204",
+        "lon": "-74.0606",
+        "ontime": "sunrise",
+        "ontopic": "",
+        "onpayload": "",
+        "onoffset": 0,
+        "onrandomoffset": 0,
+        "offtime": "sunset",
+        "offtopic": "",
+        "offpayload": "",
+        "offoffset": 0,
+        "offrandomoffset": 0,
+        "mon": true,
+        "tue": true,
+        "wed": true,
+        "thu": true,
+        "fri": true,
+        "sat": true,
+        "sun": true,
+        "x": 530,
+        "y": 1280,
+        "wires": [
+            [
+                "b8cd456404d631a0"
+            ]
+        ]
+    },
+    {
+        "id": "32fe38e559e5abae",
+        "type": "change",
+        "z": "utility-landroid-vision",
+        "g": "4409dfe1a4cd0d62",
+        "name": "Info Mode",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "info",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 340,
+        "y": 1280,
+        "wires": [
+            [
+                "b60dba6260669b71"
+            ]
+        ]
+    },
+    {
+        "id": "b8cd456404d631a0",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "4409dfe1a4cd0d62",
+        "name": "Parse Window",
+        "func": "if (!msg.payload?.on || !msg.payload?.off) {\n    return null;\n}\n\nconst config = global.get('config').landroid.schedule;\n\nconst parseSchedexDate = (str) => new Date(str.replace(' GMT', '+00:00'));\n\nlet sunrise = parseSchedexDate(msg.payload.on);\nlet sunset = parseSchedexDate(msg.payload.off);\n\n// If ran after sunrise, this will need to be moved back.\nif (isTomorrow(sunrise)) {\n    sunrise = backDate(sunrise);\n}\n\n// If ran after sunset, this will need to be moved back.\nif (isTomorrow(sunset)) {\n    sunset = backDate(sunset);\n}\n\nlet window_start = new Date(sunrise.getTime() + config.sunrise_buffer_minutes * 60000);\nlet window_end = new Date(sunset.getTime() - config.sunset_buffer_minutes * 60000);\n\nflow.set('window_start', window_start.toISOString());\nflow.set('window_end', window_end.toISOString());\n\nnode.status({ \n    fill: 'green', \n    shape: 'dot', \n    text: `${window_start.toLocaleTimeString()} → ${window_end.toLocaleTimeString()}`\n});\n\nnode.log(`Solar window: ${window_start.toISOString()} to ${window_end.toISOString()}`);\n\nconst fmt = (d) => d.toLocaleTimeString('en-US', { \n    hour: 'numeric', \n    minute: '2-digit', \n    hour12: true,\n    timeZone: global.get('config').location.timezone\n});\n\nmsg.topic = 'highland/state/landroid/session';\nmsg.payload = JSON.stringify({ mowing_window: `${fmt(window_start)} - ${fmt(window_end)}` });\nmsg.retain = true;\nnode.send(msg);\n\nreturn null;\n\nfunction backDate(date) {\n    date.setHours(date.getHours() - 24);\n    return date;\n}\n\nfunction isTomorrow(date) {\n  const tomorrow = new Date();\n  tomorrow.setDate(tomorrow.getDate() + 1);\n\n  return date.getDate() === tomorrow.getDate() &&\n         date.getMonth() === tomorrow.getMonth() &&\n         date.getFullYear() === tomorrow.getFullYear();\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 1280,
+        "wires": [
+            [
+                "6ce2163d1279bd71"
+            ]
+        ]
+    },
+    {
+        "id": "434c98a5bc97c128",
+        "type": "server-state-changed",
+        "z": "utility-landroid-vision",
+        "g": "94657fae5d69d462",
+        "name": "Voltage Change",
+        "server": "aa5463113481df19",
+        "version": 6,
+        "outputs": 1,
+        "exposeAsEntityConfig": "",
+        "entities": {
+            "entity": [
+                "sensor.vision_cloud_4wd_battery_voltage"
+            ],
+            "substring": [],
+            "regex": []
+        },
+        "outputInitially": true,
+        "stateType": "str",
+        "ifState": "",
+        "ifStateType": "str",
+        "ifStateOperator": "is",
+        "outputOnlyOnStateChange": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": true,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "triggerId"
+            }
+        ],
+        "x": 160,
+        "y": 1400,
+        "wires": [
+            [
+                "b2a747c75addc6e2"
+            ]
+        ]
+    },
+    {
+        "id": "b2a747c75addc6e2",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "94657fae5d69d462",
+        "name": "Update Trend",
+        "func": "const voltage = parseFloat(msg.payload);\nif (isNaN(voltage)) return null;\n\nlet sm = flow.get('session_manager', 'default') || {};\nconst prev_voltage = sm.voltage_prev || null;\nconst prev_trend = sm.voltage_trend || null;\nconst mower_state = msg.data?.new_state?.attributes?.state\n    || flow.get('mower_state') || null;\n\n// Update trend if we have a previous reading\nlet new_trend = prev_trend;\nif (prev_voltage !== null) {\n    const delta = voltage - prev_voltage;\n    if (Math.abs(delta) >= 0.05) { // ignore noise\n        const direction = delta > 0 ? 'charging' : 'discharging';\n        if (direction !== prev_trend) {\n            new_trend = direction;\n        }\n    }\n}\n\n// Update context\nsm.voltage_prev = voltage;\nsm.voltage_trend = new_trend;\nflow.set('session_manager', sm, 'default');\n\nnode.status({\n    fill: new_trend === 'charging' ? 'green' : new_trend === 'discharging' ? 'yellow' : 'grey',\n    shape: 'dot',\n    text: `${voltage}V ${new_trend || 'unknown'}`\n});\n\n// Only emit to FSM when we detect rising→falling while docked\n// This is the charge peak signal\nconst mower_docked = mower_state === 'docked';\nconst peak_detected = prev_trend === 'charging' && new_trend === 'discharging' && mower_docked;\n\nif (new_trend !== null) {\n    node.send({\n        topic: \"highland/state/landroid/battery_charge_state\",\n        payload: new_trend === 'charging' ? 'Charging' : 'Discharging',\n        retain: true });\n}\n\nif (peak_detected) {\n    node.send({\n        topic: \"highland/event/landroid/charge_peak\",\n        payload: JSON.stringify({ timestamp: new Date().toISOString(), voltage }),\n        retain: false });\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 1400,
+        "wires": [
+            [
+                "f629c6a9354c47f5"
+            ]
+        ]
+    },
+    {
+        "id": "f629c6a9354c47f5",
+        "type": "mqtt out",
+        "z": "utility-landroid-vision",
+        "g": "94657fae5d69d462",
+        "name": "Publish",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 580,
+        "y": 1400,
+        "wires": []
+    },
+    {
+        "id": "33efa08d55aad1ee",
+        "type": "server-state-changed",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Mower State",
+        "server": "aa5463113481df19",
+        "version": 6,
+        "outputs": 1,
+        "exposeAsEntityConfig": "",
+        "entities": {
+            "entity": [
+                "lawn_mower.vision_cloud_4wd"
+            ],
+            "substring": [],
+            "regex": []
+        },
+        "outputInitially": true,
+        "stateType": "str",
+        "ifState": "",
+        "ifStateType": "str",
+        "ifStateOperator": "is",
+        "outputOnlyOnStateChange": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": true,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "triggerId"
+            }
+        ],
+        "x": 150,
+        "y": 500,
+        "wires": [
+            [
+                "937197f404b8e3d9"
+            ]
+        ]
+    },
+    {
+        "id": "937197f404b8e3d9",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Build Signal",
+        "func": "const state = msg.payload;\nconst prev_state = msg.data?.old_state?.state || null;\nflow.set('mower_state', state);\n\nnode.status({ fill: 'blue', shape: 'dot', text: state });\n\nmsg.payload = {\n    type: 'mower_state',\n    state,\n    previous: prev_state\n};\n\n// Force discharging immediately when leaving dock\nconst charge_override = (prev_state === 'docked' && state !== 'docked')\n    ? { topic: 'highland/state/landroid/battery_charge_state', payload: 'Discharging', retain: true }\n    : null;\n\nreturn [msg, charge_override];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 500,
+        "wires": [
+            [
+                "674ec67e16417b0e"
+            ],
+            [
+                "deb47001fe9879aa"
+            ]
+        ]
+    },
+    {
+        "id": "2777d2d5e81f729b",
+        "type": "server-state-changed",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Mower Error",
+        "server": "aa5463113481df19",
+        "version": 6,
+        "outputs": 1,
+        "exposeAsEntityConfig": "",
+        "entities": {
+            "entity": [
+                "sensor.vision_cloud_4wd_error"
+            ],
+            "substring": [],
+            "regex": []
+        },
+        "outputInitially": true,
+        "stateType": "str",
+        "ifState": "",
+        "ifStateType": "str",
+        "ifStateOperator": "is",
+        "outputOnlyOnStateChange": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": true,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "triggerId"
+            }
+        ],
+        "x": 150,
+        "y": 620,
+        "wires": [
+            [
+                "36f89273f6d27c56"
+            ]
+        ]
+    },
+    {
+        "id": "36f89273f6d27c56",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Build Signal",
+        "func": "const error = msg.payload;\n\nnode.status({ fill: error === 'no_error' ? 'grey' : 'red', shape: 'dot', text: error });\n\nmsg.payload = {\n    type: 'mower_error',\n    error,\n    previous: msg.data?.old_state?.state || null\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 620,
+        "wires": [
+            [
+                "27b67e52658d481b"
+            ]
+        ]
+    },
+    {
+        "id": "deb47001fe9879aa",
+        "type": "mqtt out",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Publish",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 540,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "0d089a23cc618031",
+        "type": "link in",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Calculate Mow State",
+        "links": [
+            "440281bf3da6b6e7",
+            "d3b93a873eb26ca5",
+            "27b67e52658d481b",
+            "674ec67e16417b0e",
+            "75944f3566c5cbe7",
+            "b29d4a08e8a5d832",
+            "b287ca09aa0251f6",
+            "eccbd5b2936ac17a"
+        ],
+        "x": 210,
+        "y": 860,
+        "wires": [
+            [
+                "dec4556afef22ebf"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "e60bfd57d5b47929",
+        "type": "mqtt in",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Charge Peak",
+        "topic": "highland/event/landroid/charge_peak",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 740,
+        "wires": [
+            [
+                "b76993ec79d6c021"
+            ]
+        ]
+    },
+    {
+        "id": "b76993ec79d6c021",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Build Signal",
+        "func": "const data = msg.payload;\nmsg.payload = {\n    type: 'charge_peak',\n    timestamp: data.timestamp,\n    voltage: data.voltage\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 740,
+        "wires": [
+            [
+                "440281bf3da6b6e7"
+            ]
+        ]
+    },
+    {
+        "id": "dec4556afef22ebf",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Process State",
+        "func": "const config = global.get('config').landroid;\nconst now = new Date();\n\nconst defaults = {\n    state: 'WAITING',\n    session_phase: 'MOWING',\n    battery_low_pending: false,\n    error_during_session: false,\n    edge_cut_pending: false,\n    awaiting_charge_peak: false,\n    conditions_validated: false,\n    we_sent_dock: false\n};\n\nlet sm = Object.assign({}, defaults, flow.get('session_manager', 'default') || {});\n\nconst { type } = msg.payload;\n\nconst window_start = new Date(flow.get('window_start'));\nconst window_end = new Date(flow.get('window_end'));\n\n// Time gate helpers\nconst timeForEdgeCut = () => now <= new Date(window_end.getTime() - config.schedule.min_edge_cut_window_minutes * 60000);\nconst timeForMow = () => now <= new Date(window_end.getTime() - config.schedule.min_mow_window_minutes * 60000);\n\n// Conditions check — simplified if conditions already validated today\nconst conditionsOk = (p) => sm.conditions_validated\n    ? p.temp_ok && p.mow_ready\n    : p.conditions_met;\n\nnode.status({ fill: 'grey', shape: 'dot', text: `${sm.state} | ${sm.session_phase}` });\n\n// ── WINDOW OPEN ──────────────────────────────────────────\nif (type === 'window_open') {\n    if (sm.state !== 'WAITING' && sm.state !== 'DONE') return null;\n    // Treat same as a conditions_check arriving in WAITING\n    // Re-evaluate via next conditions_check — just ensure we're in WAITING\n    sm.state = 'WAITING';\n    flow.set('session_manager', sm, 'default');\n    node.status({ fill: 'grey', shape: 'dot', text: 'WAITING | window opened' });\n    return null;\n}\n\n// ── WINDOW CLOSE ─────────────────────────────────────────\nif (type === 'window_close') {\n    const mower_state = flow.get('mower_state') || 'docked';\n    const needs_dock = mower_state === 'mowing' || mower_state === 'edge_cut' || mower_state === 'starting';\n\n    sm.battery_low_pending = false;\n    sm.error_during_session = false;\n    sm.awaiting_charge_peak = false;\n    sm.conditions_validated = false;\n    sm.we_sent_dock = needs_dock;\n    sm.state = 'DONE';\n    flow.set('session_manager', sm, 'default');\n    node.status({ fill: 'grey', shape: 'dot', text: 'DONE | window closed' });\n\n    if (needs_dock) {\n        msg.payload = { command: 'dock', reason: 'window_close' };\n        return msg;\n    }\n    return null;\n}\n\n// ── SAFETY RECALL ──────────────────────────────────────────────────────\nif (type === 'safety_dock') {\n    const mower_state = flow.get('mower_state') || 'docked';\n    const needs_dock = mower_state === 'mowing' || mower_state === 'edge_cut' || mower_state === 'starting';\n    sm.state = 'DONE';\n    sm.conditions_validated = false;\n    flow.set('session_manager', sm, 'default');\n    node.status({ fill: 'grey', shape: 'dot', text: 'DONE | safety net' });\n    if (needs_dock) {\n        sm.we_sent_dock = true;\n        msg.payload = { command: 'dock', reason: 'safety_net' };\n        return msg;\n    }\n    return null;\n}\n\n// ── STARTING OUTSIDE WINDOW GUARD ────────────────────────\nif (type === 'mower_state' && msg.payload.state === 'starting') {\n    const in_window = now >= window_start && now <= window_end;\n    if (!in_window) {\n        sm.we_sent_dock = true;\n        flow.set('session_manager', sm, 'default');\n        node.status({ fill: 'orange', shape: 'dot', text: `${sm.state} | outside window dock` });\n        msg.payload = { command: 'dock', reason: 'outside_window' };\n        return msg;\n    }\n}\n\n// ── PARTY MODE ───────────────────────────────────────────\nif (type === 'party_mode') {\n    const enabled = msg.payload.enabled;\n    sm.party_mode_active = enabled;\n\n    if (enabled) {\n        const needs_dock = sm.state === 'MOWING' || sm.state === 'EDGE_CUTTING';\n        if (needs_dock) sm.we_sent_dock = true;\n        sm.state = 'PAUSED';\n        flow.set('session_manager', sm, 'default');\n        node.status({ fill: 'grey', shape: 'dot', text: 'PAUSED | party mode' });\n        if (needs_dock) {\n            msg.payload = { command: 'dock', reason: 'party_mode' };\n            return msg;\n        }\n        return null;\n    }\n\n    // Party mode turned off\n    if (sm.state !== 'PAUSED') {\n        flow.set('session_manager', sm, 'default');\n        return null;\n    }\n\n    sm.we_sent_dock = false;\n    const in_window = now >= window_start && now <= window_end;\n    if (!in_window) {\n        sm.state = 'DONE';\n        flow.set('session_manager', sm, 'default');\n        node.status({ fill: 'grey', shape: 'dot', text: 'DONE | window passed' });\n        return null;\n    }\n\n    sm.state = 'WAITING';\n    flow.set('session_manager', sm, 'default');\n    node.status({ fill: 'grey', shape: 'dot', text: 'WAITING | party mode off' });\n    return null;\n}\n\n// ── WAITING ──────────────────────────────────────────────\nif (sm.state === 'WAITING') {\n    if (type !== 'conditions_check') return null;\n\n    const ok = conditionsOk(msg.payload);\n\n    if (!ok) {\n        sm.state = 'CONDITIONS_WAIT';\n        flow.set('session_manager', sm, 'default');\n        node.status({ fill: 'yellow', shape: 'dot', text: 'CONDITIONS_WAIT' });\n        return null;\n    }\n\n    // Conditions good — start session\n    const command = sm.edge_cut_pending ? 'ots_edge_cut' : 'start_mowing';\n    if (command === 'ots_edge_cut') {\n        sm.session_phase = 'EDGE_CUT';\n        sm.edge_cut_pending = false;\n    } else {\n        sm.session_phase = 'MOWING';\n    }\n    sm.state = 'MOWING';\n    sm.conditions_validated = true;\n    flow.set('session_manager', sm, 'default');\n\n    msg.payload = { command };\n    return msg;\n}\n\n// ── CONDITIONS_WAIT ──────────────────────────────────────\nif (sm.state === 'CONDITIONS_WAIT') {\n    if (type !== 'conditions_check') return null;\n\n    if (!conditionsOk(msg.payload)) return null;\n\n    const command = sm.edge_cut_pending ? 'ots_edge_cut' : 'start_mowing';\n    if (command === 'ots_edge_cut') {\n        sm.session_phase = 'EDGE_CUT';\n        sm.edge_cut_pending = false;\n    } else {\n        sm.session_phase = 'MOWING';\n    }\n    sm.state = 'MOWING';\n    sm.conditions_validated = true;\n    flow.set('session_manager', sm, 'default');\n\n    msg.payload = { command };\n    return msg;\n}\n\n// ── MOWING ───────────────────────────────────────────────\nif (sm.state === 'MOWING') {\n\n    if (type === 'mower_error') {\n        const error = msg.payload.error;\n        if (error === 'battery_low') {\n            sm.battery_low_pending = true;\n        } else if (error === 'no_error') {\n            sm.battery_low_pending = false;\n            sm.error_during_session = false;\n        } else {\n            sm.error_during_session = true;\n        }\n        flow.set('session_manager', sm, 'default');\n        return null;\n    }\n\n    if (type === 'mower_state') {\n        const state = msg.payload.state;\n\n        if (state === 'returning' && !sm.battery_low_pending && !sm.we_sent_dock) {\n            // Natural completion dock detected\n            sm.awaiting_charge_peak = true;\n            sm.state = 'CHARGE_WAIT';\n            flow.set('session_manager', sm, 'default');\n            node.status({ fill: 'blue', shape: 'dot', text: `CHARGE_WAIT | ${sm.session_phase}` });\n            return null;\n        }\n\n        if (state === 'returning' && sm.battery_low_pending) {\n            // Battery recharge mid-session — Mowen handles autonomously\n            flow.set('session_manager', sm, 'default');\n            return null;\n        }\n    }\n\n    if (type === 'rain') {\n        sm.we_sent_dock = true;\n        sm.state = 'COOLDOWN';\n        flow.set('session_manager', sm, 'default');\n        node.status({ fill: 'red', shape: 'dot', text: `COOLDOWN | ${sm.session_phase}` });\n        msg.payload = { command: 'dock', reason: 'rain' };\n        return msg;\n    }\n\n    if (type === 'conditions_check') return null; // ignore during active session\n\n    return null;\n}\n\n// ── EDGE_CUTTING ─────────────────────────────────────────\nif (sm.state === 'EDGE_CUTTING') {\n    \n    if (type === 'mower_error') {\n        const error = msg.payload.error;\n        if (error === 'battery_low') {\n            sm.battery_low_pending = true;\n        } else if (error === 'no_error') {\n            sm.battery_low_pending = false;\n        } else {\n            sm.error_during_session = true;\n        }\n        flow.set('session_manager', sm, 'default');\n        return null;\n    }\n\n    if (type === 'mower_state') {\n        const state = msg.payload.state;\n\n        if (state === 'returning' && !sm.battery_low_pending && !sm.we_sent_dock) {\n            sm.awaiting_charge_peak = true;\n            sm.state = 'CHARGE_WAIT';\n            flow.set('session_manager', sm, 'default');\n            node.status({ fill: 'blue', shape: 'dot', text: `CHARGE_WAIT | ${sm.session_phase}` });\n            return null;\n        }\n    }\n\n    if (type === 'rain') {\n        sm.we_sent_dock = true;\n        sm.edge_cut_pending = true;\n        sm.state = 'COOLDOWN';\n        flow.set('session_manager', sm, 'default');\n        node.status({ fill: 'red', shape: 'dot', text: `COOLDOWN | ${sm.session_phase}` });\n        msg.payload = { command: 'dock', reason: 'rain' };\n        return msg;\n    }\n\n    if (type === 'conditions_check') return null;\n\n    return null;\n}\n\n// ── CHARGE_WAIT ──────────────────────────────────────────\nif (sm.state === 'CHARGE_WAIT') {\n    if (type === 'conditions_check') return null;\n\n    if (type === 'mower_state') {\n        const state = msg.payload.state;\n        if (state === 'mowing' || state === 'starting') {\n            sm.state = 'MOWING';\n            sm.awaiting_charge_peak = false;\n            sm.we_sent_dock = false;\n            flow.set('session_manager', sm, 'default');\n            node.status({ fill: 'green', shape: 'dot', text: 'MOWING | resumed' });\n            return null;\n        }\n        if (state === 'edge_cut') {\n            sm.state = 'EDGE_CUTTING';\n            sm.awaiting_charge_peak = false;\n            sm.we_sent_dock = false;\n            flow.set('session_manager', sm, 'default');\n            node.status({ fill: 'green', shape: 'dot', text: 'EDGE_CUTTING | resumed' });\n            return null;\n        }\n    }\n\n    if (type === 'rain') {\n        // Already docked — no dock command needed, just move to COOLDOWN\n        sm.state = 'COOLDOWN';\n        flow.set('session_manager', sm, 'default');\n        node.status({ fill: 'red', shape: 'dot', text: `COOLDOWN | ${sm.session_phase}` });\n        return null;\n    }\n\n    if (type === 'charge_peak') {\n        sm.awaiting_charge_peak = false;\n        sm.we_sent_dock = false;\n\n        const mow_ready = flow.get('mow_ready');\n        const observed = flow.get('latest_observation') || {};\n        const temp_ok = (observed.temperature || 0) >= config.mow_conditions.min_temp_f;\n\n        if (!mow_ready || !temp_ok) {\n            // Conditions not suitable — wait in CHARGE_WAIT for conditions to improve\n            flow.set('session_manager', sm, 'default');\n            node.status({ fill: 'yellow', shape: 'dot', text: `CHARGE_WAIT waiting | ${sm.session_phase}` });\n            return null;\n        }\n\n        if (sm.session_phase === 'MOWING') {\n            const edge_cut_enabled = config.schedule.edge_cut_enabled !== false;\n            if (edge_cut_enabled && timeForEdgeCut()) {\n                sm.session_phase = 'EDGE_CUT';\n                sm.state = 'EDGE_CUTTING';\n                flow.set('session_manager', sm, 'default');\n                node.status({ fill: 'green', shape: 'dot', text: 'EDGE_CUTTING' });\n                msg.payload = { command: 'ots_edge_cut' };\n                return msg;\n            } else {\n                // Edge cut disabled or no time — go straight to mowing if time permits\n                sm.session_phase = 'MOWING';\n                if (timeForMow()) {\n                    sm.state = 'MOWING';\n                    flow.set('session_manager', sm, 'default');\n                    node.status({ fill: 'green', shape: 'dot', text: 'MOWING' });\n                    msg.payload = { command: 'start_mowing' };\n                    return msg;\n                } else {\n                    sm.edge_cut_pending = true;\n                    sm.state = 'DONE';\n                    flow.set('session_manager', sm, 'default');\n                    node.status({ fill: 'grey', shape: 'dot', text: 'DONE' });\n                    return null;\n                }\n            }\n        }\n\n        if (sm.session_phase === 'EDGE_CUT') {\n            sm.session_phase = 'MOWING';\n            if (timeForMow()) {\n                sm.state = 'MOWING';\n                flow.set('session_manager', sm, 'default');\n                node.status({ fill: 'green', shape: 'dot', text: 'MOWING' });\n                msg.payload = { command: 'start_mowing' };\n                return msg;\n            } else {\n                sm.state = 'DONE';\n                flow.set('session_manager', sm, 'default');\n                node.status({ fill: 'grey', shape: 'dot', text: 'DONE' });\n                return null;\n            }\n        }\n    }\n\n    return null;\n}\n\n// ── COOLDOWN ─────────────────────────────────────────────\nif (sm.state === 'COOLDOWN') {\n    if (type === 'mower_state') {\n        const state = msg.payload.state;\n        if (state === 'mowing' || state === 'starting') {\n            sm.state = 'MOWING';\n            sm.we_sent_dock = false;\n            flow.set('session_manager', sm, 'default');\n            node.status({ fill: 'green', shape: 'dot', text: 'MOWING | manual start' });\n            return null;\n        }\n    }\n\n    if (type !== 'conditions_check') return null;  \n    \n    const p = msg.payload;\n    if (!p.conditions_met) return null;\n    if (now > new Date(window_end.getTime() - config.rain_suppression.resume_cutoff_minutes * 60000)) {\n        sm.state = 'DONE';\n        flow.set('session_manager', sm, 'default');\n        node.status({ fill: 'grey', shape: 'dot', text: 'DONE' });\n        return null;\n    }\n\n    // Resume — edge cut takes priority if pending\n    sm.we_sent_dock = false;\n    const command = sm.edge_cut_pending ? 'ots_edge_cut' : 'start_mowing';\n    if (command === 'ots_edge_cut') {\n        sm.session_phase = 'EDGE_CUT';\n        sm.edge_cut_pending = false;\n        sm.state = 'EDGE_CUTTING';\n    } else {\n        sm.state = 'MOWING';\n    }\n    flow.set('session_manager', sm, 'default');\n    node.status({ fill: 'green', shape: 'dot', text: `${sm.state} | ${sm.session_phase}` });\n    msg.payload = { command };\n    return msg;\n}\n\n// ── DONE ─────────────────────────────────────────────────\nif (sm.state === 'DONE') {\n    if (type !== 'conditions_check') return null;\n\n    // New day starts when we receive a conditions_check within the new window\n    if (now >= window_start && now <= window_end) {\n        sm.state = 'WAITING';\n        sm.battery_low_pending = false;\n        sm.error_during_session = false;\n        sm.awaiting_charge_peak = false;\n        sm.conditions_validated = false;\n        sm.we_sent_dock = false;\n        flow.set('session_manager', sm, 'default');\n        node.status({ fill: 'grey', shape: 'dot', text: 'WAITING | reset' });\n    }\n    return null;\n}\n\n// Placeholder — remaining states to be added\nnode.warn(`Unhandled: state=${sm.state} type=${type}`);\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 860,
+        "wires": [
+            [
+                "4307cce5365842a7"
+            ]
+        ]
+    },
+    {
+        "id": "440281bf3da6b6e7",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Calculate Mow State",
+        "mode": "link",
+        "links": [
+            "0d089a23cc618031"
+        ],
+        "x": 580,
+        "y": 740,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "27b67e52658d481b",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Calculate Mow State",
+        "mode": "link",
+        "links": [
+            "0d089a23cc618031"
+        ],
+        "x": 580,
+        "y": 620,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "674ec67e16417b0e",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Calculate Mow State",
+        "mode": "link",
+        "links": [
+            "0d089a23cc618031"
+        ],
+        "x": 580,
+        "y": 500,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "4307cce5365842a7",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Generate Command",
+        "func": "const mower_state = flow.get('mower_state') || 'docked';\nconst command = msg.payload.command;\n\n// Guard: don't start if already out\nif ((command === 'start_mowing' || command === 'ots_edge_cut') && \n    mower_state !== 'docked') {\n    node.warn(`Command ${command} ignored — mower is ${mower_state}`);\n    return null;\n}\n\n// Guard: don't dock if already home or returning\nif (command === 'dock' && \n    (mower_state === 'docked' || mower_state === 'returning')) {\n    node.warn(`Command dock ignored — mower is ${mower_state}`);\n    return null;\n}\n\nswitch (msg.payload.command) {\n    case 'start_mowing':\n        msg.target = \"Start Mowing\";\n        break;\n    case 'dock':\n        msg.target = \"Dock\";\n        break;\n    case 'ots_edge_cut':\n        msg.target = \"Start Edging\";\n        break;\n    default:\n        return null;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 680,
+        "y": 860,
+        "wires": [
+            [
+                "9a4c0f0d4dce7fdb"
+            ]
+        ]
+    },
+    {
+        "id": "9a4c0f0d4dce7fdb",
+        "type": "link call",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Execute",
+        "links": [],
+        "linkType": "dynamic",
+        "timeout": "30",
+        "x": 900,
+        "y": 860,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "2c9837190486e1c1",
+        "type": "link in",
+        "z": "utility-landroid-vision",
+        "g": "ac8c4f8210e9136d",
+        "name": "Start Mowing",
+        "links": [],
+        "x": 150,
+        "y": 80,
+        "wires": [
+            [
+                "8c154a5d2fd5d1a9",
+                "fc793513700a3053"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "de52ac8b2d7c7bab",
+        "type": "link in",
+        "z": "utility-landroid-vision",
+        "g": "ac8c4f8210e9136d",
+        "name": "Start Edging",
+        "links": [],
+        "x": 150,
+        "y": 200,
+        "wires": [
+            [
+                "9533e0ec3153b82b",
+                "c10a37c697d8b788"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "a810b20197f26112",
+        "type": "link in",
+        "z": "utility-landroid-vision",
+        "g": "ac8c4f8210e9136d",
+        "name": "Dock",
+        "links": [],
+        "x": 130,
+        "y": 320,
+        "wires": [
+            [
+                "fd8fdbfd375dee31",
+                "b8af70524cc90677"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "8c154a5d2fd5d1a9",
+        "type": "debug",
+        "z": "utility-landroid-vision",
+        "g": "ac8c4f8210e9136d",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 330,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "9533e0ec3153b82b",
+        "type": "debug",
+        "z": "utility-landroid-vision",
+        "g": "ac8c4f8210e9136d",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 330,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "fd8fdbfd375dee31",
+        "type": "debug",
+        "z": "utility-landroid-vision",
+        "g": "ac8c4f8210e9136d",
+        "name": "Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 290,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "4d306d410c930cc3",
+        "type": "cronplus",
+        "z": "utility-landroid-vision",
+        "g": "4a1380f15e4e5122",
+        "name": "Conditions Check",
+        "outputField": "payload",
+        "timeZone": "",
+        "storeName": "",
+        "commandResponseMsgOutput": "output2",
+        "defaultLocation": "",
+        "defaultLocationType": "default",
+        "outputs": 2,
+        "options": [
+            {
+                "name": "Every Minute",
+                "topic": "every-minute",
+                "payloadType": "default",
+                "payload": "",
+                "expressionType": "cron",
+                "expression": "0 */1 * * * *",
+                "location": "",
+                "offset": "0",
+                "solarType": "all",
+                "solarEvents": "sunrise,sunset"
+            }
+        ],
+        "x": 190,
+        "y": 1580,
+        "wires": [
+            [
+                "fbe10f51d2149c7c"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "fbe10f51d2149c7c",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "4a1380f15e4e5122",
+        "name": "Evaluate",
+        "func": "const now = new Date();\nconst window_start = new Date(flow.get('window_start'));\nconst window_end = new Date(flow.get('window_end'));\nconst mow_ready = flow.get('mow_ready');\nconst config = global.get('config').landroid;\n\n// Outside solar window — nothing to evaluate\nif (now < window_start || now > window_end) {\n    node.status({ fill: 'grey', shape: 'dot', text: 'outside window' });\n    return null;\n}\n\n// Check temperature and dew point\nconst observed = flow.get('latest_observation') || {};\nconst temp = observed.temperature;\nconst humidity = observed.humidity;\n\nif (temp === undefined || humidity === undefined) {\n    node.status({ fill: 'yellow', shape: 'dot', text: 'no weather data' });\n    return null;\n}\n\nconst dew_point = temp - ((100 - humidity) / 5);\nconst temp_ok = temp >= config.mow_conditions.min_temp_f;\nconst solar_radiation = observed.solar_radiation || 0;\nconst solar_ok = solar_radiation >= config.mow_conditions.min_solar_radiation_wm2;\nconst dew_ok = (temp - dew_point) >= config.mow_conditions.dew_point_spread_threshold_f || solar_ok;\nconst conditions_met = temp_ok && dew_ok && mow_ready;\n\nnode.status({\n    fill: conditions_met ? 'green' : 'yellow',\n    shape: 'dot',\n    text: `${temp.toFixed(1)}°F sp:${(temp-dew_point).toFixed(1)} sol:${solar_radiation} ${mow_ready ? 'clear' : 'rain'}`\n});\n\nconst sm = flow.get('session_manager', 'default') || {};\nconst conditions_validated = sm.conditions_validated || false;\n\n// conditions_delay_active reflects FSM logic:\n// after first start, only temperature still gates (dew/solar already validated)\nlet conditions_delay_active;\nlet conditions_status;\n\nif (conditions_validated) {\n    conditions_delay_active = !temp_ok;\n    conditions_status = temp_ok ? 'Ready' : 'Temperature';\n} else {\n    conditions_delay_active = !temp_ok || !dew_ok;\n    if (!temp_ok && !dew_ok)  conditions_status = 'Temperature + Humidity';\n    else if (!temp_ok)         conditions_status = 'Temperature';\n    else if (!dew_ok)          conditions_status = 'Humidity';\n    else                       conditions_status = 'Ready';\n}\n\n// Publish conditions state to MQTT\nnode.send([\n    {\n        payload: {\n            type: 'conditions_check',\n            conditions_met,\n            conditions_validated,\n            temp,\n            dew_point,\n            temp_ok,\n            dew_ok,\n            solar_ok,\n            mow_ready: mow_ready || false\n        }\n    },\n    {\n        topic: 'highland/state/landroid/conditions',\n        payload: JSON.stringify({ conditions_delay_active, conditions_status }),\n        retain: true\n    }\n]);\n\nreturn null;",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 1580,
+        "wires": [
+            [
+                "d3b93a873eb26ca5"
+            ],
+            [
+                "d34e5593b04ca505"
+            ]
+        ]
+    },
+    {
+        "id": "d3b93a873eb26ca5",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "4a1380f15e4e5122",
+        "name": "Calculate Mow State",
+        "mode": "link",
+        "links": [
+            "0d089a23cc618031"
+        ],
+        "x": 620,
+        "y": 1580,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "755778dc8a643b7b",
+        "type": "cronplus",
+        "z": "utility-landroid-vision",
+        "g": "4a1380f15e4e5122",
+        "name": "Schedule Check",
+        "outputField": "payload",
+        "timeZone": "",
+        "storeName": "",
+        "commandResponseMsgOutput": "output2",
+        "defaultLocation": "",
+        "defaultLocationType": "default",
+        "outputs": 2,
+        "options": [
+            {
+                "name": "Every Minute",
+                "topic": "every-minute",
+                "payloadType": "default",
+                "payload": "",
+                "expressionType": "cron",
+                "expression": "0 * * * * * *",
+                "location": "",
+                "offset": "0",
+                "solarType": "all",
+                "solarEvents": "sunrise,sunset"
+            }
+        ],
+        "x": 180,
+        "y": 1700,
+        "wires": [
+            [
+                "aeb63d92d3b45fa5"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "aeb63d92d3b45fa5",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "4a1380f15e4e5122",
+        "name": "Evaluate",
+        "func": "const config = global.get('config').landroid;\n\nconst now = new Date();\nconst window_start = new Date(flow.get('window_start'));\nconst window_end = new Date(flow.get('window_end'));\n\nconst was_in_window = flow.get('scheduler_in_window') || false;\nconst in_window = now >= window_start && now <= window_end;\n\nconst safety_minutes = config.rain_suppression.end_of_day_safety_minutes;\nconst safety_end = new Date(window_end.getTime() + safety_minutes * 60000);\nconst mower_state = flow.get('mower_state') || 'docked';\n\nif (now > window_end && now <= safety_end && (mower_state === 'mowing' || mower_state === 'edge_cut' || mower_state === 'starting')) {\n    msg.payload = { type: 'safety_dock' };\n    node.status({ fill: 'orange', shape: 'dot', text: 'safety net firing' });\n    return msg;\n}\n\n// Detect crossings\nif (!was_in_window && in_window) {\n    flow.set('scheduler_in_window', true);\n    msg.payload = { type: 'window_open' };\n    return msg;\n}\n\nif (was_in_window && !in_window) {\n    flow.set('scheduler_in_window', false);\n    msg.payload = { type: 'window_close' };\n    return msg;\n}\n\n// No crossing — update state and emit nothing\nflow.set('scheduler_in_window', in_window);\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 1700,
+        "wires": [
+            [
+                "75944f3566c5cbe7"
+            ]
+        ]
+    },
+    {
+        "id": "75944f3566c5cbe7",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "4a1380f15e4e5122",
+        "name": "Calculate Mow State",
+        "mode": "link",
+        "links": [
+            "0d089a23cc618031"
+        ],
+        "x": 600,
+        "y": 1700,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "a8359b91557f6f3c",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "ac8c4f8210e9136d",
+        "name": "Dock Return",
+        "mode": "return",
+        "links": [],
+        "x": 510,
+        "y": 320,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "4517b0340c06c78c",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "ac8c4f8210e9136d",
+        "name": "Start Edging Return",
+        "mode": "return",
+        "links": [],
+        "x": 570,
+        "y": 200,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "40b96db88f7b3b76",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "ac8c4f8210e9136d",
+        "name": "Start Mowing Return",
+        "mode": "return",
+        "links": [],
+        "x": 600,
+        "y": 80,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "b29d4a08e8a5d832",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Calculate Mow State",
+        "mode": "link",
+        "links": [
+            "0d089a23cc618031"
+        ],
+        "x": 580,
+        "y": 800,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "524bbd0c77050f52",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Build Signal",
+        "func": "const mow_ready = msg.payload.mow_ready;\nconst prev_mow_ready = flow.get('prev_mow_ready', 'volatile');\nconst flow_mow_ready = flow.get('mow_ready');  // authoritative flow context value\nconst mower_state = flow.get('mower_state') || 'docked';\n\nflow.set('prev_mow_ready', mow_ready, 'volatile');\n\n// Both MQTT payload AND flow context must agree mow_ready is false\nif (prev_mow_ready === true && mow_ready === false && flow_mow_ready === false &&\n    (mower_state === 'mowing' || mower_state === 'edge_cut')) {\n    msg.payload = { type: 'rain' };\n    return msg;\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 800,
+        "wires": [
+            [
+                "b29d4a08e8a5d832"
+            ]
+        ]
+    },
+    {
+        "id": "b7553a87c83d7205",
+        "type": "mqtt in",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Rain Monitor",
+        "topic": "highland/state/landroid/rain_monitor",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "4cefa2ad2d8b462e",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 800,
+        "wires": [
+            [
+                "524bbd0c77050f52"
+            ]
+        ]
+    },
+    {
+        "id": "6ce2163d1279bd71",
+        "type": "mqtt out",
+        "z": "utility-landroid-vision",
+        "g": "4409dfe1a4cd0d62",
+        "name": "Publish",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 940,
+        "y": 1280,
+        "wires": []
+    },
+    {
+        "id": "d34e5593b04ca505",
+        "type": "mqtt out",
+        "z": "utility-landroid-vision",
+        "g": "4a1380f15e4e5122",
+        "name": "Publish",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "4cefa2ad2d8b462e",
+        "x": 580,
+        "y": 1640,
+        "wires": []
+    },
+    {
+        "id": "b287ca09aa0251f6",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "65079fe33def68d5",
+        "name": "Calculate Mow State",
+        "mode": "link",
+        "links": [
+            "0d089a23cc618031"
+        ],
+        "x": 920,
+        "y": 1160,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "200a11fefc32de98",
+        "type": "server-state-changed",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Party Mode",
+        "server": "aa5463113481df19",
+        "version": 6,
+        "outputs": 1,
+        "exposeAsEntityConfig": "",
+        "entities": {
+            "entity": [
+                "switch.vision_cloud_4wd_party_mode"
+            ],
+            "substring": [],
+            "regex": []
+        },
+        "outputInitially": true,
+        "stateType": "str",
+        "ifState": "",
+        "ifStateType": "str",
+        "ifStateOperator": "is",
+        "outputOnlyOnStateChange": true,
+        "for": "0",
+        "forType": "num",
+        "forUnits": "minutes",
+        "ignorePrevStateNull": false,
+        "ignorePrevStateUnknown": false,
+        "ignorePrevStateUnavailable": false,
+        "ignoreCurrentStateUnknown": false,
+        "ignoreCurrentStateUnavailable": true,
+        "outputProperties": [
+            {
+                "property": "payload",
+                "propertyType": "msg",
+                "value": "string",
+                "valueType": "entityState"
+            },
+            {
+                "property": "data",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "eventData"
+            },
+            {
+                "property": "topic",
+                "propertyType": "msg",
+                "value": "",
+                "valueType": "triggerId"
+            }
+        ],
+        "x": 150,
+        "y": 680,
+        "wires": [
+            [
+                "3de6bdf5ab60f7ad"
+            ]
+        ]
+    },
+    {
+        "id": "3de6bdf5ab60f7ad",
+        "type": "function",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Build Signal",
+        "func": "const state = msg.payload;\n\nmsg.payload = {\n    type: 'party_mode',\n    enabled: state === \"on\"\n};\n\nnode.status({fill:\"grey\",shape:\"ring\",text: state});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 680,
+        "wires": [
+            [
+                "eccbd5b2936ac17a"
+            ]
+        ]
+    },
+    {
+        "id": "eccbd5b2936ac17a",
+        "type": "link out",
+        "z": "utility-landroid-vision",
+        "g": "46e54ddcd2ad382d",
+        "name": "Calculate Mow State",
+        "mode": "link",
+        "links": [
+            "0d089a23cc618031"
+        ],
+        "x": 580,
+        "y": 680,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "b8af70524cc90677",
+        "type": "api-call-service",
+        "z": "utility-landroid-vision",
+        "g": "ac8c4f8210e9136d",
+        "name": "Send Dock",
+        "server": "aa5463113481df19",
+        "version": 7,
+        "debugenabled": false,
+        "action": "lawn_mower.dock",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "lawn_mower.vision_cloud_4wd"
+        ],
+        "labelId": [],
+        "data": "",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": true,
+        "domain": "lawn_mower",
+        "service": "dock",
+        "x": 310,
+        "y": 320,
+        "wires": [
+            [
+                "a8359b91557f6f3c"
+            ]
+        ]
+    },
+    {
+        "id": "c10a37c697d8b788",
+        "type": "api-call-service",
+        "z": "utility-landroid-vision",
+        "g": "ac8c4f8210e9136d",
+        "name": "Send Edging",
+        "server": "aa5463113481df19",
+        "version": 7,
+        "debugenabled": false,
+        "action": "landroid_cloud.ots",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "lawn_mower.vision_cloud_4wd"
+        ],
+        "labelId": [],
+        "data": "{\"boundary\":true,\"runtime\":90}",
+        "dataType": "json",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": true,
+        "domain": "landroid_cloud",
+        "service": "ots",
+        "x": 350,
+        "y": 200,
+        "wires": [
+            [
+                "4517b0340c06c78c"
+            ]
+        ]
+    },
+    {
+        "id": "fc793513700a3053",
+        "type": "api-call-service",
+        "z": "utility-landroid-vision",
+        "g": "ac8c4f8210e9136d",
+        "name": "Send Mowing",
+        "server": "aa5463113481df19",
+        "version": 7,
+        "debugenabled": false,
+        "action": "lawn_mower.start_mowing",
+        "floorId": [],
+        "areaId": [],
+        "deviceId": [],
+        "entityId": [
+            "lawn_mower.vision_cloud_4wd"
+        ],
+        "labelId": [],
+        "data": "",
+        "dataType": "jsonata",
+        "mergeContext": "",
+        "mustacheAltTags": false,
+        "outputProperties": [],
+        "queue": "none",
+        "blockInputOverrides": true,
+        "domain": "lawn_mower",
+        "service": "start_mowing",
+        "x": 360,
+        "y": 80,
+        "wires": [
+            [
+                "40b96db88f7b3b76"
+            ]
+        ]
+    },
+    {
+        "id": "4cefa2ad2d8b462e",
+        "type": "mqtt-broker",
+        "name": "Hub",
+        "broker": "hub.local",
+        "port": 1883,
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "aa5463113481df19",
+        "type": "server",
+        "name": "Home Assistant",
+        "version": 6,
+        "addon": false,
+        "rejectUnauthorizedCerts": true,
+        "ha_boolean": [
+            "y",
+            "yes",
+            "true",
+            "on",
+            "home",
+            "open"
+        ],
+        "connectionDelay": true,
+        "cacheJson": true,
+        "heartbeat": false,
+        "heartbeatInterval": 30,
+        "areaSelector": "friendlyName",
+        "deviceSelector": "friendlyName",
+        "entitySelector": "friendlyName",
+        "statusSeparator": ": ",
+        "statusYear": "hidden",
+        "statusMonth": "short",
+        "statusDay": "numeric",
+        "statusHourCycle": "default",
+        "statusTimeFormat": "h:m",
+        "enableGlobalContextStore": false
+    },
+    {
+        "id": "e659a7827834a7f0",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-contrib-cron-plus": "2.2.4",
+            "node-red-contrib-schedex": "1.10.7",
+            "node-red-contrib-home-assistant-websocket": "0.80.3"
+        }
+    }
+]
